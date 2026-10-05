@@ -45,5 +45,6 @@ jobs:
           if ! gh release view "$TAG" >/dev/null 2>&1; then
             gh release create "$TAG" app/build/outputs/apk/debug/app-debug.apk --title "IR Remote BR $VERSION" --generate-notes
           else
-            echo "Release $TAG já existe."
+            gh release upload "$TAG" app/build/outputs/apk/debug/app-debug.apk --clobber
+            echo "Release $TAG atualizada."
           fi
