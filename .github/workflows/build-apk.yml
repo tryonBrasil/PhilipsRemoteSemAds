@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
@@ -35,3 +35,15 @@ jobs:
         with:
           name: PhilipsRemoteSemAds-debug
           path: app/build/outputs/apk/debug/app-debug.apk
+
+      - name: Publicar atualização
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION=$(sed -n "s/.*versionName '\([^']*\)'.*/\1/p" app/build.gradle)
+          TAG="v$VERSION"
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            gh release create "$TAG" app/build/outputs/apk/debug/app-debug.apk --title "IR Remote BR $VERSION" --generate-notes
+          else
+            echo "Release $TAG já existe."
+          fi
