@@ -387,8 +387,18 @@ public class MainActivity extends Activity {
                 Button aprender=new Button(this); aprender.setText("⚙  CONFIGURAR BOTÕES"); aprender.setTextColor(WHITE); aprender.setTextSize(12); aprender.setAllCaps(false);
                 GradientDrawable apb=new GradientDrawable(); apb.setColor(Color.rgb(65,65,72)); apb.setCornerRadius(dp(12)); aprender.setBackground(apb);
                 aprender.setOnClickListener(v->{ controleAtivo=c; showAprenderComandos(c); });
-                LinearLayout.LayoutParams app=new LinearLayout.LayoutParams(-1,dp(42)); app.setMargins(0,dp(5),0,0); card.addView(aprender,app);
-                LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(-1,dp(140)); cp.setMargins(0,dp(8),0,dp(8)); root.addView(card,cp);
+                LinearLayout.LayoutParams app=new LinearLayout.LayoutParams(-1,dp(42)); app.setMargins(0,dp(5),0,dp(0)); card.addView(aprender,app);
+                Button excluir=new Button(this); excluir.setText("EXCLUIR DISPOSITIVO"); excluir.setTextColor(WHITE); excluir.setTextSize(12); excluir.setAllCaps(false);
+                GradientDrawable exb=new GradientDrawable(); exb.setColor(Color.rgb(95,48,48)); exb.setCornerRadius(dp(12)); excluir.setBackground(exb);
+                excluir.setOnClickListener(v->{
+                    new android.app.AlertDialog.Builder(this).setTitle("Excluir dispositivo?")
+                        .setMessage("O controle " + c.nome + " será removido deste aparelho.")
+                        .setNegativeButton("CANCELAR",null)
+                        .setPositiveButton("EXCLUIR",(d,w)->{ controleStorage.excluir(c); if(controleAtivo==c) controleAtivo=null; showMeusControles(); })
+                        .show();
+                });
+                LinearLayout.LayoutParams exp=new LinearLayout.LayoutParams(-1,dp(42)); exp.setMargins(0,dp(5),0,dp(0)); card.addView(excluir,exp);
+                LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(-1,dp(185)); cp.setMargins(0,dp(8),0,dp(8)); root.addView(card,cp);
             }
         }
         Button add=new Button(this); add.setText("+  ADICIONAR OUTRO CONTROLE"); add.setTextColor(WHITE); add.setTextSize(13); add.setAllCaps(false);
