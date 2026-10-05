@@ -263,7 +263,24 @@ public class MainActivity extends Activity {
                                 setupModel,
                                 irPerfilTeste.getPerfil(),irPerfilTeste.lastDescription(),
                                 irPerfilTeste.currentCode(),fanMode?38000:(lgMode?38000:36000));
-                            Toast.makeText(this,"Controle adicionado em Meus controles",Toast.LENGTH_SHORT).show();
+                            List<ControleStorage.Controle> salvos=controleStorage.listar();
+                            if(!salvos.isEmpty()){
+                                ControleStorage.Controle novo=salvos.get(salvos.size()-1);
+                                final String[] funcoes=fanMode
+                                    ? new String[]{"Ligar/desligar","Reversão","Timer","Velocidade 1","Velocidade 2","Velocidade 3","Velocidade 4","Velocidade 5","Exaustão 1","Exaustão 2","Exaustão 3","Exaustão 4","Exaustão 5","Parar exaustão","Luz","Aumentar luz","Diminuir luz"}
+                                    : new String[]{"Ligar/desligar","Mute","Volume +","Volume -","Canal +","Canal -","Cima","Baixo","Esquerda","Direita","OK","Voltar","Menu","Home","Source","Info","Guide","Netflix","Configurações","Play","Pause","Stop","Retroceder","Avançar","Subtitle","Exit"};
+                                final int[] comandos=fanMode
+                                    ? new int[]{FAN_POWER,FAN_REVERSE,FAN_TIMER,FAN_SPEED_1,FAN_SPEED_2,FAN_SPEED_3,FAN_SPEED_4,FAN_SPEED_5,FAN_EXHAUST_1,FAN_EXHAUST_2,FAN_EXHAUST_3,FAN_EXHAUST_4,FAN_EXHAUST_5,FAN_STOP,FAN_LIGHT,FAN_DIM_UP,FAN_DIM_DOWN}
+                                    : new int[]{POWER,MUTE,VOL_UP,VOL_DOWN,CH_UP,CH_DOWN,UP,DOWN,LEFT,RIGHT,OK,BACK,MENU,HOME,SOURCE,INFO,GUIDE,NETFLIX,SETTINGS,PLAY,PAUSE,STOP,REWIND,FAST_FORWARD,SUBTITLE,EXIT};
+                                new android.app.AlertDialog.Builder(this)
+                                    .setTitle("Qual função este código controla?")
+                                    .setItems(funcoes,(dd,idx)->{
+                                        String funcao=funcaoDoComando(comandos[idx]);
+                                        controleStorage.salvarComando(novo,funcao,irPerfilTeste.currentCode(),irPerfilTeste.getPerfil(),fanMode?38000:(lgMode?38000:36000));
+                                        Toast.makeText(this,"Código associado a "+funcoes[idx],Toast.LENGTH_SHORT).show();
+                                    })
+                                    .setNegativeButton("PULAR",null).show();
+                            }
                         }).show();
                 }).show();
         });
