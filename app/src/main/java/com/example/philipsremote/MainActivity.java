@@ -24,6 +24,7 @@ public class MainActivity extends Activity {
     private ControleStorage.Controle controleAtivo;
     private String setupBrand="Philips";
     private String setupModel="50PUG6513/7";
+    private UpdateManager updateManager;
 
     private static final int FREQ = 36000;
     private static final int LG_FREQ = 38000;
@@ -52,6 +53,8 @@ public class MainActivity extends Activity {
         irPerfilTeste=new IrPerfilTeste(this);
         prefs=getSharedPreferences("remote_prefs",MODE_PRIVATE);
         controleStorage=new ControleStorage(this);
+        updateManager=new UpdateManager(this);
+        updateManager.verificarSilenciosamente();
         lgMode=prefs.getBoolean("lg_mode",false);
         showSelector();
     }
@@ -115,7 +118,11 @@ public class MainActivity extends Activity {
         TextView info=label("A escolha ficará salva para a próxima vez.",12); info.setTextColor(GRAY); root.addView(info,new LinearLayout.LayoutParams(-1,dp(42)));
         Button meus=new Button(this); meus.setText("★  MEUS CONTROLES"); meus.setTextColor(WHITE); meus.setTextSize(14); meus.setAllCaps(false);
         GradientDrawable meusBg=new GradientDrawable(); meusBg.setColor(KEY_DARK); meusBg.setCornerRadius(dp(16)); meus.setBackground(meusBg); meus.setOnClickListener(v->showMeusControles());
-        root.addView(meus,new LinearLayout.LayoutParams(-1,dp(52))); sv.addView(root); setContentView(sv);
+        root.addView(meus,new LinearLayout.LayoutParams(-1,dp(52)));
+        Button atualizar=new Button(this); atualizar.setText("↻  VERIFICAR ATUALIZAÇÃO"); atualizar.setTextColor(WHITE); atualizar.setTextSize(13); atualizar.setAllCaps(false);
+        GradientDrawable atualizarBg=new GradientDrawable(); atualizarBg.setColor(KEY_DARK); atualizarBg.setCornerRadius(dp(16)); atualizar.setBackground(atualizarBg); atualizar.setOnClickListener(v->updateManager.verificarManualmente());
+        LinearLayout.LayoutParams atualizarParams=new LinearLayout.LayoutParams(-1,dp(50)); atualizarParams.setMargins(0,dp(8),0,0); root.addView(atualizar,atualizarParams);
+        sv.addView(root); setContentView(sv);
     }
     private LinearLayout tvCard(String brand,String model,boolean selected,View.OnClickListener click){
         LinearLayout card=new LinearLayout(this); card.setOrientation(LinearLayout.VERTICAL); card.setGravity(Gravity.CENTER_VERTICAL); card.setPadding(dp(20),dp(10),dp(20),dp(10));
@@ -125,6 +132,11 @@ public class MainActivity extends Activity {
         TextView s=label(selected?"✓ SELECIONADA":"TOQUE PARA SELECIONAR",12); s.setTextColor(selected?Color.rgb(75,145,95):GRAY); card.addView(s,new LinearLayout.LayoutParams(-1,dp(28)));
         card.setOnClickListener(v->{ click.onClick(v); showSelector(); });
         return card;
+    }
+
+    @Override protected void onDestroy(){
+        if(updateManager!=null) updateManager.destroy();
+        super.onDestroy();
     }
 
     @Override public void onBackPressed(){
