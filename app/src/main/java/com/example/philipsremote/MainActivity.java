@@ -16,6 +16,7 @@ public class MainActivity extends Activity {
     private ConsumerIrManager ir;
     private boolean toggle = false;
     private boolean lgMode = false;
+    private boolean fanMode = false;
     private boolean showingSelector = true;
     private SharedPreferences prefs;
 
@@ -29,6 +30,11 @@ public class MainActivity extends Activity {
     private static final int KEY_DARK = Color.rgb(34,34,34);
     private static final int WHITE = Color.WHITE;
     private static final int GRAY = Color.rgb(175,175,175);
+
+    private static final int FAN_POWER=1001, FAN_REVERSE=1002, FAN_TIMER=1003;
+    private static final int FAN_SPEED_0=1010, FAN_SPEED_1=1011, FAN_SPEED_2=1012, FAN_SPEED_3=1013, FAN_SPEED_4=1014, FAN_SPEED_5=1015;
+    private static final int FAN_EXHAUST_1=1021, FAN_EXHAUST_2=1022, FAN_EXHAUST_3=1023, FAN_EXHAUST_4=1024, FAN_EXHAUST_5=1025, FAN_STOP=1026;
+    private static final int FAN_LIGHT=1031, FAN_DIM_UP=1032, FAN_DIM_DOWN=1033;
 
     private static final int POWER=0x0C, MUTE=0x0D, VOL_DOWN=0x11, VOL_UP=0x10;
     private static final int CH_DOWN=0x21, CH_UP=0x20;
@@ -91,22 +97,25 @@ public class MainActivity extends Activity {
         LinearLayout root=new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL);
         root.setGravity(Gravity.CENTER_HORIZONTAL); root.setPadding(dp(18),dp(28),dp(18),dp(30));
 
-        TextView title=label("ESCOLHA SUA TV",28); title.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
+        TextView title=label("ESCOLHA O CONTROLE",28); title.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
         root.addView(title,new LinearLayout.LayoutParams(-1,dp(52)));
-        TextView sub=label("Selecione o modelo que você quer controlar",15); sub.setTextColor(GRAY);
+        TextView sub=label("Selecione o aparelho que você quer controlar",15); sub.setTextColor(GRAY);
         root.addView(sub,new LinearLayout.LayoutParams(-1,dp(34)));
 
-        LinearLayout philips=tvCard("PHILIPS","50PUG6513/7",!lgMode, v->{lgMode=false;});
+        LinearLayout philips=tvCard("PHILIPS","50PUG6513/7",!lgMode && !fanMode, v->{lgMode=false; fanMode=false;});
         LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(-1,dp(125)); cp.setMargins(0,dp(28),0,dp(10)); root.addView(philips,cp);
-        LinearLayout lg=tvCard("LG","32LB620B",lgMode, v->{lgMode=true;});
+        LinearLayout lg=tvCard("LG","32LB620B",lgMode, v->{lgMode=true; fanMode=false;});
         LinearLayout.LayoutParams cl=new LinearLayout.LayoutParams(-1,dp(125)); cl.setMargins(0,dp(10),0,dp(24)); root.addView(lg,cl);
 
-        TextView chosen=label(lgMode?"✓ LG 32LB620B":"✓ Philips 50PUG6513/7",15); chosen.setTextColor(Color.rgb(75,145,95));
+        LinearLayout fan=tvCard("VENTILADOR","PW-789 • LE-7507",fanMode, v->{fanMode=true; lgMode=false;});
+        LinearLayout.LayoutParams cf=new LinearLayout.LayoutParams(-1,dp(125)); cf.setMargins(0,dp(10),0,dp(24)); root.addView(fan,cf);
+
+        TextView chosen=label(fanMode?"✓ Ventilador PW-789":(lgMode?"✓ LG 32LB620B":"✓ Philips 50PUG6513/7"),15); chosen.setTextColor(Color.rgb(75,145,95));
         root.addView(chosen,new LinearLayout.LayoutParams(-1,dp(34)));
 
         Button continueBtn=new Button(this); continueBtn.setText("CONTINUAR"); continueBtn.setTextColor(WHITE); continueBtn.setTextSize(17); continueBtn.setAllCaps(false);
         GradientDrawable bg=new GradientDrawable(); bg.setColor(Color.rgb(190,24,32)); bg.setCornerRadius(dp(18)); continueBtn.setBackground(bg); continueBtn.setOnClickListener(v->{
-            prefs.edit().putBoolean("lg_mode",lgMode).apply(); showingSelector=false; build();
+            prefs.edit().putBoolean("lg_mode",lgMode).apply(); showingSelector=false; if(fanMode) buildFan(); else build();
         });
         LinearLayout.LayoutParams bp=new LinearLayout.LayoutParams(-1,dp(58)); bp.setMargins(dp(4),dp(10),dp(4),0); root.addView(continueBtn,bp);
 
@@ -127,6 +136,42 @@ public class MainActivity extends Activity {
 
     @Override public void onBackPressed(){
         if(!showingSelector){ showSelector(); } else { super.onBackPressed(); }
+    }
+
+    private void buildFan(){
+        ScrollView sv=new ScrollView(this); sv.setFillViewport(true); sv.setBackgroundColor(BG); sv.setClipToPadding(false);
+        LinearLayout root=new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL);
+        root.setPadding(dp(10),dp(8),dp(10),dp(28)); root.setBackgroundColor(BG);
+
+        LinearLayout top=row();
+        TextView title=label("CONTROLE DO VENTILADOR",21); title.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
+        top.addView(title,new LinearLayout.LayoutParams(0,dp(48),1));
+        Button change=new Button(this); change.setText("TROCAR"); change.setTextColor(WHITE); change.setTextSize(12); change.setAllCaps(false);
+        GradientDrawable changeBg=new GradientDrawable(); changeBg.setColor(KEY_DARK); changeBg.setCornerRadius(dp(14)); change.setBackground(changeBg); change.setOnClickListener(v->showSelector());
+        top.addView(change,new LinearLayout.LayoutParams(dp(90),dp(44))); root.addView(top);
+
+        TextView model=label("PW-789  •  LE-7507  •  SKY-9200",13); model.setTextColor(GRAY);
+        root.addView(model,new LinearLayout.LayoutParams(-1,dp(28)));
+
+        section(root,"VENTILADOR");
+        LinearLayout r=row(); add(r,key("⏻\nLIGA / DESLIGA",FAN_POWER,68,KEY,14)); add(r,key("↻\nREVERSÃO",FAN_REVERSE,68,KEY,14)); add(r,key("⏱\nTIMER",FAN_TIMER,68,KEY,14)); root.addView(r);
+
+        section(root,"VENTILAÇÃO • 5 VELOCIDADES");
+        r=row(); add(r,key("1",FAN_SPEED_1,58,KEY_DARK,20)); add(r,key("2",FAN_SPEED_2,58,KEY_DARK,20)); add(r,key("3",FAN_SPEED_3,58,KEY_DARK,20)); root.addView(r);
+        r=row(); add(r,key("4",FAN_SPEED_4,58,KEY_DARK,20)); add(r,key("5",FAN_SPEED_5,58,KEY_DARK,20)); add(r,key("0",FAN_SPEED_0,58,KEY_DARK,20)); root.addView(r);
+
+        section(root,"EXAUSTÃO • 5 VELOCIDADES");
+        r=row(); add(r,key("1",FAN_EXHAUST_1,58,KEY_DARK,20)); add(r,key("2",FAN_EXHAUST_2,58,KEY_DARK,20)); add(r,key("3",FAN_EXHAUST_3,58,KEY_DARK,20)); root.addView(r);
+        r=row(); add(r,key("4",FAN_EXHAUST_4,58,KEY_DARK,20)); add(r,key("5",FAN_EXHAUST_5,58,KEY_DARK,20)); add(r,key("⏹",FAN_STOP,58,KEY_DARK,20)); root.addView(r);
+
+        section(root,"LÂMPADA");
+        r=row(); add(r,key("💡\nLIGA / DESLIGA",FAN_LIGHT,68,KEY,14)); add(r,key("☀\nAUMENTAR",FAN_DIM_UP,68,KEY,14)); add(r,key("☾\nDIMINUIR",FAN_DIM_DOWN,68,KEY,14)); root.addView(r);
+
+        section(root,"STATUS IR");
+        TextView status=label("●  PW-789 selecionado  •  emissor IR: "+(ir!=null&&ir.hasIrEmitter()?"detectado":"não detectado"),12);
+        status.setTextColor(ir!=null&&ir.hasIrEmitter()?Color.rgb(75,145,95):GRAY); root.addView(status,new LinearLayout.LayoutParams(-1,dp(38)));
+        TextView note=label("Os comandos específicos do PW-789/LE-7507 não estão publicados em uma tabela IR confiável. A interface foi preparada sem alterar o controle da TV.",11); note.setTextColor(GRAY); note.setGravity(Gravity.CENTER); root.addView(note,new LinearLayout.LayoutParams(-1,dp(54)));
+        sv.addView(root); setContentView(sv);
     }
 
     private void build(){
@@ -218,7 +263,15 @@ public class MainActivity extends Activity {
         sv.addView(root); setContentView(sv);
     }
 
+    private void sendFan(int command){
+        if(ir==null||!ir.hasIrEmitter()){
+            Toast.makeText(this,"Este telemóvel não possui emissor IR.",Toast.LENGTH_SHORT).show(); return;
+        }
+        Toast.makeText(this,"PW-789: código IR do botão ainda não disponível na base pública.",Toast.LENGTH_SHORT).show();
+    }
+
     private void send(int command){
+        if(fanMode){ sendFan(command); return; }
         if(ir==null||!ir.hasIrEmitter()){
             Toast.makeText(this,"Este telemóvel não possui emissor IR.",Toast.LENGTH_SHORT).show(); return;
         }
