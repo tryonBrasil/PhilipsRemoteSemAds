@@ -23,6 +23,8 @@ public class MainActivity extends Activity {
     private SharedPreferences prefs;
     private ControleStorage controleStorage;
     private ControleStorage.Controle controleAtivo;
+    private String setupBrand="Philips";
+    private String setupModel="50PUG6513/7";
 
     private static final int FREQ = 36000;
     private static final int LG_FREQ = 38000;
@@ -247,15 +249,15 @@ public class MainActivity extends Activity {
                 .setPositiveButton("SALVAR", (d,w)->{
                     final EditText nome=new EditText(this);
                     nome.setSingleLine(true); nome.setHint("Nome do controle");
-                    nome.setText(fanMode?"PW-789":"Meu "+(lgMode?"LG":"Philips"));
+                    nome.setText(setupModel.isEmpty()?"Meu controle":setupModel);
                     new android.app.AlertDialog.Builder(this).setTitle("Nome do controle")
                         .setView(nome).setNegativeButton("CANCELAR",null)
                         .setPositiveButton("SALVAR",(d2,w2)->{
                             String n=nome.getText().toString().trim();
                             if(n.isEmpty()) n=fanMode?"PW-789":"Meu controle";
                             controleStorage.salvar(n,fanMode?"Ventilador":"TV",
-                                fanMode?"PW-789":(lgMode?"LG":"Philips"),
-                                fanMode?"PW-789":(lgMode?"32LB620B":"50PUG6513/7"),
+                                setupBrand,
+                                setupModel,
                                 irPerfilTeste.getPerfil(),irPerfilTeste.lastDescription(),
                                 irPerfilTeste.currentCode(),fanMode?38000:(lgMode?38000:36000));
                             Toast.makeText(this,"Controle adicionado em Meus controles",Toast.LENGTH_SHORT).show();
@@ -363,6 +365,7 @@ public class MainActivity extends Activity {
             .setItems(modelos,(d,w)->{
                 lgMode="LG".equals(marca); fanMode=false; controleAtivo=null;
                 prefs.edit().putBoolean("lg_mode",lgMode).apply();
+                setupBrand=marca; setupModel=modelos[w];
                 showTvSetup(marca,modelos[w]);
             }).setNegativeButton("VOLTAR",(x,y)->showBrandWizard()).show();
     }
@@ -379,6 +382,7 @@ public class MainActivity extends Activity {
         new android.app.AlertDialog.Builder(this).setTitle("1 de 2 • Modelo do ventilador")
             .setItems(modelos,(d,w)->{
                 fanMode=true; lgMode=false; controleAtivo=null;
+                setupBrand="Ventilador"; setupModel=modelos[w];
                 new android.app.AlertDialog.Builder(this).setTitle("2 de 2 • Testar controle")
                     .setMessage("Use o TESTE UNIVERSAL para testar os protocolos disponíveis. Quando encontrar um comando que funcione, toque em ✓ FUNCIONOU para salvar.")
                     .setNegativeButton("CANCELAR",null).setPositiveButton("ABRIR CONTROLE",(x,y)->buildFan()).show();
