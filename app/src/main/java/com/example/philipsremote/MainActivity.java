@@ -7,6 +7,7 @@ import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.view.Gravity;
+import android.view.View;
 import android.widget.*;
 import android.content.SharedPreferences;
 import java.util.ArrayList;
@@ -15,6 +16,7 @@ public class MainActivity extends Activity {
     private ConsumerIrManager ir;
     private boolean toggle = false;
     private boolean lgMode = false;
+    private boolean showingSelector = true;
     private SharedPreferences prefs;
 
     private static final int FREQ = 36000;
@@ -42,7 +44,7 @@ public class MainActivity extends Activity {
         ir=(ConsumerIrManager)getSystemService(CONSUMER_IR_SERVICE);
         prefs=getSharedPreferences("remote_prefs",MODE_PRIVATE);
         lgMode=prefs.getBoolean("lg_mode",false);
-        build();
+        showSelector();
     }
 
     private int dp(float v){ return (int)(v*getResources().getDisplayMetrics().density+0.5f); }
@@ -81,6 +83,50 @@ public class MainActivity extends Activity {
         t.setTypeface(Typeface.DEFAULT,Typeface.BOLD); t.setLetterSpacing(.03f);
         LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,dp(34));
         p.setMargins(0,dp(7),0,0); root.addView(t,p);
+    }
+
+    private void showSelector(){
+        showingSelector=true;
+        ScrollView sv=new ScrollView(this); sv.setFillViewport(true); sv.setBackgroundColor(BG);
+        LinearLayout root=new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL);
+        root.setGravity(Gravity.CENTER_HORIZONTAL); root.setPadding(dp(18),dp(28),dp(18),dp(30));
+
+        TextView title=label("ESCOLHA SUA TV",28); title.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
+        root.addView(title,new LinearLayout.LayoutParams(-1,dp(52)));
+        TextView sub=label("Selecione o modelo que você quer controlar",15); sub.setTextColor(GRAY);
+        root.addView(sub,new LinearLayout.LayoutParams(-1,dp(34)));
+
+        LinearLayout philips=tvCard("PHILIPS","50PUG6513/7",!lgMode, v->{lgMode=false;});
+        LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(-1,dp(125)); cp.setMargins(0,dp(28),0,dp(10)); root.addView(philips,cp);
+        LinearLayout lg=tvCard("LG","32LB620B",lgMode, v->{lgMode=true;});
+        LinearLayout.LayoutParams cl=new LinearLayout.LayoutParams(-1,dp(125)); cl.setMargins(0,dp(10),0,dp(24)); root.addView(lg,cl);
+
+        TextView chosen=label(lgMode?"✓ LG 32LB620B":"✓ Philips 50PUG6513/7",15); chosen.setTextColor(Color.rgb(75,145,95));
+        root.addView(chosen,new LinearLayout.LayoutParams(-1,dp(34)));
+
+        Button continueBtn=new Button(this); continueBtn.setText("CONTINUAR"); continueBtn.setTextColor(WHITE); continueBtn.setTextSize(17); continueBtn.setAllCaps(false);
+        GradientDrawable bg=new GradientDrawable(); bg.setColor(Color.rgb(190,24,32)); bg.setCornerRadius(dp(18)); continueBtn.setBackground(bg); continueBtn.setOnClickListener(v->{
+            prefs.edit().putBoolean("lg_mode",lgMode).apply(); showingSelector=false; build();
+        });
+        LinearLayout.LayoutParams bp=new LinearLayout.LayoutParams(-1,dp(58)); bp.setMargins(dp(4),dp(10),dp(4),0); root.addView(continueBtn,bp);
+
+        TextView info=label("A escolha ficará salva para a próxima vez.",12); info.setTextColor(GRAY);
+        root.addView(info,new LinearLayout.LayoutParams(-1,dp(42)));
+        sv.addView(root); setContentView(sv);
+    }
+
+    private LinearLayout tvCard(String brand,String model,boolean selected,View.OnClickListener click){
+        LinearLayout card=new LinearLayout(this); card.setOrientation(LinearLayout.VERTICAL); card.setGravity(Gravity.CENTER_VERTICAL); card.setPadding(dp(20),dp(10),dp(20),dp(10));
+        GradientDrawable bg=new GradientDrawable(); bg.setColor(selected?Color.rgb(42,42,48):Color.rgb(27,27,30)); bg.setCornerRadius(dp(20)); bg.setStroke(dp(2),selected?Color.rgb(210,30,38):Color.rgb(55,55,58)); card.setBackground(bg);
+        TextView b=label(brand,18); b.setTypeface(Typeface.DEFAULT,Typeface.BOLD); card.addView(b,new LinearLayout.LayoutParams(-1,dp(34)));
+        TextView m=label(model,16); m.setTextColor(GRAY); card.addView(m,new LinearLayout.LayoutParams(-1,dp(30)));
+        TextView s=label(selected?"✓ SELECIONADA":"TOQUE PARA SELECIONAR",12); s.setTextColor(selected?Color.rgb(75,145,95):GRAY); card.addView(s,new LinearLayout.LayoutParams(-1,dp(28)));
+        card.setOnClickListener(v->{ click.onClick(v); showSelector(); });
+        return card;
+    }
+
+    @Override public void onBackPressed(){
+        if(!showingSelector){ showSelector(); } else { super.onBackPressed(); }
     }
 
     private void build(){
