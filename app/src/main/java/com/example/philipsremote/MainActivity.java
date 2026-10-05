@@ -145,10 +145,10 @@ public class MainActivity extends Activity {
 
     private void showAprenderComandos(ControleStorage.Controle controle){
         if(controle==null){ showMeusControles(); return; }
-        final String[] funcoes="Ventilador".equals(controle.categoria)
+        final String[] funcoes=
             ? new String[]{"Ligar/desligar","Reversão","Timer","Velocidade 1","Velocidade 2","Velocidade 3","Velocidade 4","Velocidade 5","Exaustão 1","Exaustão 2","Exaustão 3","Exaustão 4","Exaustão 5","Parar exaustão","Luz","Aumentar luz","Diminuir luz"}
             : new String[]{"Ligar/desligar","Mute","Volume +","Volume -","Canal +","Canal -","Cima","Baixo","Esquerda","Direita","OK","Voltar","Menu","Home","Source","Info","Guide","Netflix","Configurações","Play","Pause","Stop","Retroceder","Avançar","Subtitle","Exit"};
-        final String[] chaves="Ventilador".equals(controle.categoria)
+        final String[] chaves=
             ? new String[]{"FAN_POWER","FAN_REVERSE","FAN_TIMER","FAN_SPEED_1","FAN_SPEED_2","FAN_SPEED_3","FAN_SPEED_4","FAN_SPEED_5","FAN_EXHAUST_1","FAN_EXHAUST_2","FAN_EXHAUST_3","FAN_EXHAUST_4","FAN_EXHAUST_5","FAN_STOP","FAN_LIGHT","FAN_DIM_UP","FAN_DIM_DOWN"}
             : new String[]{"POWER","MUTE","VOL_UP","VOL_DOWN","CH_UP","CH_DOWN","UP","DOWN","LEFT","RIGHT","OK","BACK","MENU","HOME","SOURCE","INFO","GUIDE","NETFLIX","SETTINGS","PLAY","PAUSE","STOP","REWIND","FAST_FORWARD","SUBTITLE","EXIT"};
         final int[] pos={0};
@@ -211,8 +211,7 @@ public class MainActivity extends Activity {
                 GradientDrawable ab=new GradientDrawable(); ab.setColor(Color.rgb(55,80,55)); ab.setCornerRadius(dp(12)); abrir.setBackground(ab);
                 abrir.setOnClickListener(v->{
                     controleAtivo=c;
-                    if("Ventilador".equals(c.categoria)){ lgMode=false; buildFan(); }
-                    else { lgMode="LG".equals(c.marca); build(); }
+                    lgMode="LG".equals(c.marca); build();
                     Toast.makeText(this,"Controle "+c.nome+" carregado",Toast.LENGTH_SHORT).show();
                 });
                 card.addView(abrir,new LinearLayout.LayoutParams(-1,dp(46)));
@@ -425,33 +424,7 @@ public class MainActivity extends Activity {
         return irPerfilTeste.transmitirSalvo(perfil,codigo);
     }
 
-    private void sendFan(int command){
-        if(ir==null||!ir.hasIrEmitter()){
-            Toast.makeText(this,"Este telemóvel não possui emissor IR.",Toast.LENGTH_SHORT).show(); return;
-        }
-        try{
-            String funcao=funcaoDoComando(command);
-            if(enviarComandoSalvo(funcao)){
-                Toast.makeText(this,"Código salvo enviado",Toast.LENGTH_SHORT).show();
-                return;
-            }
-            int code = (command==FAN_POWER) ? FAN_IR_POWER_ON : -1;
-            if(command==FAN_POWER && controleAtivo!=null && controleAtivo.codigo>=0){
-                boolean ok=irPerfilTeste.transmitirSalvo(controleAtivo.perfil,controleAtivo.codigo);
-                Toast.makeText(this,ok?"Código salvo enviado":"Não foi possível enviar o código salvo",Toast.LENGTH_SHORT).show();
-            } else if(code>=0){
-                ir.transmit(LG_FREQ, fanLgFrame(code));
-                Toast.makeText(this,"Ventilador: LG 0x18 enviado (LIGA)",Toast.LENGTH_SHORT).show();
-            } else {
-                Toast.makeText(this,"Código desta função ainda não identificado. Use a varredura LG.",Toast.LENGTH_SHORT).show();
-            }
-        }catch(Exception e){
-            Toast.makeText(this,"Falha ao enviar IR: "+e.getMessage(),Toast.LENGTH_SHORT).show();
-        }
-    }
-
     private void send(int command){
-        if(fanMode){ sendFan(command); return; }
         if(ir==null||!ir.hasIrEmitter()){
             Toast.makeText(this,"Este telemóvel não possui emissor IR.",Toast.LENGTH_SHORT).show(); return;
         }
