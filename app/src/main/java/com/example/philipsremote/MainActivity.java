@@ -423,6 +423,40 @@ public class MainActivity extends Activity {
         TextView status=label(available?"●  Emissor IR detectado  •  "+(lgMode?"LG 38":"Philips 36")+" kHz":"○  Emissor IR não detectado",12);
         status.setTextColor(available?Color.rgb(75,145,95):GRAY);
         root.addView(status,new LinearLayout.LayoutParams(-1,dp(38)));
+
+        if(controleAtivo!=null){
+            LinearLayout deviceBar=row();
+            TextView deviceInfo=label("✓ "+controleAtivo.nome,13);
+            deviceInfo.setTextColor(Color.rgb(75,145,95));
+            deviceBar.addView(deviceInfo,new LinearLayout.LayoutParams(0,dp(44),1));
+
+            Button configurar=new Button(this);
+            configurar.setText("CONFIGURAR");
+            configurar.setTextColor(WHITE);
+            configurar.setTextSize(11);
+            configurar.setAllCaps(false);
+            GradientDrawable configBg=new GradientDrawable();
+            configBg.setColor(KEY_DARK);
+            configBg.setCornerRadius(dp(12));
+            configurar.setBackground(configBg);
+            configurar.setOnClickListener(v->showAprenderComandos(controleAtivo));
+            deviceBar.addView(configurar,new LinearLayout.LayoutParams(dp(108),dp(42)));
+            root.addView(deviceBar);
+        }
+
+        Button meusControles=new Button(this);
+        meusControles.setText("★  MEUS CONTROLES");
+        meusControles.setTextColor(WHITE);
+        meusControles.setTextSize(13);
+        meusControles.setAllCaps(false);
+        GradientDrawable meusBg=new GradientDrawable();
+        meusBg.setColor(KEY_DARK);
+        meusBg.setCornerRadius(dp(16));
+        meusControles.setBackground(meusBg);
+        meusControles.setOnClickListener(v->showMeusControles());
+        LinearLayout.LayoutParams meusParams=new LinearLayout.LayoutParams(-1,dp(50));
+        meusParams.setMargins(dp(2),dp(6),dp(2),0);
+        root.addView(meusControles,meusParams);
         sv.addView(root); setContentView(sv);
     }
 
