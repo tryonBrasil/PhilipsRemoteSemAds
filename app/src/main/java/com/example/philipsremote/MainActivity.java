@@ -109,9 +109,19 @@ public class MainActivity extends Activity {
         title.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
         root.addView(title,new LinearLayout.LayoutParams(-1,dp(48)));
 
-        // Power
+        // Power — custom artwork
         LinearLayout r=row();
-        add(r,key("⏻",POWER,56,KEY_DARK,24));
+        ImageButton powerButton=new ImageButton(this);
+        powerButton.setImageResource(com.example.philipsremote.R.drawable.power_button);
+        powerButton.setBackgroundColor(Color.TRANSPARENT);
+        powerButton.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
+        powerButton.setPadding(0,0,0,0);
+        powerButton.setContentDescription("Ligar ou desligar a TV");
+        powerButton.setOnClickListener(v->send(POWER));
+        LinearLayout.LayoutParams powerParams=new LinearLayout.LayoutParams(dp(82),dp(82));
+        powerParams.setMargins(dp(4),dp(2),dp(4),dp(2));
+        powerButton.setLayoutParams(powerParams);
+        r.addView(powerButton);
         root.addView(r);
 
         // SOURCE / INFO / SETTINGS
