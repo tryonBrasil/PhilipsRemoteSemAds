@@ -134,7 +134,7 @@ public class MainActivity extends Activity {
         addDpadBtn(dpadArea,createBtn("∨",DOWN,32,BTN_COLOR,TEXT_COLOR,25),0,98,66,66);
         addDpadBtn(dpadArea,createBtn("＜",LEFT,32,BTN_COLOR,TEXT_COLOR,25),-98,0,66,66);
         addDpadBtn(dpadArea,createBtn("＞",RIGHT,32,BTN_COLOR,TEXT_COLOR,25),98,0,66,66);
-        addDpadBtn(dpadArea,createPowerBtn(),0,-165,68,68);
+        addDpadBtn(dpadArea,createPowerBtn(),0,-165,76,76);
         addDpadBtn(dpadArea,createBtn("⎘",SOURCE,32,BTN_COLOR,TEXT_COLOR,22),-130,-112,62,62);
         addDpadBtn(dpadArea,createBtn("▦",MENU,32,BTN_COLOR,TEXT_COLOR,22),130,-112,62,62);
         addDpadBtn(dpadArea,createBtn("←",BACK,32,BTN_COLOR,TEXT_COLOR,24),-130,112,62,62);
