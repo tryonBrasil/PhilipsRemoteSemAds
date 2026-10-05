@@ -493,11 +493,78 @@ public class MainActivity extends Activity {
         sv.addView(root); setContentView(sv);
     }
 
+    private String funcaoDoComando(int command){
+        switch(command){
+            case POWER: return "POWER";
+            case MUTE: return "MUTE";
+            case VOL_UP: return "VOL_UP";
+            case VOL_DOWN: return "VOL_DOWN";
+            case CH_UP: return "CH_UP";
+            case CH_DOWN: return "CH_DOWN";
+            case UP: return "UP";
+            case DOWN: return "DOWN";
+            case LEFT: return "LEFT";
+            case RIGHT: return "RIGHT";
+            case OK: return "OK";
+            case BACK: return "BACK";
+            case MENU: return "MENU";
+            case HOME: return "HOME";
+            case SOURCE: return "SOURCE";
+            case INFO: return "INFO";
+            case GUIDE: return "GUIDE";
+            case NETFLIX: return "NETFLIX";
+            case SETTINGS: return "SETTINGS";
+            case RED: return "RED";
+            case GREEN: return "GREEN";
+            case YELLOW: return "YELLOW";
+            case BLUE: return "BLUE";
+            case PLAY: return "PLAY";
+            case STOP: return "STOP";
+            case PAUSE: return "PAUSE";
+            case REWIND: return "REWIND";
+            case FAST_FORWARD: return "FAST_FORWARD";
+            case SUBTITLE: return "SUBTITLE";
+            case EXIT: return "EXIT";
+            case FAN_POWER: return "FAN_POWER";
+            case FAN_REVERSE: return "FAN_REVERSE";
+            case FAN_TIMER: return "FAN_TIMER";
+            case FAN_SPEED_0: return "FAN_SPEED_0";
+            case FAN_SPEED_1: return "FAN_SPEED_1";
+            case FAN_SPEED_2: return "FAN_SPEED_2";
+            case FAN_SPEED_3: return "FAN_SPEED_3";
+            case FAN_SPEED_4: return "FAN_SPEED_4";
+            case FAN_SPEED_5: return "FAN_SPEED_5";
+            case FAN_EXHAUST_1: return "FAN_EXHAUST_1";
+            case FAN_EXHAUST_2: return "FAN_EXHAUST_2";
+            case FAN_EXHAUST_3: return "FAN_EXHAUST_3";
+            case FAN_EXHAUST_4: return "FAN_EXHAUST_4";
+            case FAN_EXHAUST_5: return "FAN_EXHAUST_5";
+            case FAN_STOP: return "FAN_STOP";
+            case FAN_LIGHT: return "FAN_LIGHT";
+            case FAN_DIM_UP: return "FAN_DIM_UP";
+            case FAN_DIM_DOWN: return "FAN_DIM_DOWN";
+            default: return "";
+        }
+    }
+
+    private boolean enviarComandoSalvo(String funcao){
+        if(controleAtivo==null || funcao.isEmpty()) return false;
+        int codigo=controleStorage.codigoComando(controleAtivo,funcao);
+        String perfil=controleStorage.perfilComando(controleAtivo,funcao);
+        if(codigo<0 || perfil.isEmpty()) return false;
+        return irPerfilTeste.transmitirSalvo(perfil,codigo);
+    }
+
     private void sendFan(int command){
         if(ir==null||!ir.hasIrEmitter()){
             Toast.makeText(this,"Este telemóvel não possui emissor IR.",Toast.LENGTH_SHORT).show(); return;
         }
         try{
+            String funcao=funcaoDoComando(command);
+            if(enviarComandoSalvo(funcao)){
+                Toast.makeText(this,"Código salvo enviado",Toast.LENGTH_SHORT).show();
+                return;
+            }
             int code = (command==FAN_POWER) ? FAN_IR_POWER_ON : -1;
             if(command==FAN_POWER && controleAtivo!=null && controleAtivo.codigo>=0){
                 boolean ok=irPerfilTeste.transmitirSalvo(controleAtivo.perfil,controleAtivo.codigo);
@@ -519,6 +586,11 @@ public class MainActivity extends Activity {
             Toast.makeText(this,"Este telemóvel não possui emissor IR.",Toast.LENGTH_SHORT).show(); return;
         }
         try{
+            String funcao=funcaoDoComando(command);
+            if(enviarComandoSalvo(funcao)){
+                Toast.makeText(this,"Código salvo enviado",Toast.LENGTH_SHORT).show();
+                return;
+            }
             if(command==POWER && controleAtivo!=null && controleAtivo.codigo>=0){
                 boolean ok=irPerfilTeste.transmitirSalvo(controleAtivo.perfil,controleAtivo.codigo);
                 if(!ok) Toast.makeText(this,"Não foi possível enviar o código salvo",Toast.LENGTH_SHORT).show();
