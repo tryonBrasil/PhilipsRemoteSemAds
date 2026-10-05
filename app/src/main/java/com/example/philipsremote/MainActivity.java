@@ -8,12 +8,14 @@ import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.view.Gravity;
 import android.widget.*;
+import android.content.SharedPreferences;
 import java.util.ArrayList;
 
 public class MainActivity extends Activity {
     private ConsumerIrManager ir;
     private boolean toggle = false;
     private boolean lgMode = false;
+    private SharedPreferences prefs;
 
     private static final int FREQ = 36000;
     private static final int LG_FREQ = 38000;
@@ -38,6 +40,8 @@ public class MainActivity extends Activity {
     @Override protected void onCreate(Bundle b) {
         super.onCreate(b);
         ir=(ConsumerIrManager)getSystemService(CONSUMER_IR_SERVICE);
+        prefs=getSharedPreferences("remote_prefs",MODE_PRIVATE);
+        lgMode=prefs.getBoolean("lg_mode",false);
         build();
     }
 
@@ -87,19 +91,34 @@ public class MainActivity extends Activity {
         root.setPadding(dp(10),dp(8),dp(10),dp(28)); root.setBackgroundColor(BG);
 
         LinearLayout modelRow=row();
-        TextView title=label(lgMode?"LG 32LB620B":"PHILIPS",24);
+        TextView title=label("CONTROLE REMOTO",21);
         title.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
         modelRow.addView(title,new LinearLayout.LayoutParams(0,dp(48),1));
 
-        Button switchTv=new Button(this);
-        switchTv.setText(lgMode?"LG":"PHILIPS"); switchTv.setTextColor(WHITE); switchTv.setTextSize(13);
-        switchTv.setAllCaps(false);
-        GradientDrawable sg=new GradientDrawable(); sg.setColor(KEY); sg.setCornerRadius(dp(16));
-        switchTv.setBackground(sg); switchTv.setOnClickListener(v->{ lgMode=!lgMode; build(); });
-        LinearLayout.LayoutParams sp=new LinearLayout.LayoutParams(dp(100),dp(42));
-        sp.setMargins(dp(4),dp(3),0,dp(3)); switchTv.setLayoutParams(sp);
-        modelRow.addView(switchTv);
+        Spinner selector=new Spinner(this);
+        String[] models={"Philips 50PUG6513/7","LG 32LB620B"};
+        ArrayAdapter<String> adapter=new ArrayAdapter<String>(this,android.R.layout.simple_spinner_dropdown_item,models);
+        selector.setAdapter(adapter);
+        selector.setSelection(lgMode?1:0);
+        selector.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener(){
+            @Override public void onItemSelected(android.widget.AdapterView<?> parent,android.view.View view,int position,long id){
+                boolean newLg=position==1;
+                if(newLg!=lgMode){
+                    lgMode=newLg;
+                    prefs.edit().putBoolean("lg_mode",lgMode).apply();
+                    build();
+                }
+            }
+            @Override public void onNothingSelected(android.widget.AdapterView<?> parent){}
+        });
+        LinearLayout.LayoutParams sp=new LinearLayout.LayoutParams(dp(178),dp(48));
+        sp.setMargins(dp(4),dp(0),0,dp(0)); selector.setLayoutParams(sp);
+        modelRow.addView(selector);
         root.addView(modelRow);
+
+        TextView selected=label(lgMode?"LG • 32LB620B":"PHILIPS • 50PUG6513/7",13);
+        selected.setTextColor(GRAY);
+        root.addView(selected,new LinearLayout.LayoutParams(-1,dp(26)));
 
         LinearLayout r=row();
         Button powerButton=new Button(this); powerButton.setText("");
@@ -161,7 +180,7 @@ public class MainActivity extends Activity {
         add(r,key("▶▶",FAST_FORWARD,50,KEY,19)); root.addView(r);
 
         boolean available=ir!=null&&ir.hasIrEmitter();
-        TextView status=label(available?"●  Emissor IR detectado  •  "+(lgMode?"38":"36")+" kHz":"○  Emissor IR não detectado",12);
+        TextView status=label(available?"●  Emissor IR detectado  •  "+(lgMode?"LG 38":"Philips 36")+" kHz":"○  Emissor IR não detectado",12);
         status.setTextColor(available?Color.rgb(75,145,95):GRAY);
         root.addView(status,new LinearLayout.LayoutParams(-1,dp(38)));
         sv.addView(root); setContentView(sv);
