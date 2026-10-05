@@ -325,10 +325,26 @@ public class MainActivity extends Activity {
                 LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(-1,dp(185)); cp.setMargins(0,dp(8),0,dp(8)); root.addView(card,cp);
             }
         }
+        Button sobre=new Button(this); sobre.setText("ⓘ  SOBRE O APLICATIVO"); sobre.setTextColor(WHITE); sobre.setTextSize(13); sobre.setAllCaps(false);
+        GradientDrawable sobreBg=new GradientDrawable(); sobreBg.setColor(Color.rgb(45,45,50)); sobreBg.setCornerRadius(dp(16)); sobre.setBackground(sobreBg);
+        sobre.setOnClickListener(v->showSobre()); root.addView(sobre,new LinearLayout.LayoutParams(-1,dp(50)));
+
         Button add=new Button(this); add.setText("+  ADICIONAR OUTRO CONTROLE"); add.setTextColor(WHITE); add.setTextSize(13); add.setAllCaps(false);
         GradientDrawable addBg=new GradientDrawable(); addBg.setColor(Color.rgb(55,55,60)); addBg.setCornerRadius(dp(16)); add.setBackground(addBg);
         add.setOnClickListener(v->showAddControlWizard()); root.addView(add,new LinearLayout.LayoutParams(-1,dp(52)));
         sv.addView(root); setContentView(sv);
+    }
+
+    private void showSobre(){
+        String versao="1.2.0";
+        try{
+            android.content.pm.PackageInfo info=getPackageManager().getPackageInfo(getPackageName(),0);
+            if(info.versionName!=null) versao=info.versionName;
+        }catch(Exception ignored){}
+        new android.app.AlertDialog.Builder(this)
+            .setTitle("IR Remote BR")
+            .setMessage("Controle remoto por infravermelho\\n\\nVersão "+versao+"\\n\\nControle TVs compatíveis usando o emissor infravermelho do celular.\\n\\nSeus controles e configurações são armazenados localmente no aparelho.\\n\\nPara transmitir IR, o celular precisa possuir emissor infravermelho compatível.")
+            .setPositiveButton("OK",null).show();
     }
 
     private void showAddControlWizard(){
