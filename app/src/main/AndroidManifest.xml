@@ -7,7 +7,9 @@
 
     <application
         android:theme="@style/AppTheme"
-        android:label="Controle Philips sem anuncios"\n        android:icon="@drawable/app_icon"\n        android:roundIcon="@drawable/app_icon"
+        android:label="Controle Philips sem anuncios"
+        android:icon="@drawable/app_icon"
+        android:roundIcon="@drawable/app_icon"
         android:allowBackup="false"
         android:supportsRtl="true">
 
