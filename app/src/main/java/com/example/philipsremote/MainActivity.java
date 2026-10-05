@@ -104,8 +104,19 @@ public class MainActivity extends Activity {
         root.setGravity(Gravity.CENTER_HORIZONTAL); root.setPadding(dp(18),dp(28),dp(18),dp(30));
         TextView title=label("ESCOLHA O CONTROLE",28); title.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
         root.addView(title,new LinearLayout.LayoutParams(-1,dp(52)));
-        TextView sub=label("Selecione a TV que você quer controlar",15); sub.setTextColor(GRAY);
-        root.addView(sub,new LinearLayout.LayoutParams(-1,dp(34)));
+        TextView sub=label("Seu controle remoto por infravermelho",15); sub.setTextColor(GRAY);
+        root.addView(sub,new LinearLayout.LayoutParams(-1,dp(30)));
+        List<ControleStorage.Controle> salvosHome=controleStorage.listar();
+        TextView resumo=label(salvosHome.isEmpty()?"Nenhum controle salvo":"✓ "+salvosHome.size()+" controle"+(salvosHome.size()>1?"s":"")+" salvo"+(salvosHome.size()>1?"s":""),13);
+        resumo.setTextColor(salvosHome.isEmpty()?GRAY:Color.rgb(75,145,95));
+        root.addView(resumo,new LinearLayout.LayoutParams(-1,dp(30)));
+        if(controleAtivo!=null){
+            TextView ativo=label("CONTROLE ATIVO  •  "+controleAtivo.nome,13);
+            ativo.setTextColor(WHITE);
+            GradientDrawable ativoBg=new GradientDrawable(); ativoBg.setColor(Color.rgb(38,70,48)); ativoBg.setCornerRadius(dp(14)); ativo.setBackground(ativoBg);
+            ativo.setPadding(dp(14),0,dp(14),0);
+            root.addView(ativo,new LinearLayout.LayoutParams(-1,dp(42)));
+        }
         LinearLayout philips=tvCard("PHILIPS","50PUG6513/7",!lgMode,v->{lgMode=false;});
         LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(-1,dp(125)); cp.setMargins(0,dp(28),0,dp(10)); root.addView(philips,cp);
         LinearLayout lg=tvCard("LG","32LB620B",lgMode,v->{lgMode=true;});
