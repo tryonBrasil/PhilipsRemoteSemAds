@@ -216,6 +216,29 @@ public class MainActivity extends Activity {
             Toast.makeText(this,resultado,Toast.LENGTH_SHORT).show();
         });
         LinearLayout.LayoutParams unp=new LinearLayout.LayoutParams(-1,dp(56)); unp.setMargins(dp(4),dp(4),dp(4),dp(6)); root.addView(universalNext,unp);
+        
+        LinearLayout resultRow=row();
+        Button worked=new Button(this);
+        worked.setText("✓  FUNCIONOU");
+        worked.setTextColor(WHITE); worked.setTextSize(13); worked.setAllCaps(false);
+        GradientDrawable workedBg=new GradientDrawable(); workedBg.setColor(Color.rgb(35,105,60)); workedBg.setCornerRadius(dp(14)); worked.setBackground(workedBg);
+        worked.setOnClickListener(v->{
+            String salvo=irPerfilTeste.marcarFuncionou();
+            universalLog.setText("✓ RESULTADO SALVO\n"+salvo);
+            Toast.makeText(this,salvo,Toast.LENGTH_SHORT).show();
+        });
+        resultRow.addView(worked,new LinearLayout.LayoutParams(0,dp(50),1));
+        Button notWorked=new Button(this);
+        notWorked.setText("✕  NÃO FUNCIONOU");
+        notWorked.setTextColor(WHITE); notWorked.setTextSize(13); notWorked.setAllCaps(false);
+        GradientDrawable notBg=new GradientDrawable(); notBg.setColor(Color.rgb(85,50,50)); notBg.setCornerRadius(dp(14)); notWorked.setBackground(notBg);
+        notWorked.setOnClickListener(v->{
+            if(irPerfilTeste.position()>0){
+                universalLog.setText("✕ Não funcionou: código "+String.format("0x%X",irPerfilTeste.currentCode())+" • "+irPerfilTeste.position()+"/"+irPerfilTeste.total());
+            }else universalLog.setText("✕ Nenhum código testado.");
+        });
+        resultRow.addView(notWorked,new LinearLayout.LayoutParams(0,dp(50),1));
+        root.addView(resultRow,new LinearLayout.LayoutParams(-1,dp(54)));
 
         Button resetTest=new Button(this);
         resetTest.setText("↺  REINICIAR PERFIL");
