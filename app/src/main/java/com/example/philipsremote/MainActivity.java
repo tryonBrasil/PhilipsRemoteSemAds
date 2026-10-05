@@ -79,20 +79,20 @@ public class MainActivity extends Activity {
     private void build(){
         ScrollView sv=new ScrollView(this);
         sv.setFillViewport(true);
-        sv.setClipToPadding(false); sv.setBackgroundColor(BG);
+        sv.setClipToPadding(false); sv.setBackgroundColor(BG);\n        getWindow().setStatusBarColor(BG);\n        getWindow().setNavigationBarColor(BG);\n        getWindow().getDecorView().setSystemUiVisibility(0);
 
         LinearLayout root=new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(6,4,6,8);
+        root.setPadding(0,0,0,0);
         root.setBackgroundColor(BG);
 
         // Corpo visual do controle FBG-8049 / LE-7276
         LinearLayout body=new LinearLayout(this);
         body.setOrientation(LinearLayout.VERTICAL);
-        body.setPadding(5,5,5,6);
+        body.setPadding(0,0,0,0);
         GradientDrawable bodyBg=new GradientDrawable();
         bodyBg.setColor(Color.rgb(20,20,20));
-        bodyBg.setCornerRadius(22);
+        bodyBg.setCornerRadius(0);
         body.setBackground(bodyBg);
 
         TextView philips=label("PHILIPS",12);
@@ -172,7 +172,7 @@ public class MainActivity extends Activity {
         status.setTextColor(GRAY);
         body.addView(status,new LinearLayout.LayoutParams(-1,28));
 
-        LinearLayout.LayoutParams bodyParams = new LinearLayout.LayoutParams(-1, 0, 1f);
+        LinearLayout.LayoutParams bodyParams = new LinearLayout.LayoutParams(-1, -1);
         root.addView(body, bodyParams);
         sv.addView(root, new ScrollView.LayoutParams(-1, -1));
         setContentView(sv);
