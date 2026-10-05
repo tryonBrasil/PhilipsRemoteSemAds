@@ -39,43 +39,6 @@ public class MainActivity extends Activity {
         build();
     }
 
-    private TextView label(String s,int sp){
-        TextView t=new TextView(this);
-        t.setText(s); t.setTextColor(WHITE); t.setTextSize(sp);
-        t.setGravity(Gravity.CENTER); return t;
-    }
-
-    private Button key(String text,int cmd,int h){
-        return key(text,cmd,h,KEY,10);
-    }
-
-    private Button key(String text,int cmd,int h,int color,int size){
-        Button b=new Button(this);
-        b.setText(text); b.setTextColor(WHITE); b.setTextSize(size);
-        b.setAllCaps(false); b.setGravity(Gravity.CENTER); b.setPadding(0,0,0,0);
-        b.setMinHeight(0); b.setMinWidth(0); b.setIncludeFontPadding(false);
-        GradientDrawable g=new GradientDrawable(); g.setColor(color); g.setCornerRadius(10);
-        b.setBackground(g);
-        b.setOnClickListener(v->send(cmd));
-        LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,h,1);
-        p.setMargins(3,3,3,3); b.setLayoutParams(p);
-        return b;
-    }
-
-    private LinearLayout row(){
-        LinearLayout r=new LinearLayout(this);
-        r.setOrientation(LinearLayout.HORIZONTAL); r.setGravity(Gravity.CENTER);
-        return r;
-    }
-
-    private void add(LinearLayout r,Button b){r.addView(b);}
-
-    private void section(LinearLayout root,String title){
-        TextView t=label(title,9); t.setTextColor(GRAY);
-        t.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
-        root.addView(t,new LinearLayout.LayoutParams(-1,20));
-    }
-
     private int dp(float v){ return (int)(v*getResources().getDisplayMetrics().density+0.5f); }
 
     private Button key(String text,int cmd,int h){
