@@ -200,6 +200,9 @@ public class MainActivity extends Activity {
         ArrayAdapter<String> adapter=new ArrayAdapter<String>(this,android.R.layout.simple_spinner_item,perfis);
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         perfilSpinner.setAdapter(adapter);
+        int perfilInicial = perfilInicialPara(setupBrand, setupModel, perfis);
+        perfilSpinner.setSelection(perfilInicial);
+        irPerfilTeste.selecionar(perfis[perfilInicial]);
         perfilSpinner.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener(){
             public void onItemSelected(android.widget.AdapterView<?> parent,View view,int position,long id){
                 irPerfilTeste.selecionar(perfis[position]);
@@ -294,6 +297,18 @@ public class MainActivity extends Activity {
         note.setTextColor(GRAY); note.setGravity(Gravity.CENTER);
         root.addView(note,new LinearLayout.LayoutParams(-1,dp(64)));
         sv.addView(root); setContentView(sv);
+    }
+
+    private int perfilInicialPara(String marca,String modelo,String[] perfis){
+        if(marca==null) marca="";
+        String alvo="";
+        if("LG".equalsIgnoreCase(marca)) alvo="LG / NEC";
+        else if("Samsung".equalsIgnoreCase(marca)) alvo="Samsung TV";
+        else if("Sony".equalsIgnoreCase(marca)) alvo="Sony TV";
+        else if("Philips".equalsIgnoreCase(marca)) alvo="Philips / RC6";
+        else if("Ventilador".equalsIgnoreCase(marca)) alvo="LG / NEC";
+        for(int i=0;i<perfis.length;i++) if(perfis[i].equals(alvo)) return i;
+        return 0;
     }
 
     private void showMeusControles(){
