@@ -8,6 +8,7 @@ import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.view.Gravity;
 import android.view.View;
+import android.widget.FrameLayout;
 import android.widget.*;
 import java.util.ArrayList;
 
@@ -71,15 +72,17 @@ public class MainActivity extends Activity {
     private void add(LinearLayout r,Button b){r.addView(b);}
 
     private void section(LinearLayout root,String title){
-        TextView t=label(title,9); t.setTextColor(GRAY);
+        TextView t=label(title,8); t.setTextColor(GRAY);
         t.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
         root.addView(t,new LinearLayout.LayoutParams(-1,20));
     }
 
     private void build(){
-        ScrollView sv=new ScrollView(this);
-        sv.setFillViewport(true);
-        sv.setClipToPadding(false); sv.setBackgroundColor(BG);
+        FrameLayout frame=new FrameLayout(this);
+        frame.setBackgroundColor(BG);
+        LinearLayout sv=new LinearLayout(this);
+        sv.setOrientation(LinearLayout.VERTICAL);
+        sv.setBackgroundColor(BG);
         getWindow().setStatusBarColor(BG);
         getWindow().setNavigationBarColor(BG);
         getWindow().getDecorView().setSystemUiVisibility(0);
@@ -98,62 +101,62 @@ public class MainActivity extends Activity {
         bodyBg.setCornerRadius(0);
         body.setBackground(bodyBg);
 
-        TextView philips=label("PHILIPS",12);
+        TextView philips=label("PHILIPS",11);
         philips.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
-        body.addView(philips,new LinearLayout.LayoutParams(-1,25));
+        body.addView(philips,new LinearLayout.LayoutParams(-1,20));
 
         // Power
         LinearLayout r=row();
-        Button power=key("⏻",POWER,46,KEY_DARK,20);
+        Button power=key("⏻",POWER,38,KEY_DARK,20);
         LinearLayout.LayoutParams pp=(LinearLayout.LayoutParams)power.getLayoutParams();
         pp.weight=1; r.addView(power);
         body.addView(r);
 
         // Transporte: modelo original tem três grupos de teclas
         r=row();
-        add(r,key("◀",REWIND,34)); add(r,key("Ⅱ",PAUSE,34)); add(r,key("●",RECORD,34));
+        add(r,key("◀",REWIND,28)); add(r,key("Ⅱ",PAUSE,28)); add(r,key("●",RECORD,28));
         body.addView(r);
         r=row();
-        add(r,key("◀◀",REWIND,34)); add(r,key("▶",PLAY,34)); add(r,key("▶▶",FAST_FORWARD,34));
+        add(r,key("◀◀",REWIND,28)); add(r,key("▶",PLAY,28)); add(r,key("▶▶",FAST_FORWARD,28));
         body.addView(r);
 
         r=row();
-        add(r,key("TV",SOURCE,34)); add(r,key("⌕",INFO,34)); add(r,key("⚙",SETTINGS,34));
+        add(r,key("TV",SOURCE,28)); add(r,key("⌕",INFO,28)); add(r,key("⚙",SETTINGS,28));
         body.addView(r);
         r=row();
-        add(r,key("TV GUIDE",GUIDE,34)); add(r,key("INFO",INFO,34)); add(r,key("SOURCE",SOURCE,34));
+        add(r,key("TV GUIDE",GUIDE,28)); add(r,key("INFO",INFO,34)); add(r,key("SOURCE",SOURCE,34));
         body.addView(r);
 
         section(body,"SMART TV");
         r=row();
-        add(r,key("SMART",HOME,34)); add(r,key("HOME",HOME,34)); add(r,key("TV",SOURCE,34));
+        add(r,key("SMART",HOME,28)); add(r,key("HOME",HOME,34)); add(r,key("TV",SOURCE,34));
         body.addView(r);
 
         r=row();
-        add(r,key("RED",RED,28,Color.rgb(125,20,20),8));
-        add(r,key("GREEN",GREEN,28,Color.rgb(20,105,45),8));
-        add(r,key("YELLOW",YELLOW,28,Color.rgb(150,120,10),8));
-        add(r,key("BLUE",BLUE,28,Color.rgb(20,70,145),8));
+        add(r,key("RED",RED,24,Color.rgb(125,20,20),8));
+        add(r,key("GREEN",GREEN,24,Color.rgb(20,105,45),8));
+        add(r,key("YELLOW",YELLOW,24,Color.rgb(150,120,10),8));
+        add(r,key("BLUE",BLUE,24,Color.rgb(20,70,145),8));
         body.addView(r);
 
         // Navegação grande, como no controle físico
         LinearLayout nav=new LinearLayout(this);
         nav.setOrientation(LinearLayout.VERTICAL); nav.setGravity(Gravity.CENTER);
         nav.setPadding(22,4,22,3);
-        r=row(); add(r,key("▲",UP,38,Color.rgb(90,90,90),12)); nav.addView(r);
-        r=row(); add(r,key("◀",LEFT,45,Color.rgb(90,90,90),12));
-        add(r,key("OK",OK,45,Color.rgb(105,105,105),11));
-        add(r,key("▶",RIGHT,45,Color.rgb(90,90,90),12)); nav.addView(r);
-        r=row(); add(r,key("▼",DOWN,38,Color.rgb(90,90,90),12)); nav.addView(r);
+        r=row(); add(r,key("▲",UP,32,Color.rgb(90,90,90),12)); nav.addView(r);
+        r=row(); add(r,key("◀",LEFT,36,Color.rgb(90,90,90),12));
+        add(r,key("OK",OK,36,Color.rgb(105,105,105),11));
+        add(r,key("▶",RIGHT,36,Color.rgb(90,90,90),12)); nav.addView(r);
+        r=row(); add(r,key("▼",DOWN,32,Color.rgb(90,90,90),12)); nav.addView(r);
         body.addView(nav);
 
         r=row();
-        add(r,key("↩ BACK",BACK,34)); add(r,key("☰ MENU",MENU,34)); add(r,key("▣ EXIT",EXIT,34));
+        add(r,key("↩ BACK",BACK,28)); add(r,key("☰ MENU",MENU,28)); add(r,key("▣ EXIT",EXIT,28));
         body.addView(r);
 
         // Volume / Netflix / Channel, mesma posição do controle
-        r=row(); add(r,key("VOL +",VOL_UP,34)); add(r,key("NETFLIX",NETFLIX,34,Color.rgb(225,225,225),9)); add(r,key("CH +",CH_UP,34)); body.addView(r);
-        r=row(); add(r,key("VOL −",VOL_DOWN,34)); add(r,key("🔇",MUTE,34)); add(r,key("CH −",CH_DOWN,34)); body.addView(r);
+        r=row(); add(r,key("VOL +",VOL_UP,28)); add(r,key("NETFLIX",NETFLIX,28,Color.rgb(225,225,225),9)); add(r,key("CH +",CH_UP,28)); body.addView(r);
+        r=row(); add(r,key("VOL −",VOL_DOWN,28)); add(r,key("🔇",MUTE,28)); add(r,key("CH −",CH_DOWN,28)); body.addView(r);
 
         section(body,"TECLADO");
         String[][] nums={{"1","2 ABC","3 DEF"},{"4 GHI","5 JKL","6 MNO"},{"7 PQRS","8 TUV","9 WXYZ"},{"CC","0","SUBTITLE"}};
@@ -173,12 +176,13 @@ public class MainActivity extends Activity {
         boolean available=ir!=null&&ir.hasIrEmitter();
         TextView status=label(available?"●  IR disponível • RC6 36 kHz • Sem anúncios":"○  Emissor IR não detectado",9);
         status.setTextColor(GRAY);
-        body.addView(status,new LinearLayout.LayoutParams(-1,28));
+        body.addView(status,new LinearLayout.LayoutParams(-1,20));
 
         LinearLayout.LayoutParams bodyParams = new LinearLayout.LayoutParams(-1, -1);
         root.addView(body, bodyParams);
-        sv.addView(root, new ScrollView.LayoutParams(-1, -1));
-        setContentView(sv);
+        sv.addView(root, new LinearLayout.LayoutParams(-1, -1));
+        frame.addView(sv, new FrameLayout.LayoutParams(-1, -1));
+        setContentView(frame);
     }
 
     private void send(int command){
