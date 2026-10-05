@@ -1,0 +1,12 @@
+PHILIPS REMOTE SEM ADS
+
+GERAR PELO GITHUB:
+1. Abra a aba Actions.
+2. Selecione "Gerar APK".
+3. Clique em "Run workflow".
+4. Aguarde o build terminar.
+5. Abra a execucao concluida.
+6. Em Artifacts, baixe "PhilipsRemoteSemAds-debug".
+7. Extraia o ZIP e instale o app-debug.apk no Redmi Note 12.
+
+O APK e uma versao de teste (debug), sem anuncios.
