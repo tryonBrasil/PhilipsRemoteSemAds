@@ -59,6 +59,11 @@ public class UpdateManager {
         verificar(true);
     }
 
+    /** Verifica atualizações ao retornar para o aplicativo. */
+    public void verificarAoAbrir() {
+        verificar(false);
+    }
+
     private void verificar(boolean manual) {
         executor.execute(() -> {
             HttpURLConnection connection = null;
