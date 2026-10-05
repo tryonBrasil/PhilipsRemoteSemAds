@@ -78,20 +78,21 @@ public class MainActivity extends Activity {
 
     private void build(){
         ScrollView sv=new ScrollView(this);
-        sv.setFillViewport(true); sv.setBackgroundColor(BG);
+        sv.setFillViewport(true);
+        sv.setClipToPadding(false); sv.setBackgroundColor(BG);
 
         LinearLayout root=new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(10,8,10,16);
+        root.setPadding(6,4,6,8);
         root.setBackgroundColor(BG);
 
         // Corpo visual do controle FBG-8049 / LE-7276
         LinearLayout body=new LinearLayout(this);
         body.setOrientation(LinearLayout.VERTICAL);
-        body.setPadding(8,8,8,10);
+        body.setPadding(5,5,5,6);
         GradientDrawable bodyBg=new GradientDrawable();
         bodyBg.setColor(Color.rgb(20,20,20));
-        bodyBg.setCornerRadius(32);
+        bodyBg.setCornerRadius(22);
         body.setBackground(bodyBg);
 
         TextView philips=label("PHILIPS",12);
@@ -171,8 +172,10 @@ public class MainActivity extends Activity {
         status.setTextColor(GRAY);
         body.addView(status,new LinearLayout.LayoutParams(-1,28));
 
-        root.addView(body,new LinearLayout.LayoutParams(-1,-2));
-        sv.addView(root); setContentView(sv);
+        LinearLayout.LayoutParams bodyParams = new LinearLayout.LayoutParams(-1, 0, 1f);
+        root.addView(body, bodyParams);
+        sv.addView(root, new ScrollView.LayoutParams(-1, -1));
+        setContentView(sv);
     }
 
     private void send(int command){
