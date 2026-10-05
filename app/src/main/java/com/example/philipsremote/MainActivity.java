@@ -7,18 +7,20 @@ import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.view.Gravity;
-import android.view.View;
 import android.widget.*;
 import java.util.ArrayList;
 
 public class MainActivity extends Activity {
     private ConsumerIrManager ir;
     private boolean toggle = false;
+    private boolean lgMode = false;
 
     private static final int FREQ = 36000;
+    private static final int LG_FREQ = 38000;
     private static final int UNIT = 444;
+    private static final int LG_UNIT = 560;
+
     private static final int BG = Color.rgb(12,12,12);
-    private static final int PANEL = Color.rgb(27,27,27);
     private static final int KEY = Color.rgb(48,48,48);
     private static final int KEY_DARK = Color.rgb(34,34,34);
     private static final int WHITE = Color.WHITE;
@@ -35,186 +37,134 @@ public class MainActivity extends Activity {
 
     @Override protected void onCreate(Bundle b) {
         super.onCreate(b);
-        ir=(ConsumerIrManager)getSystemService(CONSUMER_IR_SERVICE);
+        ir=(ConsumerIrManager)getSystemService(CONSUMER_SERVICE);
         build();
     }
 
     private int dp(float v){ return (int)(v*getResources().getDisplayMetrics().density+0.5f); }
 
-    private Button key(String text,int cmd,int h){
-        return key(text,cmd,h,KEY,16);
-    }
+    private Button key(String text,int cmd,int h){ return key(text,cmd,h,KEY,16); }
 
     private Button key(String text,int cmd,int h,int color,int size){
         Button b=new Button(this);
-        b.setText(text);
-        b.setTextColor(WHITE);
-        b.setTextSize(size);
-        b.setAllCaps(false);
-        b.setGravity(Gravity.CENTER);
-        b.setPadding(0,0,0,0);
-        b.setMinHeight(0); b.setMinWidth(0);
-        b.setIncludeFontPadding(false);
+        b.setText(text); b.setTextColor(WHITE); b.setTextSize(size);
+        b.setAllCaps(false); b.setGravity(Gravity.CENTER); b.setPadding(0,0,0,0);
+        b.setMinHeight(0); b.setMinWidth(0); b.setIncludeFontPadding(false);
         GradientDrawable g=new GradientDrawable();
-        g.setColor(color);
-        g.setCornerRadius(dp(18));
-        g.setStroke(dp(1),Color.rgb(55,55,58));
-        b.setBackground(g);
+        g.setColor(color); g.setCornerRadius(dp(18));
+        g.setStroke(dp(1),Color.rgb(55,55,58)); b.setBackground(g);
         b.setOnClickListener(v->send(cmd));
         LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,dp(h),1);
-        p.setMargins(dp(4),dp(4),dp(4),dp(4));
-        b.setLayoutParams(p);
+        p.setMargins(dp(4),dp(4),dp(4),dp(4)); b.setLayoutParams(p);
         return b;
     }
 
     private TextView label(String s,int sp){
-        TextView t=new TextView(this);
-        t.setText(s); t.setTextColor(WHITE); t.setTextSize(sp);
-        t.setGravity(Gravity.CENTER);
-        t.setIncludeFontPadding(false);
+        TextView t=new TextView(this); t.setText(s); t.setTextColor(WHITE);
+        t.setTextSize(sp); t.setGravity(Gravity.CENTER); t.setIncludeFontPadding(false);
         return t;
     }
 
     private LinearLayout row(){
-        LinearLayout r=new LinearLayout(this);
-        r.setOrientation(LinearLayout.HORIZONTAL);
-        r.setGravity(Gravity.CENTER);
-        return r;
+        LinearLayout r=new LinearLayout(this); r.setOrientation(LinearLayout.HORIZONTAL);
+        r.setGravity(Gravity.CENTER); return r;
     }
 
     private void add(LinearLayout r,Button b){ r.addView(b); }
 
     private void section(LinearLayout root,String title){
-        TextView t=label(title,13);
-        t.setTextColor(GRAY);
-        t.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
-        t.setLetterSpacing(.03f);
+        TextView t=label(title,13); t.setTextColor(GRAY);
+        t.setTypeface(Typeface.DEFAULT,Typeface.BOLD); t.setLetterSpacing(.03f);
         LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,dp(34));
-        p.setMargins(0,dp(7),0,0);
-        root.addView(t,p);
+        p.setMargins(0,dp(7),0,0); root.addView(t,p);
     }
 
     private void build(){
-        ScrollView sv=new ScrollView(this);
-        sv.setFillViewport(true);
-        sv.setBackgroundColor(BG);
-        sv.setClipToPadding(false);
+        ScrollView sv=new ScrollView(this); sv.setFillViewport(true);
+        sv.setBackgroundColor(BG); sv.setClipToPadding(false);
 
-        LinearLayout root=new LinearLayout(this);
-        root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(dp(10),dp(8),dp(10),dp(28));
-        root.setBackgroundColor(BG);
+        LinearLayout root=new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL);
+        root.setPadding(dp(10),dp(8),dp(10),dp(28)); root.setBackgroundColor(BG);
 
-        TextView title=label("PHILIPS",24);
+        LinearLayout modelRow=row();
+        TextView title=label(lgMode?"LG 32LB620B":"PHILIPS",24);
         title.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
-        root.addView(title,new LinearLayout.LayoutParams(-1,dp(48)));
+        modelRow.addView(title,new LinearLayout.LayoutParams(0,dp(48),1));
 
-        // Power — custom artwork
+        Button switchTv=new Button(this);
+        switchTv.setText(lgMode?"LG":"PHILIPS"); switchTv.setTextColor(WHITE); switchTv.setTextSize(13);
+        switchTv.setAllCaps(false);
+        GradientDrawable sg=new GradientDrawable(); sg.setColor(KEY); sg.setCornerRadius(dp(16));
+        switchTv.setBackground(sg); switchTv.setOnClickListener(v->{ lgMode=!lgMode; build(); });
+        LinearLayout.LayoutParams sp=new LinearLayout.LayoutParams(dp(100),dp(42));
+        sp.setMargins(dp(4),dp(3),0,dp(3)); switchTv.setLayoutParams(sp);
+        modelRow.addView(switchTv);
+        root.addView(modelRow);
+
         LinearLayout r=row();
-        Button powerButton=new Button(this);
-        powerButton.setText("");
-        powerButton.setBackgroundResource(R.drawable.power_button);
-        powerButton.setPadding(0,0,0,0);
+        Button powerButton=new Button(this); powerButton.setText("");
+        powerButton.setBackgroundResource(R.drawable.power_button); powerButton.setPadding(0,0,0,0);
         powerButton.setContentDescription("Ligar ou desligar a TV");
         powerButton.setOnClickListener(v->send(POWER));
         LinearLayout.LayoutParams powerParams=new LinearLayout.LayoutParams(dp(82),dp(82));
-        powerParams.setMargins(dp(4),dp(2),dp(4),dp(2));
-        powerButton.setLayoutParams(powerParams);
-        r.addView(powerButton);
-        root.addView(r);
+        powerParams.setMargins(dp(4),dp(2),dp(4),dp(2)); powerButton.setLayoutParams(powerParams);
+        r.addView(powerButton); root.addView(r);
 
-        // SOURCE / INFO / SETTINGS
         r=row();
-        add(r,key("SOURCE",SOURCE,50,KEY,16));
-        add(r,key("INFO",INFO,50,KEY,16));
-        add(r,key("⚙",SETTINGS,50,KEY,25));
-        root.addView(r);
+        add(r,key("SOURCE",SOURCE,50,KEY,16)); add(r,key("INFO",INFO,50,KEY,16));
+        add(r,key("⚙",SETTINGS,50,KEY,25)); root.addView(r);
 
-        // GUIDE / HOME / NETFLIX
         r=row();
-        add(r,key("GUIDE",GUIDE,50,KEY,16));
-        add(r,key("HOME",HOME,50,KEY,16));
-        add(r,key("NETFLIX",NETFLIX,50,KEY,16));
-        root.addView(r);
+        add(r,key("GUIDE",GUIDE,50,KEY,16)); add(r,key("HOME",HOME,50,KEY,16));
+        add(r,key(lgMode?"SMART":"NETFLIX",NETFLIX,50,KEY,16)); root.addView(r);
 
         section(root,"NAVEGAÇÃO");
-
-        LinearLayout nav=new LinearLayout(this);
-        nav.setOrientation(LinearLayout.VERTICAL);
-        nav.setGravity(Gravity.CENTER);
-        nav.setPadding(dp(42),dp(8),dp(42),dp(8));
-        GradientDrawable navBg=new GradientDrawable();
-        navBg.setColor(Color.rgb(26,26,28));
-        navBg.setCornerRadius(dp(26));
-        navBg.setStroke(dp(1),Color.rgb(55,55,58));
-        nav.setBackground(navBg);
-        LinearLayout.LayoutParams np=new LinearLayout.LayoutParams(-1,-2);
-        np.setMargins(dp(3),dp(2),dp(3),dp(2));
-        nav.setLayoutParams(np);
+        LinearLayout nav=new LinearLayout(this); nav.setOrientation(LinearLayout.VERTICAL);
+        nav.setGravity(Gravity.CENTER); nav.setPadding(dp(42),dp(8),dp(42),dp(8));
+        GradientDrawable navBg=new GradientDrawable(); navBg.setColor(Color.rgb(26,26,28));
+        navBg.setCornerRadius(dp(26)); navBg.setStroke(dp(1),Color.rgb(55,55,58));
+        nav.setBackground(navBg); LinearLayout.LayoutParams np=new LinearLayout.LayoutParams(-1,-2);
+        np.setMargins(dp(3),dp(2),dp(3),dp(2)); nav.setLayoutParams(np);
 
         r=row(); add(r,key("▲",UP,56,Color.rgb(60,61,70),22)); nav.addView(r);
-        r=row();
-        add(r,key("◀",LEFT,64,Color.rgb(60,61,70),22));
+        r=row(); add(r,key("◀",LEFT,64,Color.rgb(60,61,70),22));
         add(r,key("OK",OK,64,Color.rgb(60,61,70),18));
-        add(r,key("▶",RIGHT,64,Color.rgb(60,61,70),22));
-        nav.addView(r);
+        add(r,key("▶",RIGHT,64,Color.rgb(60,61,70),22)); nav.addView(r);
         r=row(); add(r,key("▼",DOWN,56,Color.rgb(60,61,70),22)); nav.addView(r);
         root.addView(nav);
 
-        r=row();
-        add(r,key("↩  BACK",BACK,50,KEY,16));
-        add(r,key("☰  MENU",MENU,50,KEY,16));
-        add(r,key("EXIT",EXIT,50,KEY,16));
-        root.addView(r);
+        r=row(); add(r,key("↩  BACK",BACK,50,KEY,16));
+        add(r,key("☰  MENU",MENU,50,KEY,16)); add(r,key("EXIT",EXIT,50,KEY,16)); root.addView(r);
 
         section(root,"VOLUME E CANAIS");
-        r=row();
-        add(r,key("📡 VOL +",VOL_UP,50,KEY,16));
-        add(r,key("🔇",MUTE,50,KEY,20));
-        add(r,key("CH +  +",CH_UP,50,KEY,16));
-        root.addView(r);
-        r=row();
-        add(r,key("📡 VOL −",VOL_DOWN,50,KEY,16));
-        add(r,key("TV",SOURCE,50,KEY,16));
-        add(r,key("CH −  −",CH_DOWN,50,KEY,16));
-        root.addView(r);
+        r=row(); add(r,key("📡 VOL +",VOL_UP,50,KEY,16)); add(r,key("🔇",MUTE,50,KEY,20));
+        add(r,key("CH +  +",CH_UP,50,KEY,16)); root.addView(r);
+        r=row(); add(r,key("📡 VOL −",VOL_DOWN,50,KEY,16)); add(r,key("TV",SOURCE,50,KEY,16));
+        add(r,key("CH −  −",CH_DOWN,50,KEY,16)); root.addView(r);
 
         section(root,"SMART TV");
-        r=row();
-        add(r,key("RED",RED,50,Color.rgb(145,18,18),14));
+        r=row(); add(r,key("RED",RED,50,Color.rgb(145,18,18),14));
         add(r,key("GREEN",GREEN,50,Color.rgb(18,118,48),14));
         add(r,key("YELLOW",YELLOW,50,Color.rgb(166,132,8),14));
-        add(r,key("BLUE",BLUE,50,Color.rgb(24,78,155),14));
-        root.addView(r);
+        add(r,key("BLUE",BLUE,50,Color.rgb(24,78,155),14)); root.addView(r);
 
         section(root,"TECLADO");
         String[][] nums={{"1","2 ABC","3 DEF"},{"4 GHI","5 JKL","6 MNO"},{"7 PQRS","8 TUV","9 WXYZ"},{"CC","0","SUBTITLE"}};
         int[][] cmds={{1,2,3},{4,5,6},{7,8,9},{0,0x3C,SUBTITLE}};
-        for(int i=0;i<nums.length;i++){
-            r=row();
-            for(int j=0;j<3;j++){
-                int fs=(i==0&&j==0)?20:14;
-                add(r,key(nums[i][j],cmds[i][j],50,KEY_DARK,fs));
-            }
-            root.addView(r);
-        }
+        for(int i=0;i<nums.length;i++){ r=row(); for(int j=0;j<3;j++){
+            int fs=(i==0&&j==0)?20:14; add(r,key(nums[i][j],cmds[i][j],50,KEY_DARK,fs));
+        } root.addView(r); }
 
         section(root,"CONTROLE DE MÍDIA");
-        r=row();
-        add(r,key("◀◀",REWIND,50,KEY,19));
-        add(r,key("▶",PLAY,50,KEY,19));
-        add(r,key("Ⅱ",PAUSE,50,KEY,19));
-        add(r,key("■",STOP,50,KEY,19));
-        add(r,key("▶▶",FAST_FORWARD,50,KEY,19));
-        root.addView(r);
+        r=row(); add(r,key("◀◀",REWIND,50,KEY,19)); add(r,key("▶",PLAY,50,KEY,19));
+        add(r,key("Ⅱ",PAUSE,50,KEY,19)); add(r,key("■",STOP,50,KEY,19));
+        add(r,key("▶▶",FAST_FORWARD,50,KEY,19)); root.addView(r);
 
         boolean available=ir!=null&&ir.hasIrEmitter();
-        TextView status=label(available?"●  Emissor IR detectado  •  36 kHz":"○  Emissor IR não detectado",12);
+        TextView status=label(available?"●  Emissor IR detectado  •  "+(lgMode?"38":"36")+" kHz":"○  Emissor IR não detectado",12);
         status.setTextColor(available?Color.rgb(75,145,95):GRAY);
         root.addView(status,new LinearLayout.LayoutParams(-1,dp(38)));
-
-        sv.addView(root);
-        setContentView(sv);
+        sv.addView(root); setContentView(sv);
     }
 
     private void send(int command){
@@ -222,11 +172,42 @@ public class MainActivity extends Activity {
             Toast.makeText(this,"Este telemóvel não possui emissor IR.",Toast.LENGTH_SHORT).show(); return;
         }
         try{
-            toggle=!toggle;
-            ir.transmit(FREQ,rc6(0x00,command,toggle));
+            if(lgMode) ir.transmit(LG_FREQ,lgNec(command));
+            else { toggle=!toggle; ir.transmit(FREQ,rc6(0x00,command,toggle)); }
         }catch(Exception e){
             Toast.makeText(this,"Falha ao enviar IR: "+e.getMessage(),Toast.LENGTH_SHORT).show();
         }
+    }
+
+    private int lgCode(int c){
+        switch(c){
+            case POWER:return 0x08; case MUTE:return 0x09; case VOL_UP:return 0x02; case VOL_DOWN:return 0x03;
+            case CH_UP:return 0x00; case CH_DOWN:return 0x01; case UP:return 0x40; case DOWN:return 0x41;
+            case LEFT:return 0x07; case RIGHT:return 0x06; case OK:return 0x44; case BACK:return 0x28;
+            case MENU:return 0x43; case HOME:return 0x43; case SOURCE:return 0x0B; case INFO:return 0xAA;
+            case GUIDE:return 0xAB; case SETTINGS:return 0x43; case RED:return 0x72; case GREEN:return 0x71;
+            case YELLOW:return 0x63; case BLUE:return 0x61; case PLAY:return 0xB0; case STOP:return 0xB1;
+            case PAUSE:return 0xBA; case REWIND:return 0x8F; case FAST_FORWARD:return 0x8E;
+            case SUBTITLE:return 0x39; case EXIT:return 0x5B; case NETFLIX:return 0xB5;
+            case 0x3C:return 0x10; case 0:return 0x10;
+            case 1:return 0x11; case 2:return 0x12; case 3:return 0x13; case 4:return 0x14;
+            case 5:return 0x15; case 6:return 0x16; case 7:return 0x17; case 8:return 0x18; case 9:return 0x19;
+            default:return c & 0xFF;
+        }
+    }
+
+    private int[] lgNec(int command){
+        int data=lgCode(command)&0xFF;
+        int[] bytes={0x04,0xFB,data,(~data)&0xFF};
+        ArrayList<Integer> p=new ArrayList<>();
+        append(p,true,9000); append(p,false,4500);
+        for(int b:bytes) for(int m=1;m<=0x80;m<<=1){
+            append(p,true,LG_UNIT);
+            append(p,false,(b&m)!=0?1690:560);
+        }
+        append(p,true,LG_UNIT); append(p,false,20000);
+        int[] out=new int[p.size()]; for(int i=0;i<p.size();i++) out[i]=p.get(i);
+        return out;
     }
 
     private int[] rc6(int address,int command,boolean tog){
@@ -252,5 +233,4 @@ public class MainActivity extends Activity {
         if(expectedMark==mark){int i=p.size()-1;p.set(i,p.get(i)+duration);}
         else p.add(duration);
     }
-                                       }
-                  
+}
