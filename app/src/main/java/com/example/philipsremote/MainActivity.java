@@ -22,6 +22,7 @@ public class MainActivity extends Activity {
     private boolean showingSelector = true;
     private SharedPreferences prefs;
     private ControleStorage controleStorage;
+    private ControleStorage.Controle controleAtivo;
 
     private static final int FREQ = 36000;
     private static final int LG_FREQ = 38000;
@@ -321,8 +322,10 @@ public class MainActivity extends Activity {
                 Button abrir=new Button(this); abrir.setText("ABRIR CONTROLE"); abrir.setTextColor(WHITE); abrir.setTextSize(12); abrir.setAllCaps(false);
                 GradientDrawable ab=new GradientDrawable(); ab.setColor(Color.rgb(55,80,55)); ab.setCornerRadius(dp(12)); abrir.setBackground(ab);
                 abrir.setOnClickListener(v->{
+                    controleAtivo=c;
                     if("Ventilador".equals(c.categoria)){ fanMode=true; lgMode=false; buildFan(); }
                     else { fanMode=false; lgMode="LG".equals(c.marca); build(); }
+                    Toast.makeText(this,"Controle "+c.nome+" carregado",Toast.LENGTH_SHORT).show();
                 });
                 card.addView(abrir,new LinearLayout.LayoutParams(-1,dp(46)));
                 LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(-1,dp(140)); cp.setMargins(0,dp(8),0,dp(8)); root.addView(card,cp);
@@ -429,7 +432,10 @@ public class MainActivity extends Activity {
         }
         try{
             int code = (command==FAN_POWER) ? FAN_IR_POWER_ON : -1;
-            if(code>=0){
+            if(command==FAN_POWER && controleAtivo!=null && controleAtivo.codigo>=0){
+                boolean ok=irPerfilTeste.transmitirSalvo(controleAtivo.perfil,controleAtivo.codigo);
+                Toast.makeText(this,ok?"Código salvo enviado":"Não foi possível enviar o código salvo",Toast.LENGTH_SHORT).show();
+            } else if(code>=0){
                 ir.transmit(LG_FREQ, fanLgFrame(code));
                 Toast.makeText(this,"Ventilador: LG 0x18 enviado (LIGA)",Toast.LENGTH_SHORT).show();
             } else {
@@ -446,6 +452,11 @@ public class MainActivity extends Activity {
             Toast.makeText(this,"Este telemóvel não possui emissor IR.",Toast.LENGTH_SHORT).show(); return;
         }
         try{
+            if(command==POWER && controleAtivo!=null && controleAtivo.codigo>=0){
+                boolean ok=irPerfilTeste.transmitirSalvo(controleAtivo.perfil,controleAtivo.codigo);
+                if(!ok) Toast.makeText(this,"Não foi possível enviar o código salvo",Toast.LENGTH_SHORT).show();
+                return;
+            }
             if(lgMode) ir.transmit(LG_FREQ,lgNec(command));
             else { toggle=!toggle; ir.transmit(FREQ,rc6(0x00,command,toggle)); }
         }catch(Exception e){
