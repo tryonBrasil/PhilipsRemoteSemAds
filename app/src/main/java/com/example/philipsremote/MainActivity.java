@@ -414,7 +414,6 @@ public class MainActivity extends Activity {
             .setMessage("Vamos configurar seu aparelho passo a passo.")
             .setItems(categorias,(d,which)->{
                 if(which==0) showBrandWizard();
-                else showFanModelWizard();
             }).setNegativeButton("CANCELAR",null).show();
     }
 
