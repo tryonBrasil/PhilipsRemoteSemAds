@@ -103,6 +103,19 @@ public class ControleStorage {
         }catch(Exception e){return 0;}
     }
 
+    public void excluir(Controle controle){
+        if(controle==null) return;
+        try{
+            JSONArray a=ler(), novo=new JSONArray();
+            for(int i=0;i<a.length();i++){
+                JSONObject o=a.getJSONObject(i);
+                long oid=o.optLong("id",o.optLong("created",0));
+                if(oid!=controle.id) novo.put(o);
+            }
+            prefs.edit().putString(KEY,novo.toString()).apply();
+        }catch(Exception ignored){}
+    }
+
     public void limpar(){ prefs.edit().remove(KEY).apply(); }
     private JSONArray ler(){
         try{return new JSONArray(prefs.getString(KEY,"[]"));}catch(Exception e){return new JSONArray();}
