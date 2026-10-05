@@ -106,42 +106,24 @@ public class MainActivity extends Activity {
         ScrollView sv=new ScrollView(this); sv.setFillViewport(true); sv.setBackgroundColor(BG);
         LinearLayout root=new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL);
         root.setGravity(Gravity.CENTER_HORIZONTAL); root.setPadding(dp(18),dp(28),dp(18),dp(30));
-
         TextView title=label("ESCOLHA O CONTROLE",28); title.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
         root.addView(title,new LinearLayout.LayoutParams(-1,dp(52)));
-        TextView sub=label("Selecione o aparelho que você quer controlar",15); sub.setTextColor(GRAY);
+        TextView sub=label("Selecione a TV que você quer controlar",15); sub.setTextColor(GRAY);
         root.addView(sub,new LinearLayout.LayoutParams(-1,dp(34)));
-
-        LinearLayout philips=tvCard("PHILIPS","50PUG6513/7",!lgMode && !fanMode, v->{lgMode=false; fanMode=false;});
+        LinearLayout philips=tvCard("PHILIPS","50PUG6513/7",!lgMode,v->{lgMode=false;fanMode=false;});
         LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(-1,dp(125)); cp.setMargins(0,dp(28),0,dp(10)); root.addView(philips,cp);
-        LinearLayout lg=tvCard("LG","32LB620B",lgMode, v->{lgMode=true; fanMode=false;});
+        LinearLayout lg=tvCard("LG","32LB620B",lgMode,v->{lgMode=true;fanMode=false;});
         LinearLayout.LayoutParams cl=new LinearLayout.LayoutParams(-1,dp(125)); cl.setMargins(0,dp(10),0,dp(24)); root.addView(lg,cl);
-
-        LinearLayout fan=tvCard("VENTILADOR","PW-789 • LE-7507",fanMode, v->{fanMode=true; lgMode=false;});
-        LinearLayout.LayoutParams cf=new LinearLayout.LayoutParams(-1,dp(125)); cf.setMargins(0,dp(10),0,dp(24)); root.addView(fan,cf);
-
-        TextView chosen=label(fanMode?"✓ Ventilador PW-789":(lgMode?"✓ LG 32LB620B":"✓ Philips 50PUG6513/7"),15); chosen.setTextColor(Color.rgb(75,145,95));
+        TextView chosen=label(lgMode?"✓ LG 32LB620B":"✓ Philips 50PUG6513/7",15); chosen.setTextColor(Color.rgb(75,145,95));
         root.addView(chosen,new LinearLayout.LayoutParams(-1,dp(34)));
-
         Button continueBtn=new Button(this); continueBtn.setText("CONTINUAR"); continueBtn.setTextColor(WHITE); continueBtn.setTextSize(17); continueBtn.setAllCaps(false);
-        GradientDrawable bg=new GradientDrawable(); bg.setColor(Color.rgb(190,24,32)); bg.setCornerRadius(dp(18)); continueBtn.setBackground(bg); continueBtn.setOnClickListener(v->{
-            prefs.edit().putBoolean("lg_mode",lgMode).apply(); showingSelector=false; if(fanMode) buildFan(); else build();
-        });
-        LinearLayout.LayoutParams bp=new LinearLayout.LayoutParams(-1,dp(58)); bp.setMargins(dp(4),dp(10),dp(4),0); root.addView(continueBtn,bp);
-
-        TextView info=label("A escolha ficará salva para a próxima vez.",12); info.setTextColor(GRAY);
-        root.addView(info,new LinearLayout.LayoutParams(-1,dp(42)));
-
-        Button meus=new Button(this);
-        meus.setText("★  MEUS CONTROLES");
-        meus.setTextColor(WHITE); meus.setTextSize(14); meus.setAllCaps(false);
-        GradientDrawable meusBg=new GradientDrawable(); meusBg.setColor(KEY_DARK); meusBg.setCornerRadius(dp(16)); meus.setBackground(meusBg);
-        meus.setOnClickListener(v->showMeusControles());
-        root.addView(meus,new LinearLayout.LayoutParams(-1,dp(52)));
-
-        sv.addView(root); setContentView(sv);
+        GradientDrawable bg=new GradientDrawable(); bg.setColor(Color.rgb(190,24,32)); bg.setCornerRadius(dp(18)); continueBtn.setBackground(bg); continueBtn.setOnClickListener(v->{prefs.edit().putBoolean("lg_mode",lgMode).apply();showingSelector=false;build();});
+        root.addView(continueBtn,new LinearLayout.LayoutParams(-1,dp(58)));
+        TextView info=label("A escolha ficará salva para a próxima vez.",12); info.setTextColor(GRAY); root.addView(info,new LinearLayout.LayoutParams(-1,dp(42)));
+        Button meus=new Button(this); meus.setText("★  MEUS CONTROLES"); meus.setTextColor(WHITE); meus.setTextSize(14); meus.setAllCaps(false);
+        GradientDrawable meusBg=new GradientDrawable(); meusBg.setColor(KEY_DARK); meusBg.setCornerRadius(dp(16)); meus.setBackground(meusBg); meus.setOnClickListener(v->showMeusControles());
+        root.addView(meus,new LinearLayout.LayoutParams(-1,dp(52))); sv.addView(root); setContentView(sv);
     }
-
     private LinearLayout tvCard(String brand,String model,boolean selected,View.OnClickListener click){
         LinearLayout card=new LinearLayout(this); card.setOrientation(LinearLayout.VERTICAL); card.setGravity(Gravity.CENTER_VERTICAL); card.setPadding(dp(20),dp(10),dp(20),dp(10));
         GradientDrawable bg=new GradientDrawable(); bg.setColor(selected?Color.rgb(42,42,48):Color.rgb(27,27,30)); bg.setCornerRadius(dp(20)); bg.setStroke(dp(2),selected?Color.rgb(210,30,38):Color.rgb(55,55,58)); card.setBackground(bg);
@@ -416,7 +398,7 @@ public class MainActivity extends Activity {
     }
 
     private void showAddControlWizard(){
-        final String[] categorias={"TV","Ventilador"};
+        final String[] categorias={"TV"};
         new android.app.AlertDialog.Builder(this)
             .setTitle("Adicionar controle")
             .setMessage("Vamos configurar seu aparelho passo a passo.")
@@ -451,18 +433,6 @@ public class MainActivity extends Activity {
             .setMessage("Agora abra o controle e use o TESTE UNIVERSAL para encontrar o código correto. Quando funcionar, toque em ✓ FUNCIONOU e salve o controle.")
             .setNegativeButton("CANCELAR",null)
             .setPositiveButton("ABRIR CONTROLE",(d,w)->build()).show();
-    }
-
-    private void showFanModelWizard(){
-        final String[] modelos={"PW-789","LE-7507","SKY-9200","Outro modelo"};
-        new android.app.AlertDialog.Builder(this).setTitle("1 de 2 • Modelo do ventilador")
-            .setItems(modelos,(d,w)->{
-                fanMode=true; lgMode=false; controleAtivo=null;
-                setupBrand="Ventilador"; setupModel=modelos[w];
-                new android.app.AlertDialog.Builder(this).setTitle("2 de 2 • Testar controle")
-                    .setMessage("Use o TESTE UNIVERSAL para testar os protocolos disponíveis. Quando encontrar um comando que funcione, toque em ✓ FUNCIONOU para salvar.")
-                    .setNegativeButton("CANCELAR",null).setPositiveButton("ABRIR CONTROLE",(x,y)->buildFan()).show();
-            }).setNegativeButton("VOLTAR",(x,y)->showAddControlWizard()).show();
     }
 
     private void build(){
