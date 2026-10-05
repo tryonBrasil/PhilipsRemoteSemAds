@@ -36,7 +36,7 @@ public class MainActivity extends Activity {
 
     @Override protected void onCreate(Bundle b) {
         super.onCreate(b);
-        ir = (ConsumerIrManager) getSystemService(CONSUMER_SERVICE);
+        ir = (ConsumerIrManager) getSystemService(CONSUMER_IR_SERVICE);
         buildUi();
     }
 
