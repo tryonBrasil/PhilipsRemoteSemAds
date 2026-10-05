@@ -14,6 +14,7 @@ import java.util.ArrayList;
 
 public class MainActivity extends Activity {
     private ConsumerIrManager ir;
+    private FanIrTeste fanTeste;
     private boolean toggle = false;
     private boolean lgMode = false;
     private boolean fanMode = false;
@@ -48,6 +49,7 @@ public class MainActivity extends Activity {
     @Override protected void onCreate(Bundle b) {
         super.onCreate(b);
         ir=(ConsumerIrManager)getSystemService(CONSUMER_IR_SERVICE);
+        fanTeste=new FanIrTeste(this, ir);
         prefs=getSharedPreferences("remote_prefs",MODE_PRIVATE);
         lgMode=prefs.getBoolean("lg_mode",false);
         showSelector();
@@ -170,7 +172,20 @@ public class MainActivity extends Activity {
         section(root,"STATUS IR");
         TextView status=label("●  PW-789 selecionado  •  emissor IR: "+(ir!=null&&ir.hasIrEmitter()?"detectado":"não detectado"),12);
         status.setTextColor(ir!=null&&ir.hasIrEmitter()?Color.rgb(75,145,95):GRAY); root.addView(status,new LinearLayout.LayoutParams(-1,dp(38)));
-        TextView note=label("Os comandos específicos do PW-789/LE-7507 não estão publicados em uma tabela IR confiável. A interface foi preparada sem alterar o controle da TV.",11); note.setTextColor(GRAY); note.setGravity(Gravity.CENTER); root.addView(note,new LinearLayout.LayoutParams(-1,dp(54)));
+        Button testNext=new Button(this); testNext.setText("🧪  TESTAR PRÓXIMO CÓDIGO"); testNext.setTextColor(WHITE); testNext.setTextSize(14); testNext.setAllCaps(false);
+        GradientDrawable testBg=new GradientDrawable(); testBg.setColor(Color.rgb(45,65,90)); testBg.setCornerRadius(dp(16)); testNext.setBackground(testBg);
+        testNext.setOnClickListener(v->{
+            String nome=fanTeste.next();
+            Toast.makeText(this,"Teste enviado: "+nome,Toast.LENGTH_LONG).show();
+        });
+        LinearLayout.LayoutParams tp=new LinearLayout.LayoutParams(-1,dp(54)); tp.setMargins(dp(4),dp(4),dp(4),dp(6)); root.addView(testNext,tp);
+
+        Button resetTest=new Button(this); resetTest.setText("↺  REINICIAR TESTES"); resetTest.setTextColor(WHITE); resetTest.setTextSize(13); resetTest.setAllCaps(false);
+        GradientDrawable resetBg=new GradientDrawable(); resetBg.setColor(KEY_DARK); resetBg.setCornerRadius(dp(16)); resetTest.setBackground(resetBg);
+        resetTest.setOnClickListener(v->{ fanTeste.reset(); Toast.makeText(this,"Sequência de testes reiniciada.",Toast.LENGTH_SHORT).show(); });
+        LinearLayout.LayoutParams rp=new LinearLayout.LayoutParams(-1,dp(48)); rp.setMargins(dp(4),0,dp(4),dp(4)); root.addView(resetTest,rp);
+
+        TextView note=label("Os códigos abaixo são candidatos experimentais: não foram identificados publicamente como o protocolo original do PW-789/LE-7507. O botão envia um por vez para você testar no ventilador.",11); note.setTextColor(GRAY); note.setGravity(Gravity.CENTER); root.addView(note,new LinearLayout.LayoutParams(-1,dp(54)));
         sv.addView(root); setContentView(sv);
     }
 
