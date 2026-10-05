@@ -14,8 +14,7 @@ import java.util.ArrayList;
 
 public class MainActivity extends Activity {
     private ConsumerIrManager ir;
-    private FanIrTeste fanTeste;
-    private FanLgTeste fanLgTeste;
+    private IrPerfilTeste irPerfilTeste;
     private boolean toggle = false;
     private boolean lgMode = false;
     private boolean fanMode = false;
@@ -52,8 +51,7 @@ public class MainActivity extends Activity {
     @Override protected void onCreate(Bundle b) {
         super.onCreate(b);
         ir=(ConsumerIrManager)getSystemService(CONSUMER_IR_SERVICE);
-        fanTeste=new FanIrTeste(this);
-        fanLgTeste=new FanLgTeste(this);
+        irPerfilTeste=new IrPerfilTeste(this);
         prefs=getSharedPreferences("remote_prefs",MODE_PRIVATE);
         lgMode=prefs.getBoolean("lg_mode",false);
         showSelector();
@@ -175,45 +173,60 @@ public class MainActivity extends Activity {
 
         section(root,"STATUS IR");
         TextView status=label("●  PW-789 selecionado  •  emissor IR: "+(ir!=null&&ir.hasIrEmitter()?"detectado":"não detectado"),12);
-        status.setTextColor(ir!=null&&ir.hasIrEmitter()?Color.rgb(75,145,95):GRAY); root.addView(status,new LinearLayout.LayoutParams(-1,dp(38)));
-        Button testNext=new Button(this); testNext.setText("🧪  TESTAR PRÓXIMO CÓDIGO"); testNext.setTextColor(WHITE); testNext.setTextSize(14); testNext.setAllCaps(false);
-        GradientDrawable testBg=new GradientDrawable(); testBg.setColor(Color.rgb(45,65,90)); testBg.setCornerRadius(dp(16)); testNext.setBackground(testBg);
-        testNext.setOnClickListener(v->{
-            String nome=fanTeste.next();
-            Toast.makeText(this,"Teste enviado: "+nome,Toast.LENGTH_LONG).show();
-        });
-        LinearLayout.LayoutParams tp=new LinearLayout.LayoutParams(-1,dp(54)); tp.setMargins(dp(4),dp(4),dp(4),dp(6)); root.addView(testNext,tp);
+        status.setTextColor(ir!=null&&ir.hasIrEmitter()?Color.rgb(75,145,95):GRAY);
+        root.addView(status,new LinearLayout.LayoutParams(-1,dp(38)));
 
-        Button resetTest=new Button(this); resetTest.setText("↺  REINICIAR TESTES"); resetTest.setTextColor(WHITE); resetTest.setTextSize(13); resetTest.setAllCaps(false);
-        GradientDrawable resetBg=new GradientDrawable(); resetBg.setColor(KEY_DARK); resetBg.setCornerRadius(dp(16)); resetTest.setBackground(resetBg);
-        resetTest.setOnClickListener(v->{ fanTeste.reset(); fanLgTeste.reset(); Toast.makeText(this,"Sequências reiniciadas.",Toast.LENGTH_SHORT).show(); });
-        LinearLayout.LayoutParams rp=new LinearLayout.LayoutParams(-1,dp(48)); rp.setMargins(dp(4),0,dp(4),dp(4)); root.addView(resetTest,rp);
+        section(root,"TESTE UNIVERSAL • ESCOLHA A FAMÍLIA");
+        TextView help=label("Escolha uma família de protocolo e envie um comando por vez. O LOG registra exatamente o código transmitido.",11);
+        help.setTextColor(GRAY); help.setGravity(Gravity.CENTER);
+        root.addView(help,new LinearLayout.LayoutParams(-1,dp(44)));
 
-        TextView lgTitle=label("VARREDURA LG • PISTA DO VENTILADOR",13); lgTitle.setTextColor(GRAY); lgTitle.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
-        root.addView(lgTitle,new LinearLayout.LayoutParams(-1,dp(34)));
-
-        TextView lgStatus=label("Nenhum código LG testado.",13); lgStatus.setTextColor(Color.rgb(75,145,95)); lgStatus.setGravity(Gravity.CENTER);
-        root.addView(lgStatus,new LinearLayout.LayoutParams(-1,dp(38)));
-
-        TextView lgLog=label("LOG: aguardando teste...",12); lgLog.setTextColor(GRAY); lgLog.setGravity(Gravity.CENTER);
-        root.addView(lgLog,new LinearLayout.LayoutParams(-1,dp(44)));
-
-        Button lgNext=new Button(this); lgNext.setText("📡  TESTAR PRÓXIMO LG"); lgNext.setTextColor(WHITE); lgNext.setTextSize(14); lgNext.setAllCaps(false);
-        GradientDrawable lgBg=new GradientDrawable(); lgBg.setColor(Color.rgb(55,80,55)); lgBg.setCornerRadius(dp(16)); lgNext.setBackground(lgBg);
-        lgNext.setOnClickListener(v->{
-            String resultado=fanLgTeste.next();
-            int codigo=fanLgTeste.currentCodeValue();
-            lgStatus.setText(resultado);
-            if(codigo>=0){
-                lgLog.setText(String.format("LOG: enviado LG 0x%02X  •  teste %d/%d\nSe o ventilador reagir, anote este código e a função.", codigo, fanLgTeste.position(), fanLgTeste.total()));
-            } else {
-                lgLog.setText("LOG: nenhum comando enviado.");
+        Spinner perfilSpinner=new Spinner(this);
+        String[] perfis=irPerfilTeste.perfis();
+        ArrayAdapter<String> adapter=new ArrayAdapter<String>(this,android.R.layout.simple_spinner_item,perfis);
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        perfilSpinner.setAdapter(adapter);
+        perfilSpinner.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener(){
+            public void onItemSelected(android.widget.AdapterView<?> parent,View view,int position,long id){
+                irPerfilTeste.selecionar(perfis[position]);
             }
+            public void onNothingSelected(android.widget.AdapterView<?> parent){}
+        });
+        LinearLayout.LayoutParams sp=new LinearLayout.LayoutParams(-1,dp(52)); sp.setMargins(dp(4),dp(4),dp(4),dp(4)); root.addView(perfilSpinner,sp);
+
+        TextView universalStatus=label("Perfil: LG / NEC",13);
+        universalStatus.setTextColor(Color.rgb(75,145,95)); universalStatus.setGravity(Gravity.CENTER);
+        root.addView(universalStatus,new LinearLayout.LayoutParams(-1,dp(36)));
+
+        TextView universalLog=label("LOG: aguardando teste...",12);
+        universalLog.setTextColor(GRAY); universalLog.setGravity(Gravity.CENTER);
+        root.addView(universalLog,new LinearLayout.LayoutParams(-1,dp(48)));
+
+        Button universalNext=new Button(this);
+        universalNext.setText("📡  TESTAR PRÓXIMO CÓDIGO");
+        universalNext.setTextColor(WHITE); universalNext.setTextSize(14); universalNext.setAllCaps(false);
+        GradientDrawable ubg=new GradientDrawable(); ubg.setColor(Color.rgb(55,80,55)); ubg.setCornerRadius(dp(16)); universalNext.setBackground(ubg);
+        universalNext.setOnClickListener(v->{
+            String resultado=irPerfilTeste.next();
+            int codigo=irPerfilTeste.currentCode();
+            universalStatus.setText("Perfil: "+irPerfilTeste.getPerfil()+" • "+resultado);
+            if(codigo>=0){
+                universalLog.setText(String.format("LOG: código transmitido 0x%X  •  teste %d/%d\nSe o ventilador reagir, anote o perfil e este código.",codigo,irPerfilTeste.position(),irPerfilTeste.total()));
+            }else universalLog.setText("LOG: nenhum comando transmitido.");
             Toast.makeText(this,resultado,Toast.LENGTH_SHORT).show();
         });
-        LinearLayout.LayoutParams lnp=new LinearLayout.LayoutParams(-1,dp(54)); lnp.setMargins(dp(4),dp(4),dp(4),dp(6)); root.addView(lgNext,lnp);
+        LinearLayout.LayoutParams unp=new LinearLayout.LayoutParams(-1,dp(56)); unp.setMargins(dp(4),dp(4),dp(4),dp(6)); root.addView(universalNext,unp);
 
-        TextView note=label("A varredura LG usa exatamente o mesmo formato IR LG que já funciona nos comandos da TV. Os códigos são enviados um por vez. Quando o ventilador responder, o LOG mostra o código exato.",11); note.setTextColor(GRAY); note.setGravity(Gravity.CENTER); root.addView(note,new LinearLayout.LayoutParams(-1,dp(54)));
+        Button resetTest=new Button(this);
+        resetTest.setText("↺  REINICIAR PERFIL");
+        resetTest.setTextColor(WHITE); resetTest.setTextSize(13); resetTest.setAllCaps(false);
+        GradientDrawable resetBg=new GradientDrawable(); resetBg.setColor(KEY_DARK); resetBg.setCornerRadius(dp(16)); resetTest.setBackground(resetBg);
+        resetTest.setOnClickListener(v->{irPerfilTeste.reset(); universalStatus.setText("Perfil: "+irPerfilTeste.getPerfil()); universalLog.setText("LOG: perfil reiniciado.");});
+        LinearLayout.LayoutParams rp=new LinearLayout.LayoutParams(-1,dp(48)); rp.setMargins(dp(4),0,dp(4),dp(4)); root.addView(resetTest,rp);
+
+        TextView note=label("Inclui famílias de TVs LG/NEC, Samsung, Sony, Philips RC5/RC6, Toshiba/JVC, além de candidatos para ar-condicionado Coolix e Midea. São testes experimentais; compatibilidade depende do receptor do aparelho.",11);
+        note.setTextColor(GRAY); note.setGravity(Gravity.CENTER);
+        root.addView(note,new LinearLayout.LayoutParams(-1,dp(64)));
         sv.addView(root); setContentView(sv);
     }
 
