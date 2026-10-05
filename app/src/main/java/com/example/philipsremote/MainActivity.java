@@ -333,8 +333,56 @@ public class MainActivity extends Activity {
         }
         Button add=new Button(this); add.setText("+  ADICIONAR OUTRO CONTROLE"); add.setTextColor(WHITE); add.setTextSize(13); add.setAllCaps(false);
         GradientDrawable addBg=new GradientDrawable(); addBg.setColor(Color.rgb(55,55,60)); addBg.setCornerRadius(dp(16)); add.setBackground(addBg);
-        add.setOnClickListener(v->showSelector()); root.addView(add,new LinearLayout.LayoutParams(-1,dp(52)));
+        add.setOnClickListener(v->showAddControlWizard()); root.addView(add,new LinearLayout.LayoutParams(-1,dp(52)));
         sv.addView(root); setContentView(sv);
+    }
+
+    private void showAddControlWizard(){
+        final String[] categorias={"TV","Ventilador"};
+        new android.app.AlertDialog.Builder(this)
+            .setTitle("Adicionar controle")
+            .setMessage("Vamos configurar seu aparelho passo a passo.")
+            .setItems(categorias,(d,which)->{
+                if(which==0) showBrandWizard();
+                else showFanModelWizard();
+            }).setNegativeButton("CANCELAR",null).show();
+    }
+
+    private void showBrandWizard(){
+        final String[] marcas={"Philips","LG","Samsung","Sony"};
+        new android.app.AlertDialog.Builder(this).setTitle("1 de 3 • Marca da TV")
+            .setItems(marcas,(d,w)->showModelWizard(marcas[w])).setNegativeButton("VOLTAR",(x,y)->showAddControlWizard()).show();
+    }
+
+    private void showModelWizard(String marca){
+        final String[] modelos;
+        if("Philips".equals(marca)) modelos=new String[]{"50PUG6513/7","Outro modelo"};
+        else if("LG".equals(marca)) modelos=new String[]{"32LB620B","Outro modelo"};
+        else modelos=new String[]{"Modelo não informado","Outro modelo"};
+        new android.app.AlertDialog.Builder(this).setTitle("2 de 3 • Modelo")
+            .setItems(modelos,(d,w)->{
+                lgMode="LG".equals(marca); fanMode=false; controleAtivo=null;
+                prefs.edit().putBoolean("lg_mode",lgMode).apply();
+                showTvSetup(marca,modelos[w]);
+            }).setNegativeButton("VOLTAR",(x,y)->showBrandWizard()).show();
+    }
+
+    private void showTvSetup(String marca,String modelo){
+        new android.app.AlertDialog.Builder(this).setTitle("3 de 3 • Testar controle")
+            .setMessage("Agora abra o controle e use o TESTE UNIVERSAL para encontrar o código correto. Quando funcionar, toque em ✓ FUNCIONOU e salve o controle.")
+            .setNegativeButton("CANCELAR",null)
+            .setPositiveButton("ABRIR CONTROLE",(d,w)->build()).show();
+    }
+
+    private void showFanModelWizard(){
+        final String[] modelos={"PW-789","LE-7507","SKY-9200","Outro modelo"};
+        new android.app.AlertDialog.Builder(this).setTitle("1 de 2 • Modelo do ventilador")
+            .setItems(modelos,(d,w)->{
+                fanMode=true; lgMode=false; controleAtivo=null;
+                new android.app.AlertDialog.Builder(this).setTitle("2 de 2 • Testar controle")
+                    .setMessage("Use o TESTE UNIVERSAL para testar os protocolos disponíveis. Quando encontrar um comando que funcione, toque em ✓ FUNCIONOU para salvar.")
+                    .setNegativeButton("CANCELAR",null).setPositiveButton("ABRIR CONTROLE",(x,y)->buildFan()).show();
+            }).setNegativeButton("VOLTAR",(x,y)->showAddControlWizard()).show();
     }
 
     private void build(){
