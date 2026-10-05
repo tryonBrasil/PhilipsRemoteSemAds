@@ -224,8 +224,10 @@ public class MainActivity extends Activity {
         GradientDrawable workedBg=new GradientDrawable(); workedBg.setColor(Color.rgb(35,105,60)); workedBg.setCornerRadius(dp(14)); worked.setBackground(workedBg);
         worked.setOnClickListener(v->{
             String salvo=irPerfilTeste.marcarFuncionou();
-            universalLog.setText("✓ RESULTADO SALVO\n"+salvo);
-            Toast.makeText(this,salvo,Toast.LENGTH_SHORT).show();
+            String chave="ir_found_"+irPerfilTeste.getPerfil().replace(" ","_").replace("/","_");
+            prefs.edit().putString(chave,salvo).apply();
+            universalLog.setText("✓ RESULTADO SALVO\n"+salvo+"\n\nEste código ficará guardado neste aparelho.");
+            Toast.makeText(this,"Código salvo neste aparelho",Toast.LENGTH_SHORT).show();
         });
         resultRow.addView(worked,new LinearLayout.LayoutParams(0,dp(50),1));
         Button notWorked=new Button(this);
@@ -247,6 +249,12 @@ public class MainActivity extends Activity {
         resetTest.setOnClickListener(v->{irPerfilTeste.reset(); universalStatus.setText("Perfil: "+irPerfilTeste.getPerfil()); universalLog.setText("LOG: perfil reiniciado.");});
         LinearLayout.LayoutParams rp=new LinearLayout.LayoutParams(-1,dp(48)); rp.setMargins(dp(4),0,dp(4),dp(4)); root.addView(resetTest,rp);
 
+        String perfilKey=irPerfilTeste.getPerfil().replace(" ","_").replace("/","_");
+        String salvoAnterior=prefs.getString("ir_found_"+perfilKey,"");
+        TextView saved=label(salvoAnterior.isEmpty()?"Nenhum código confirmado salvo para este perfil.":"★ Último código salvo: "+salvoAnterior,11);
+        saved.setTextColor(Color.rgb(220,185,80)); saved.setGravity(Gravity.CENTER);
+        root.addView(saved,new LinearLayout.LayoutParams(-1,dp(44)));
+        
         TextView note=label("Inclui famílias de TVs LG/NEC, Samsung, Sony, Philips RC5/RC6, Toshiba/JVC, além de candidatos para ar-condicionado Coolix e Midea. São testes experimentais; compatibilidade depende do receptor do aparelho.",11);
         note.setTextColor(GRAY); note.setGravity(Gravity.CENTER);
         root.addView(note,new LinearLayout.LayoutParams(-1,dp(64)));
