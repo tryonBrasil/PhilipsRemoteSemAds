@@ -70,6 +70,8 @@ public class UpdateManager {
                 connection.setReadTimeout(7000);
                 connection.setRequestProperty("Accept", "application/vnd.github+json");
                 connection.setRequestProperty("User-Agent", "IR-Remote-BR");
+                connection.setRequestProperty("Cache-Control", "no-cache");
+                connection.setRequestProperty("Pragma", "no-cache");
                 int code = connection.getResponseCode();
                 if (code != 200) throw new Exception("HTTP " + code);
 
