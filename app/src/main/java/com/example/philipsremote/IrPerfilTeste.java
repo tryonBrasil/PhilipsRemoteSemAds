@@ -3,7 +3,6 @@ package com.example.philipsremote;
 import android.content.Context;
 import android.hardware.ConsumerIrManager;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 
@@ -13,6 +12,8 @@ public class IrPerfilTeste {
     private final List<Item> itens=new ArrayList<>();
     private int pos=0;
     private String perfil="LG / NEC";
+    private Item ultimoFuncionou;
+
 
     private static class Item {
         String nome; int tipo,addr,cmd,code;
@@ -65,6 +66,16 @@ public class IrPerfilTeste {
     public int position(){return pos;}
     public int total(){return itens.size();}
     public void reset(){pos=0;}
+    public String lastDescription(){
+        return ultimoFuncionou==null ? "" : ultimoFuncionou.nome;
+    }
+    public String marcarFuncionou(){
+        if(pos==0 || itens.isEmpty()) return "Nenhum código foi transmitido ainda.";
+        ultimoFuncionou=itens.get(pos-1);
+        return "SALVO: "+ultimoFuncionou.nome;
+    }
+    public void limparResultado(){ ultimoFuncionou=null; }
+
     public int currentCode(){return pos==0?-1:itens.get(pos-1).code;}
 
     public String next(){
@@ -88,17 +99,27 @@ public class IrPerfilTeste {
         add(p,9000);add(p,4500); for(int v:b)for(int m=1;m<=128;m<<=1){add(p,560);add(p,(v&m)!=0?1690:560);} add(p,560);add(p,20000);return arr(p);
     }
     private int[] samsung(int addr,int cmd){
-        int[] b={addr&255,cmd&255,(~cmd)&255,addr&255}; ArrayList<Integer>p=new ArrayList<>();
+        int[] b={addr&255,(~addr)&255,cmd&255,(~cmd)&255}; ArrayList<Integer>p=new ArrayList<>();
         add(p,4500);add(p,4500);for(int v:b)for(int m=1;m<=128;m<<=1){add(p,560);add(p,(v&m)!=0?1600:560);}add(p,560);add(p,20000);return arr(p);
     }
     private int[] sony(int addr,int cmd){
         ArrayList<Integer>p=new ArrayList<>();for(int r=0;r<3;r++){add(p,2400);add(p,600);for(int i=0;i<7;i++){add(p,600);add(p,((cmd>>i)&1)!=0?1200:600);}for(int i=0;i<5;i++){add(p,600);add(p,((addr>>i)&1)!=0?1200:600);}if(r<2)add(p,10000);}return arr(p);
     }
     private int[] rc5(int addr,int cmd,boolean tog){
-        ArrayList<Integer>p=new ArrayList<>(); bit(p,1,889);bit(p,1,889);bit(p,tog?1:0,889);for(int m=16;m!=0;m>>=1)bit(p,(addr&m)!=0?1:0,889);for(int m=64;m!=0;m>>=1)bit(p,(cmd&m)!=0?1:0,889);return arr(p);
+        ArrayList<Integer>p=new ArrayList<>();
+        manchester(p,1,889); manchester(p,1,889); manchester(p,tog?1:0,889);
+        for(int m=16;m!=0;m>>=1) manchester(p,(addr&m)!=0?1:0,889);
+        for(int m=64;m!=0;m>>=1) manchester(p,(cmd&m)!=0?1:0,889);
+        return arr(p);
     }
     private int[] rc6(int addr,int cmd,boolean tog){
-        ArrayList<Integer>p=new ArrayList<>();add(p,2666);add(p,889);bit(p,1,444);bit(p,0,444);bit(p,0,444);bit(p,0,444);bit(p,tog?1:0,888);for(int m=128;m!=0;m>>=1)bit(p,(addr&m)!=0?1:0,444);for(int m=128;m!=0;m>>=1)bit(p,(cmd&m)!=0?1:0,444);add(p,2666);return arr(p);
+        ArrayList<Integer>p=new ArrayList<>();
+        add(p,2666); add(p,889);
+        manchester(p,1,444); manchester(p,0,444); manchester(p,0,444); manchester(p,0,444);
+        manchester(p,tog?1:0,888);
+        for(int m=0x80;m!=0;m>>=1) manchester(p,(addr&m)!=0?1:0,444);
+        for(int m=0x80;m!=0;m>>=1) manchester(p,(cmd&m)!=0?1:0,444);
+        return arr(p);
     }
     private int[] coolix(int code){
         ArrayList<Integer>p=new ArrayList<>();add(p,4000);add(p,4000);for(int i=0;i<24;i++){add(p,500);add(p,((code>>i)&1)!=0?1500:500);}add(p,500);return arr(p);
@@ -107,7 +128,14 @@ public class IrPerfilTeste {
         int a=(shortCode>>8)&255,b=shortCode&255;int[] bytes={0xB2,a,b,(~0xB2)&255,(~a)&255,(~b)&255};ArrayList<Integer>p=new ArrayList<>();
         add(p,4350);add(p,4400);for(int rep=0;rep<2;rep++){for(int v:bytes)for(int m=1;m<=128;m<<=1){add(p,560);add(p,(v&m)!=0?1690:560);}add(p,560);if(rep==0){add(p,4400);}}return arr(p);
     }
-    private void bit(ArrayList<Integer>p,int v,int h){if(v==1){add(p,h);add(p,h);}else{add(p,h);add(p,h);}}
-    private void add(ArrayList<Integer>p,int d){p.add(d);}
+    private void manchester(ArrayList<Integer>p,int v,int h){
+        if(v==1){add(p,true,h);add(p,false,h);}else{add(p,false,h);add(p,true,h);}
+    }
+    private void add(ArrayList<Integer>p,int d){p.add(d);} 
+    private void add(ArrayList<Integer>p,boolean mark,int d){
+        if(p.isEmpty()){ if(!mark)p.add(0); p.add(d); return; }
+        boolean expectedMark=(p.size()%2==1);
+        if(expectedMark==mark){int i=p.size()-1;p.set(i,p.get(i)+d);}else p.add(d);
+    }
     private int[] arr(ArrayList<Integer>p){int[]o=new int[p.size()];for(int i=0;i<o.length;i++)o[i]=p.get(i);return o;}
 }
