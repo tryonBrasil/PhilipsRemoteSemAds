@@ -49,7 +49,7 @@ public class MainActivity extends Activity {
     @Override protected void onCreate(Bundle b) {
         super.onCreate(b);
         ir=(ConsumerIrManager)getSystemService(CONSUMER_IR_SERVICE);
-        fanTeste=new FanIrTeste(this, ir);
+        fanTeste=new FanIrTeste(this);
         prefs=getSharedPreferences("remote_prefs",MODE_PRIVATE);
         lgMode=prefs.getBoolean("lg_mode",false);
         showSelector();
