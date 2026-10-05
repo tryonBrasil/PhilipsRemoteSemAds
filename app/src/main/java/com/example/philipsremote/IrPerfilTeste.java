@@ -78,6 +78,23 @@ public class IrPerfilTeste {
 
     public int currentCode(){return pos==0?-1:itens.get(pos-1).code;}
 
+    /** Transmite um código já confirmado e salvo pelo usuário. */
+    public boolean transmitirSalvo(String perfilSalvo,int codigo){
+        if(!hasEmitter() || codigo<0) return false;
+        try{
+            if(perfilSalvo.equals("LG / NEC")) ir.transmit(38000,nec(0x04,codigo));
+            else if(perfilSalvo.equals("Samsung TV")) ir.transmit(38000,samsung(0x07,codigo));
+            else if(perfilSalvo.equals("Sony TV")) ir.transmit(40000,sony(0x01,codigo));
+            else if(perfilSalvo.equals("Philips / RC5")) ir.transmit(36000,rc5(0x00,codigo,false));
+            else if(perfilSalvo.equals("Philips / RC6")) ir.transmit(36000,rc6(0x00,codigo,false));
+            else if(perfilSalvo.equals("Toshiba / JVC / NEC")) ir.transmit(38000,nec(0x00,codigo));
+            else if(perfilSalvo.equals("AC Coolix")) ir.transmit(38000,coolix(codigo));
+            else if(perfilSalvo.equals("AC Midea")) ir.transmit(38000,midea(codigo));
+            else return false;
+            return true;
+        }catch(Exception e){ return false; }
+    }
+
     public String next(){
         if(!hasEmitter())return "Emissor IR não detectado";
         if(pos>=itens.size())return "Fim: "+perfil;
