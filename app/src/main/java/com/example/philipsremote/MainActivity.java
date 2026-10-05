@@ -328,6 +328,46 @@ public class MainActivity extends Activity {
         return 0;
     }
 
+
+    private void showAprenderComandos(ControleStorage.Controle controle){
+        if(controle==null){ showMeusControles(); return; }
+        final String[] funcoes="Ventilador".equals(controle.categoria)
+            ? new String[]{"Ligar/desligar","Reversão","Timer","Velocidade 1","Velocidade 2","Velocidade 3","Velocidade 4","Velocidade 5","Exaustão 1","Exaustão 2","Exaustão 3","Exaustão 4","Exaustão 5","Parar exaustão","Luz","Aumentar luz","Diminuir luz"}
+            : new String[]{"Ligar/desligar","Mute","Volume +","Volume -","Canal +","Canal -","Cima","Baixo","Esquerda","Direita","OK","Voltar","Menu","Home","Source","Info","Guide","Netflix","Configurações","Play","Pause","Stop","Retroceder","Avançar","Subtitle","Exit"};
+        final String[] chaves="Ventilador".equals(controle.categoria)
+            ? new String[]{"FAN_POWER","FAN_REVERSE","FAN_TIMER","FAN_SPEED_1","FAN_SPEED_2","FAN_SPEED_3","FAN_SPEED_4","FAN_SPEED_5","FAN_EXHAUST_1","FAN_EXHAUST_2","FAN_EXHAUST_3","FAN_EXHAUST_4","FAN_EXHAUST_5","FAN_STOP","FAN_LIGHT","FAN_DIM_UP","FAN_DIM_DOWN"}
+            : new String[]{"POWER","MUTE","VOL_UP","VOL_DOWN","CH_UP","CH_DOWN","UP","DOWN","LEFT","RIGHT","OK","BACK","MENU","HOME","SOURCE","INFO","GUIDE","NETFLIX","SETTINGS","PLAY","PAUSE","STOP","REWIND","FAST_FORWARD","SUBTITLE","EXIT"};
+        final int[] pos={0};
+        final String[] perfis=irPerfilTeste.perfis();
+        final Spinner[] spinner={null};
+        new android.app.AlertDialog.Builder(this)
+            .setTitle("APRENDER BOTÕES • "+controle.nome)
+            .setMessage("Selecione uma função, teste os códigos até o aparelho reagir e toque em FUNCIONOU. Cada botão é salvo separadamente.")
+            .setSingleChoiceItems(funcoes,0,(d,which)->pos[0]=which)
+            .setNegativeButton("FECHAR",(d,w)->showMeusControles())
+            .setNeutralButton("TESTAR CÓDIGO",(d,w)->{
+                String perfil=controle.perfil;
+                if(perfil==null || perfil.isEmpty()) perfil=perfilInicialPara(controle.marca,controle.modelo,perfis)>=0?perfis[perfilInicialPara(controle.marca,controle.modelo,perfis)]:perfis[0];
+                irPerfilTeste.selecionar(perfil);
+                String resultado=irPerfilTeste.next();
+                Toast.makeText(this,resultado+" • "+funcoes[pos[0]],Toast.LENGTH_SHORT).show();
+            })
+            .setPositiveButton("FUNCIONOU / SALVAR",(d,w)->{
+                int codigo=irPerfilTeste.currentCode();
+                String perfil=irPerfilTeste.getPerfil();
+                if(codigo<0 || perfil==null || perfil.isEmpty()){
+                    Toast.makeText(this,"Primeiro use TESTAR CÓDIGO.",Toast.LENGTH_SHORT).show();
+                    showAprenderComandos(controle);
+                    return;
+                }
+                String funcao=chaves[pos[0]];
+                int freq=perfil.contains("Sony")?40000:(perfil.contains("Philips")?36000:38000);
+                controleStorage.salvarComando(controle,funcao,codigo,perfil,freq);
+                Toast.makeText(this,"✓ "+funcoes[pos[0]]+" configurado",Toast.LENGTH_SHORT).show();
+                showAprenderComandos(controle);
+            }).show();
+    }
+
     private void showMeusControles(){
         ScrollView sv=new ScrollView(this); sv.setFillViewport(true); sv.setBackgroundColor(BG);
         LinearLayout root=new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL);
@@ -362,6 +402,10 @@ public class MainActivity extends Activity {
                     Toast.makeText(this,"Controle "+c.nome+" carregado",Toast.LENGTH_SHORT).show();
                 });
                 card.addView(abrir,new LinearLayout.LayoutParams(-1,dp(46)));
+                Button aprender=new Button(this); aprender.setText("⚙  CONFIGURAR BOTÕES"); aprender.setTextColor(WHITE); aprender.setTextSize(12); aprender.setAllCaps(false);
+                GradientDrawable apb=new GradientDrawable(); apb.setColor(Color.rgb(65,65,72)); apb.setCornerRadius(dp(12)); aprender.setBackground(apb);
+                aprender.setOnClickListener(v->{ controleAtivo=c; showAprenderComandos(c); });
+                LinearLayout.LayoutParams app=new LinearLayout.LayoutParams(-1,dp(42)); app.setMargins(0,dp(5),0,0); card.addView(aprender,app);
                 LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(-1,dp(140)); cp.setMargins(0,dp(8),0,dp(8)); root.addView(card,cp);
             }
         }
