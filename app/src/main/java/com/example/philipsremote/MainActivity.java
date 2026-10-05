@@ -11,6 +11,7 @@ import android.view.View;
 import android.widget.*;
 import android.content.SharedPreferences;
 import java.util.ArrayList;
+import java.util.List;
 
 public class MainActivity extends Activity {
     private ConsumerIrManager ir;
