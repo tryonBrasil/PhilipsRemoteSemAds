@@ -281,6 +281,9 @@ public class MainActivity extends Activity {
         top.addView(voltar,new LinearLayout.LayoutParams(dp(90),dp(44))); root.addView(top);
 
         List<ControleStorage.Controle> lista=controleStorage.listar();
+        TextView resumo=label(lista.isEmpty()?"Gerencie seus dispositivos":"Você tem "+lista.size()+" controle"+(lista.size()>1?"s":"")+" salvo"+(lista.size()>1?"s":"")+" neste aparelho",13);
+        resumo.setTextColor(GRAY);
+        root.addView(resumo,new LinearLayout.LayoutParams(-1,dp(34)));
         if(lista.isEmpty()){
             TextView vazio=label("Você ainda não salvou nenhum controle.\n\nUse o teste universal, confirme um código e salve em Meus controles.",15);
             vazio.setTextColor(GRAY); vazio.setGravity(Gravity.CENTER);
@@ -333,7 +336,7 @@ public class MainActivity extends Activity {
                         .show();
                 });
                 LinearLayout.LayoutParams exp=new LinearLayout.LayoutParams(-1,dp(42)); exp.setMargins(0,dp(5),0,dp(0)); card.addView(excluir,exp);
-                LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(-1,dp(185)); cp.setMargins(0,dp(8),0,dp(8)); root.addView(card,cp);
+                LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(-1,dp(240)); cp.setMargins(0,dp(8),0,dp(8)); root.addView(card,cp);
             }
         }
         Button sobre=new Button(this); sobre.setText("ⓘ  SOBRE O APLICATIVO"); sobre.setTextColor(WHITE); sobre.setTextSize(13); sobre.setAllCaps(false);
