@@ -291,6 +291,23 @@ public class MainActivity extends Activity {
                     Toast.makeText(this,"Controle "+c.nome+" carregado",Toast.LENGTH_SHORT).show();
                 });
                 card.addView(abrir,new LinearLayout.LayoutParams(-1,dp(46)));
+                Button editar=new Button(this); editar.setText("✎  RENOMEAR"); editar.setTextColor(WHITE); editar.setTextSize(12); editar.setAllCaps(false);
+                GradientDrawable edb=new GradientDrawable(); edb.setColor(Color.rgb(55,65,80)); edb.setCornerRadius(dp(12)); editar.setBackground(edb);
+                editar.setOnClickListener(v->{
+                    final EditText campo=new EditText(this); campo.setSingleLine(true); campo.setText(c.nome); campo.setSelectAllOnFocus(true); campo.setHint("Nome do controle");
+                    int pad=dp(8); campo.setPadding(pad,pad,pad,pad);
+                    new android.app.AlertDialog.Builder(this).setTitle("Renomear controle").setView(campo)
+                        .setNegativeButton("CANCELAR",null)
+                        .setPositiveButton("SALVAR",(d,w)->{
+                            String novo=campo.getText().toString().trim();
+                            if(novo.isEmpty()){ Toast.makeText(this,"Digite um nome.",Toast.LENGTH_SHORT).show(); return; }
+                            controleStorage.renomear(c,novo);
+                            if(controleAtivo==c) controleAtivo=c;
+                            showMeusControles();
+                        }).show();
+                });
+                LinearLayout.LayoutParams edp=new LinearLayout.LayoutParams(-1,dp(42)); edp.setMargins(0,dp(5),0,0); card.addView(editar,edp);
+
                 Button aprender=new Button(this); aprender.setText("⚙  CONFIGURAR BOTÕES"); aprender.setTextColor(WHITE); aprender.setTextSize(12); aprender.setAllCaps(false);
                 GradientDrawable apb=new GradientDrawable(); apb.setColor(Color.rgb(65,65,72)); apb.setCornerRadius(dp(12)); aprender.setBackground(apb);
                 aprender.setOnClickListener(v->{ controleAtivo=c; showAprenderComandos(c); });
