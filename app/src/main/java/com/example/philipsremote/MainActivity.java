@@ -111,10 +111,9 @@ public class MainActivity extends Activity {
 
         // Power — custom artwork
         LinearLayout r=row();
-        ImageButton powerButton=new ImageButton(this);
-        powerButton.setImageResource(com.example.philipsremote.R.drawable.power_button);
-        powerButton.setBackgroundColor(Color.TRANSPARENT);
-        powerButton.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
+        Button powerButton=new Button(this);
+        powerButton.setText("");
+        powerButton.setBackgroundResource(R.drawable.power_button);
         powerButton.setPadding(0,0,0,0);
         powerButton.setContentDescription("Ligar ou desligar a TV");
         powerButton.setOnClickListener(v->send(POWER));
