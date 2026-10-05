@@ -103,6 +103,23 @@ public class ControleStorage {
         }catch(Exception e){return 0;}
     }
 
+    public void renomear(Controle controle,String novoNome){
+        if(controle==null || novoNome==null || novoNome.trim().isEmpty()) return;
+        try{
+            JSONArray a=ler();
+            for(int i=0;i<a.length();i++){
+                JSONObject o=a.getJSONObject(i);
+                long oid=o.optLong("id",o.optLong("created",0));
+                if(oid==controle.id){
+                    String nome=novoNome.trim();
+                    o.put("nome",nome); a.put(i,o);
+                    prefs.edit().putString(KEY,a.toString()).apply();
+                    controle.nome=nome; return;
+                }
+            }
+        }catch(Exception ignored){}
+    }
+
     public void excluir(Controle controle){
         if(controle==null) return;
         try{
