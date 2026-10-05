@@ -145,7 +145,7 @@ public class MainActivity extends Activity {
         return card;
     }
 
-    @Override protected void onDestroy(){
+    @Override protected void onResume(){\n        super.onResume();\n        if(updateManager!=null) updateManager.verificarAoAbrir();\n    }\n\n    @Override protected void onDestroy(){
         if(updateManager!=null) updateManager.destroy();
         super.onDestroy();
     }
