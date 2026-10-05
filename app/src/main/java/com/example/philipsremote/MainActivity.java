@@ -7,6 +7,7 @@ import android.hardware.ConsumerIrManager;
 import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
 import android.view.Gravity;
+import android.view.View;
 import android.view.Window;
 import android.widget.*;
 import java.util.ArrayList;
