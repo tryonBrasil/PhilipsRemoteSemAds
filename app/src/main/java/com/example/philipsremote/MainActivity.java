@@ -141,25 +141,11 @@ public class MainActivity extends Activity {
         title.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
         modelRow.addView(title,new LinearLayout.LayoutParams(0,dp(48),1));
 
-        Spinner selector=new Spinner(this);
-        String[] models={"Philips 50PUG6513/7","LG 32LB620B"};
-        ArrayAdapter<String> adapter=new ArrayAdapter<String>(this,android.R.layout.simple_spinner_dropdown_item,models);
-        selector.setAdapter(adapter);
-        selector.setSelection(lgMode?1:0);
-        selector.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener(){
-            @Override public void onItemSelected(android.widget.AdapterView<?> parent,android.view.View view,int position,long id){
-                boolean newLg=position==1;
-                if(newLg!=lgMode){
-                    lgMode=newLg;
-                    prefs.edit().putBoolean("lg_mode",lgMode).apply();
-                    build();
-                }
-            }
-            @Override public void onNothingSelected(android.widget.AdapterView<?> parent){}
-        });
-        LinearLayout.LayoutParams sp=new LinearLayout.LayoutParams(dp(178),dp(48));
-        sp.setMargins(dp(4),dp(0),0,dp(0)); selector.setLayoutParams(sp);
-        modelRow.addView(selector);
+        Button change= new Button(this);
+        change.setText("TROCAR TV"); change.setTextColor(WHITE); change.setTextSize(12); change.setAllCaps(false);
+        GradientDrawable changeBg=new GradientDrawable(); changeBg.setColor(KEY_DARK); changeBg.setCornerRadius(dp(14));
+        change.setBackground(changeBg); change.setOnClickListener(v->showSelector());
+        modelRow.addView(change,new LinearLayout.LayoutParams(dp(112),dp(44)));
         root.addView(modelRow);
 
         TextView selected=label(lgMode?"LG • 32LB620B":"PHILIPS • 50PUG6513/7",13);
