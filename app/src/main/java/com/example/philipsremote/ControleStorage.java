@@ -13,12 +13,13 @@ public class ControleStorage {
     private final SharedPreferences prefs;
 
     public static class Controle {
+        public long id;
         public String nome, categoria, marca, modelo, perfil, descricao;
         public int codigo, frequencia;
         public JSONObject comandos;
 
-        Controle(String n,String c,String m,String mo,String p,String d,int code,int freq){
-            nome=n;categoria=c;marca=m;modelo=mo;perfil=p;descricao=d;codigo=code;frequencia=freq;
+        Controle(long id,String n,String c,String m,String mo,String p,String d,int code,int freq){
+            this.id=id; nome=n;categoria=c;marca=m;modelo=mo;perfil=p;descricao=d;codigo=code;frequencia=freq;
             comandos=new JSONObject();
         }
     }
@@ -29,9 +30,12 @@ public class ControleStorage {
         try{
             JSONArray a=ler();
             JSONObject o=new JSONObject();
+            long id=System.currentTimeMillis();
+            o.put("id",id);
             o.put("nome",nome); o.put("categoria",categoria); o.put("marca",marca);
             o.put("modelo",modelo); o.put("perfil",perfil); o.put("descricao",descricao);
-            o.put("codigo",codigo); o.put("frequencia",frequencia); o.put("created",System.currentTimeMillis());
+            o.put("codigo",codigo); o.put("frequencia",frequencia); o.put("created",id);
+            o.put("comandos",new JSONObject().toString());
             a.put(o); prefs.edit().putString(KEY,a.toString()).apply();
         }catch(Exception ignored){}
     }
@@ -42,10 +46,12 @@ public class ControleStorage {
             JSONArray a=ler();
             for(int i=0;i<a.length();i++){
                 JSONObject o=a.getJSONObject(i);
-                out.add(new Controle(o.optString("nome","Meu controle"),o.optString("categoria","IR"),
+                long id=o.optLong("id",o.optLong("created",0));
+                Controle c=new Controle(id,o.optString("nome","Meu controle"),o.optString("categoria","IR"),
                     o.optString("marca",""),o.optString("modelo",""),o.optString("perfil",""),
-                    o.optString("descricao",""),o.optInt("codigo",-1),o.optInt("frequencia",38000)));
-                try{ out.get(out.size()-1).comandos=new JSONObject(o.optString("comandos","{}")); }catch(Exception ignored){}
+                    o.optString("descricao",""),o.optInt("codigo",-1),o.optInt("frequencia",38000));
+                try{ c.comandos=new JSONObject(o.optString("comandos","{}")); }catch(Exception ignored){}
+                out.add(c);
             }
         }catch(Exception ignored){}
         return out;
@@ -57,8 +63,8 @@ public class ControleStorage {
             JSONArray a=ler();
             for(int i=0;i<a.length();i++){
                 JSONObject o=a.getJSONObject(i);
-                if(o.optString("nome","").equals(controle.nome) &&
-                   o.optLong("created",0)>0){
+                long oid=o.optLong("id",o.optLong("created",0));
+                if(oid==controle.id && oid>0){
                     JSONObject mapa;
                     try{ mapa=new JSONObject(o.optString("comandos","{}")); }catch(Exception e){ mapa=new JSONObject(); }
                     JSONObject item=new JSONObject();
