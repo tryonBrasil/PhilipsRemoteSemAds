@@ -143,24 +143,93 @@ public class MainActivity extends Activity {
     }
 
 
+    private int frequenciaPerfil(String perfil){
+        if(perfil==null) return 38000;
+        if(perfil.contains("Sony")) return 40000;
+        if(perfil.contains("Philips")) return 36000;
+        return 38000;
+    }
+
+    private void showUniversalScanner(String marca,String modelo){
+        final String[] perfis=irPerfilTeste.perfis();
+        int idx=perfilInicialPara(marca,modelo,perfis);
+        final String perfilInicial=perfis[idx];
+        irPerfilTeste.selecionar(perfilInicial);
+        irPerfilTeste.limparResultado();
+
+        LinearLayout box=new LinearLayout(this);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setPadding(dp(18),dp(8),dp(18),dp(4));
+        TextView status=label("Pronto para testar • "+perfilInicial,15);
+        status.setTextColor(GRAY);
+        status.setGravity(Gravity.CENTER);
+        box.addView(status,new LinearLayout.LayoutParams(-1,dp(70)));
+
+        TextView detalhe=label("Pressione TESTAR PRÓXIMO até a TV reagir.\nDepois toque em FUNCIONOU / SALVAR.",13);
+        detalhe.setTextColor(GRAY);
+        detalhe.setGravity(Gravity.CENTER);
+        box.addView(detalhe,new LinearLayout.LayoutParams(-1,dp(64)));
+
+        android.app.AlertDialog dialog=new android.app.AlertDialog.Builder(this)
+            .setTitle("TESTE UNIVERSAL • "+marca+" "+modelo)
+            .setView(box)
+            .setNegativeButton("CANCELAR",(d,w)->showMeusControles())
+            .setNeutralButton("TESTAR PRÓXIMO",null)
+            .setPositiveButton("FUNCIONOU / SALVAR",null)
+            .create();
+
+        dialog.setOnShowListener(x->{
+            Button testar=dialog.getButton(android.app.AlertDialog.BUTTON_NEUTRAL);
+            Button salvar=dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE);
+            testar.setOnClickListener(v->{
+                String resultado=irPerfilTeste.next();
+                status.setText(resultado);
+                detalhe.setText("Se a TV respondeu, toque em FUNCIONOU / SALVAR.");
+            });
+            salvar.setOnClickListener(v->{
+                int codigo=irPerfilTeste.currentCode();
+                String perfil=irPerfilTeste.getPerfil();
+                if(codigo<0 || perfil==null || perfil.isEmpty()){
+                    Toast.makeText(this,"Teste pelo menos um código antes de salvar.",Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                int freq=frequenciaPerfil(perfil);
+                String nome=marca+" "+modelo;
+                String descricao=irPerfilTeste.lastDescription();
+                controleStorage.salvar(nome,"TV",marca,modelo,perfil,descricao,codigo,freq);
+                dialog.dismiss();
+                List<ControleStorage.Controle> salvos=controleStorage.listar();
+                if(!salvos.isEmpty()) controleAtivo=salvos.get(salvos.size()-1);
+                lgMode="LG".equalsIgnoreCase(marca);
+                prefs.edit().putBoolean("lg_mode",lgMode).apply();
+                Toast.makeText(this,"✓ Controle salvo em Meus Controles.",Toast.LENGTH_SHORT).show();
+                showMeusControles();
+            });
+        });
+        dialog.show();
+    }
+
     private void showAprenderComandos(ControleStorage.Controle controle){
         if(controle==null){ showMeusControles(); return; }
         final String[] funcoes={"Ligar/desligar","Mute","Volume +","Volume -","Canal +","Canal -","Cima","Baixo","Esquerda","Direita","OK","Voltar","Menu","Home","Source","Info","Guide","Netflix","Configurações","Play","Pause","Stop","Retroceder","Avançar","Subtitle","Exit"};
         final String[] chaves={"POWER","MUTE","VOL_UP","VOL_DOWN","CH_UP","CH_DOWN","UP","DOWN","LEFT","RIGHT","OK","BACK","MENU","HOME","SOURCE","INFO","GUIDE","NETFLIX","SETTINGS","PLAY","PAUSE","STOP","REWIND","FAST_FORWARD","SUBTITLE","EXIT"};
         final int[] pos={0};
         final String[] perfis=irPerfilTeste.perfis();
-        final Spinner[] spinner={null};
+
         new android.app.AlertDialog.Builder(this)
             .setTitle("APRENDER BOTÕES • "+controle.nome)
-            .setMessage("Selecione uma função, teste os códigos até o aparelho reagir e toque em FUNCIONOU. Cada botão é salvo separadamente.")
+            .setMessage("Selecione uma função. O teste avança um código por vez; quando a TV reagir, salve o código.")
             .setSingleChoiceItems(funcoes,0,(d,which)->pos[0]=which)
             .setNegativeButton("FECHAR",(d,w)->showMeusControles())
             .setNeutralButton("TESTAR CÓDIGO",(d,w)->{
                 String perfil=controle.perfil;
-                if(perfil==null || perfil.isEmpty()) perfil=perfilInicialPara(controle.marca,controle.modelo,perfis)>=0?perfis[perfilInicialPara(controle.marca,controle.modelo,perfis)]:perfis[0];
+                if(perfil==null || perfil.isEmpty()){
+                    perfil=perfis[perfilInicialPara(controle.marca,controle.modelo,perfis)];
+                }
                 irPerfilTeste.selecionar(perfil);
                 String resultado=irPerfilTeste.next();
                 Toast.makeText(this,resultado+" • "+funcoes[pos[0]],Toast.LENGTH_SHORT).show();
+                showAprenderComandos(controle);
             })
             .setPositiveButton("FUNCIONOU / SALVAR",(d,w)->{
                 int codigo=irPerfilTeste.currentCode();
@@ -171,8 +240,7 @@ public class MainActivity extends Activity {
                     return;
                 }
                 String funcao=chaves[pos[0]];
-                int freq=perfil.contains("Sony")?40000:(perfil.contains("Philips")?36000:38000);
-                controleStorage.salvarComando(controle,funcao,codigo,perfil,freq);
+                controleStorage.salvarComando(controle,funcao,codigo,perfil,frequenciaPerfil(perfil));
                 Toast.makeText(this,"✓ "+funcoes[pos[0]]+" configurado",Toast.LENGTH_SHORT).show();
                 showAprenderComandos(controle);
             }).show();
@@ -264,9 +332,9 @@ public class MainActivity extends Activity {
 
     private void showTvSetup(String marca,String modelo){
         new android.app.AlertDialog.Builder(this).setTitle("3 de 3 • Testar controle")
-            .setMessage("Agora abra o controle e use o TESTE UNIVERSAL para encontrar o código correto. Quando funcionar, toque em ✓ FUNCIONOU e salve o controle.")
+            .setMessage("Vamos procurar automaticamente um código compatível com sua TV. Teste os candidatos e salve somente quando a TV responder.")
             .setNegativeButton("CANCELAR",null)
-            .setPositiveButton("ABRIR CONTROLE",(d,w)->build()).show();
+            .setPositiveButton("ABRIR TESTE UNIVERSAL",(d,w)->showUniversalScanner(marca,modelo)).show();
     }
 
     private void build(){
