@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.os.Bundle;
 import android.hardware.ConsumerIrManager;
 import android.graphics.Color;
+import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.view.Gravity;
 import android.view.View;
@@ -16,15 +17,13 @@ public class MainActivity extends Activity {
 
     private static final int FREQ = 36000;
     private static final int UNIT = 444;
+    private static final int BG = Color.rgb(12,12,12);
+    private static final int PANEL = Color.rgb(27,27,27);
+    private static final int KEY = Color.rgb(48,48,48);
+    private static final int KEY_DARK = Color.rgb(34,34,34);
+    private static final int WHITE = Color.WHITE;
+    private static final int GRAY = Color.rgb(175,175,175);
 
-    // --- CORES DO NOVO DESIGN ---
-    private static final int BG_COLOR = Color.parseColor("#0F1115"); // Fundo super escuro
-    private static final int BTN_COLOR = Color.parseColor("#26282E"); // Fundo cinza dos botões
-    private static final int BTN_BORDER = Color.parseColor("#333333"); // Borda leve
-    private static final int TEXT_COLOR = Color.WHITE;
-    private static final int TEXT_RED = Color.parseColor("#E53935"); // Vermelho do Power
-
-    // --- CÓDIGOS RC6 ---
     private static final int POWER=0x0C, MUTE=0x0D, VOL_DOWN=0x11, VOL_UP=0x10;
     private static final int CH_DOWN=0x21, CH_UP=0x20;
     private static final int UP=0x58, DOWN=0x59, LEFT=0x5A, RIGHT=0x5B, OK=0x5C;
@@ -36,184 +35,146 @@ public class MainActivity extends Activity {
 
     @Override protected void onCreate(Bundle b) {
         super.onCreate(b);
-        ir = (ConsumerIrManager) getSystemService(CONSUMER_IR_SERVICE);
-        buildUi();
+        ir=(ConsumerIrManager)getSystemService(CONSUMER_IR_SERVICE);
+        build();
     }
 
-    // Função utilitária para converter DP para Pixels
-    private int dp(int px) {
-        return (int) (px * getResources().getDisplayMetrics().density);
+    private TextView label(String s,int sp){
+        TextView t=new TextView(this);
+        t.setText(s); t.setTextColor(WHITE); t.setTextSize(sp);
+        t.setGravity(Gravity.CENTER); return t;
     }
 
-    // Criador base de botões (Circular ou Pílula dependendo do radius)
-    private Button createBtn(String text, int cmd, int radius, int bgColor, int textColor, int textSizeSp) {
-        Button b = new Button(this);
-        b.setText(text);
-        b.setTextColor(textColor);
-        b.setTextSize(textSizeSp);
-        b.setGravity(Gravity.CENTER);
-        b.setPadding(0, 0, 0, 0);
-        b.setIncludeFontPadding(false);
-        b.setStateListAnimator(null); // Remove sombra padrão do Android
-        b.setAllCaps(false);
+    private Button key(String text,int cmd,int h){
+        return key(text,cmd,h,KEY,10);
+    }
 
-        GradientDrawable g = new GradientDrawable();
-        g.setColor(bgColor);
-        g.setCornerRadius(dp(radius));
+    private Button key(String text,int cmd,int h,int color,int size){
+        Button b=new Button(this);
+        b.setText(text); b.setTextColor(WHITE); b.setTextSize(size);
+        b.setAllCaps(false); b.setGravity(Gravity.CENTER); b.setPadding(0,0,0,0);
+        b.setMinHeight(0); b.setMinWidth(0); b.setIncludeFontPadding(false);
+        GradientDrawable g=new GradientDrawable(); g.setColor(color); g.setCornerRadius(10);
         b.setBackground(g);
-
-        b.setOnClickListener(v -> send(cmd));
+        b.setOnClickListener(v->send(cmd));
+        LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,h,1);
+        p.setMargins(3,3,3,3); b.setLayoutParams(p);
         return b;
     }
 
-    // Posicionador de botões no formato de cruz/losango (D-Pad)
-    private void addDpadBtn(FrameLayout fl, Button b, int transX, int transY, int sizeX, int sizeY) {
-        FrameLayout.LayoutParams p = new FrameLayout.LayoutParams(dp(sizeX), dp(sizeY));
-        p.gravity = Gravity.CENTER;
-        b.setLayoutParams(p);
-        b.setTranslationX(dp(transX));
-        b.setTranslationY(dp(transY));
-        fl.addView(b);
+    private LinearLayout row(){
+        LinearLayout r=new LinearLayout(this);
+        r.setOrientation(LinearLayout.HORIZONTAL); r.setGravity(Gravity.CENTER);
+        return r;
     }
 
-    // Botão estendido (para Volume e Canais)
-    private void addWeightedBtn(LinearLayout parent, String text, int cmd, int bgColor, int radius, int marginDp, int textSize) {
-        Button b = createBtn(text, cmd, radius, bgColor, TEXT_COLOR, textSize);
-        LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(0, -1, 1f);
-        p.setMargins(dp(marginDp), dp(marginDp), dp(marginDp), dp(marginDp));
-        parent.addView(b, p);
+    private void add(LinearLayout r,Button b){r.addView(b);}
+
+    private void section(LinearLayout root,String title){
+        TextView t=label(title,9); t.setTextColor(GRAY);
+        t.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
+        root.addView(t,new LinearLayout.LayoutParams(-1,20));
     }
 
-    private void buildUi() {
-        getWindow().setStatusBarColor(BG_COLOR);
-        getWindow().setNavigationBarColor(BG_COLOR);
+    private void build(){
+        ScrollView sv=new ScrollView(this);
+        sv.setFillViewport(true); sv.setBackgroundColor(BG);
 
-        ScrollView scroll = new ScrollView(this);
-        scroll.setBackgroundColor(BG_COLOR);
-        scroll.setFillViewport(true);
-
-        LinearLayout root = new LinearLayout(this);
+        LinearLayout root=new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(dp(16), dp(32), dp(16), dp(16));
-        root.setGravity(Gravity.CENTER_HORIZONTAL);
-        scroll.addView(root);
+        root.setPadding(10,8,10,16);
+        root.setBackgroundColor(BG);
 
-        // ==========================================
-        // 1. ÁREA SUPERIOR E D-PAD (DIRECIONAIS)
-        // ==========================================
-        FrameLayout dpadArea = new FrameLayout(this);
-        dpadArea.setLayoutParams(new LinearLayout.LayoutParams(-1, dp(380)));
+        // Corpo visual do controle FBG-8049 / LE-7276
+        LinearLayout body=new LinearLayout(this);
+        body.setOrientation(LinearLayout.VERTICAL);
+        body.setPadding(8,8,8,10);
+        GradientDrawable bodyBg=new GradientDrawable();
+        bodyBg.setColor(Color.rgb(20,20,20));
+        bodyBg.setCornerRadius(32);
+        body.setBackground(bodyBg);
 
-        // Losango de fundo (View rodada em 45 graus)
-        View diamond = new View(this);
-        GradientDrawable dBg = new GradientDrawable();
-        dBg.setStroke(dp(1), BTN_BORDER);
-        dBg.setCornerRadius(dp(30));
-        diamond.setBackground(dBg);
-        diamond.setRotation(45);
-        FrameLayout.LayoutParams dpParams = new FrameLayout.LayoutParams(dp(200), dp(200));
-        dpParams.gravity = Gravity.CENTER;
-        dpadArea.addView(diamond, dpParams);
+        TextView philips=label("PHILIPS",12);
+        philips.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
+        body.addView(philips,new LinearLayout.LayoutParams(-1,25));
 
-        // Direcionais e OK
-        addDpadBtn(dpadArea, createBtn("OK", OK, 40, BTN_COLOR, TEXT_COLOR, 18), 0, 0, 80, 80);
-        addDpadBtn(dpadArea, createBtn("∧", UP, 30, BTN_COLOR, TEXT_COLOR, 22), 0, -85, 55, 55);
-        addDpadBtn(dpadArea, createBtn("∨", DOWN, 30, BTN_COLOR, TEXT_COLOR, 22), 0, 85, 55, 55);
-        addDpadBtn(dpadArea, createBtn("＜", LEFT, 30, BTN_COLOR, TEXT_COLOR, 22), -85, 0, 55, 55);
-        addDpadBtn(dpadArea, createBtn("＞", RIGHT, 30, BTN_COLOR, TEXT_COLOR, 22), 85, 0, 55, 55);
+        // Power
+        LinearLayout r=row();
+        Button power=key("⏻",POWER,46,KEY_DARK,20);
+        LinearLayout.LayoutParams pp=(LinearLayout.LayoutParams)power.getLayoutParams();
+        pp.weight=1; r.addView(power);
+        body.addView(r);
 
-        // Botões dos cantos e Power
-        addDpadBtn(dpadArea, createBtn("⏻", POWER, 30, BTN_COLOR, TEXT_RED, 24), 0, -170, 60, 60);
-        addDpadBtn(dpadArea, createBtn("⎘", SOURCE, 30, BTN_COLOR, TEXT_COLOR, 20), -125, -115, 55, 55);
-        addDpadBtn(dpadArea, createBtn("▦", MENU, 30, BTN_COLOR, TEXT_COLOR, 20), 125, -115, 55, 55);
-        addDpadBtn(dpadArea, createBtn("←", BACK, 30, BTN_COLOR, TEXT_COLOR, 22), -125, 115, 55, 55);
-        addDpadBtn(dpadArea, createBtn("⌂", HOME, 30, BTN_COLOR, TEXT_COLOR, 24), 125, 115, 55, 55);
+        // Transporte: modelo original tem três grupos de teclas
+        r=row();
+        add(r,key("◀",REWIND,34)); add(r,key("Ⅱ",PAUSE,34)); add(r,key("●",RECORD,34));
+        body.addView(r);
+        r=row();
+        add(r,key("◀◀",REWIND,34)); add(r,key("▶",PLAY,34)); add(r,key("▶▶",FAST_FORWARD,34));
+        body.addView(r);
 
-        root.addView(dpadArea);
+        r=row();
+        add(r,key("TV",SOURCE,34)); add(r,key("⌕",INFO,34)); add(r,key("⚙",SETTINGS,34));
+        body.addView(r);
+        r=row();
+        add(r,key("TV GUIDE",GUIDE,34)); add(r,key("INFO",INFO,34)); add(r,key("SOURCE",SOURCE,34));
+        body.addView(r);
 
-        // ==========================================
-        // 2. BARRA DO MEIO (Atalhos)
-        // ==========================================
-        LinearLayout midBar = new LinearLayout(this);
-        midBar.setOrientation(LinearLayout.HORIZONTAL);
-        GradientDrawable midBg = new GradientDrawable();
-        midBg.setStroke(dp(1), BTN_BORDER);
-        midBg.setCornerRadius(dp(20));
-        midBar.setBackground(midBg);
-        midBar.setPadding(dp(4), dp(4), dp(4), dp(4));
-        LinearLayout.LayoutParams midParams = new LinearLayout.LayoutParams(-1, dp(60));
-        midParams.setMargins(0, dp(16), 0, dp(24));
-        root.addView(midBar, midParams);
+        section(body,"SMART TV");
+        r=row();
+        add(r,key("SMART",HOME,34)); add(r,key("HOME",HOME,34)); add(r,key("TV",SOURCE,34));
+        body.addView(r);
 
-        addWeightedBtn(midBar, "⋯", SETTINGS, BTN_COLOR, 15, 4, 18);
-        addWeightedBtn(midBar, "🔢", GUIDE, BTN_COLOR, 15, 4, 18);
-        addWeightedBtn(midBar, "▶/II", PLAY, BTN_COLOR, 15, 4, 14);
-        addWeightedBtn(midBar, "🎨", NETFLIX, BTN_COLOR, 15, 4, 14);
+        r=row();
+        add(r,key("RED",RED,28,Color.rgb(125,20,20),8));
+        add(r,key("GREEN",GREEN,28,Color.rgb(20,105,45),8));
+        add(r,key("YELLOW",YELLOW,28,Color.rgb(150,120,10),8));
+        add(r,key("BLUE",BLUE,28,Color.rgb(20,70,145),8));
+        body.addView(r);
 
-        // ==========================================
-        // 3. TEXTOS: VOLUME E CANAIS
-        // ==========================================
-        LinearLayout labels = new LinearLayout(this);
-        labels.setOrientation(LinearLayout.HORIZONTAL);
-        TextView volLabel = new TextView(this); volLabel.setText("Volume"); volLabel.setTextColor(TEXT_COLOR); volLabel.setGravity(Gravity.CENTER);
-        TextView chLabel = new TextView(this); chLabel.setText("Canais"); chLabel.setTextColor(TEXT_COLOR); chLabel.setGravity(Gravity.CENTER);
-        
-        labels.addView(volLabel, new LinearLayout.LayoutParams(0, -2, 1f));
-        View space = new View(this); labels.addView(space, new LinearLayout.LayoutParams(dp(76), -2));
-        labels.addView(chLabel, new LinearLayout.LayoutParams(0, -2, 1f));
-        root.addView(labels, new LinearLayout.LayoutParams(-1, -2));
+        // Navegação grande, como no controle físico
+        LinearLayout nav=new LinearLayout(this);
+        nav.setOrientation(LinearLayout.VERTICAL); nav.setGravity(Gravity.CENTER);
+        nav.setPadding(22,4,22,3);
+        r=row(); add(r,key("▲",UP,38,Color.rgb(90,90,90),12)); nav.addView(r);
+        r=row(); add(r,key("◀",LEFT,45,Color.rgb(90,90,90),12));
+        add(r,key("OK",OK,45,Color.rgb(105,105,105),11));
+        add(r,key("▶",RIGHT,45,Color.rgb(90,90,90),12)); nav.addView(r);
+        r=row(); add(r,key("▼",DOWN,38,Color.rgb(90,90,90),12)); nav.addView(r);
+        body.addView(nav);
 
-        // ==========================================
-        // 4. BOTÕES DE VOLUME, CANAIS E MUTE/EXIT
-        // ==========================================
-        
-        // Linha 1 (Volume +, EXIT, Canal +)
-        LinearLayout row1 = new LinearLayout(this);
-        row1.setOrientation(LinearLayout.HORIZONTAL);
-        row1.setGravity(Gravity.CENTER_VERTICAL);
-        row1.setPadding(0, dp(8), 0, dp(4));
-        
-        addWeightedBtn(row1, "🔊", VOL_UP, BTN_COLOR, 30, 0, 18);
-        
-        Button exitBtn = createBtn("TV\nEXIT", EXIT, 30, BTN_COLOR, TEXT_COLOR, 10);
-        LinearLayout.LayoutParams exitP = new LinearLayout.LayoutParams(dp(60), dp(60));
-        exitP.setMargins(dp(12),0,dp(12),0);
-        row1.addView(exitBtn, exitP);
-        
-        addWeightedBtn(row1, "＋", CH_UP, BTN_COLOR, 30, 0, 22);
-        root.addView(row1, new LinearLayout.LayoutParams(-1, dp(68)));
+        r=row();
+        add(r,key("↩ BACK",BACK,34)); add(r,key("☰ MENU",MENU,34)); add(r,key("▣ EXIT",EXIT,34));
+        body.addView(r);
 
-        // Linha 2 (Volume -, MUTE, Canal -)
-        LinearLayout row2 = new LinearLayout(this);
-        row2.setOrientation(LinearLayout.HORIZONTAL);
-        row2.setGravity(Gravity.CENTER_VERTICAL);
-        row2.setPadding(0, dp(4), 0, dp(16));
-        
-        addWeightedBtn(row2, "🔉", VOL_DOWN, BTN_COLOR, 30, 0, 18);
-        
-        Button muteBtn = createBtn("🔇", MUTE, 30, BTN_COLOR, TEXT_COLOR, 18);
-        LinearLayout.LayoutParams muteP = new LinearLayout.LayoutParams(dp(60), dp(60));
-        muteP.setMargins(dp(12),0,dp(12),0);
-        row2.addView(muteBtn, muteP);
-        
-        addWeightedBtn(row2, "－", CH_DOWN, BTN_COLOR, 30, 0, 22);
-        root.addView(row2, new LinearLayout.LayoutParams(-1, dp(68)));
+        // Volume / Netflix / Channel, mesma posição do controle
+        r=row(); add(r,key("VOL +",VOL_UP,34)); add(r,key("NETFLIX",NETFLIX,34,Color.rgb(225,225,225),9)); add(r,key("CH +",CH_UP,34)); body.addView(r);
+        r=row(); add(r,key("VOL −",VOL_DOWN,34)); add(r,key("🔇",MUTE,34)); add(r,key("CH −",CH_DOWN,34)); body.addView(r);
 
-        // ==========================================
-        // 5. STATUS DO INFRAVERMELHO
-        // ==========================================
-        boolean available = ir != null && ir.hasIrEmitter();
-        TextView status = new TextView(this);
-        status.setText(available ? "● Emissor IR detetado" : "○ Emissor IR não detetado");
-        status.setTextColor(Color.parseColor("#555555"));
-        status.setGravity(Gravity.CENTER);
-        status.setTextSize(10);
-        root.addView(status, new LinearLayout.LayoutParams(-1, -2));
+        section(body,"TECLADO");
+        String[][] nums={{"1","2 ABC","3 DEF"},{"4 GHI","5 JKL","6 MNO"},{"7 PQRS","8 TUV","9 WXYZ"},{"CC","0","SUBTITLE"}};
+        for(String[] a:nums){
+            r=row();
+            for(String s:a){
+                int c;
+                if(s.startsWith("1"))c=1; else if(s.startsWith("2"))c=2; else if(s.startsWith("3"))c=3;
+                else if(s.startsWith("4"))c=4; else if(s.startsWith("5"))c=5; else if(s.startsWith("6"))c=6;
+                else if(s.startsWith("7"))c=7; else if(s.startsWith("8"))c=8; else if(s.startsWith("9"))c=9;
+                else if(s.equals("0"))c=0; else if(s.equals("SUBTITLE"))c=SUBTITLE; else c=0x3C;
+                add(r,key(s,c,31,KEY_DARK,8));
+            }
+            body.addView(r);
+        }
 
-        setContentView(scroll);
+        boolean available=ir!=null&&ir.hasIrEmitter();
+        TextView status=label(available?"●  IR disponível • RC6 36 kHz • Sem anúncios":"○  Emissor IR não detectado",9);
+        status.setTextColor(GRAY);
+        body.addView(status,new LinearLayout.LayoutParams(-1,28));
+
+        root.addView(body,new LinearLayout.LayoutParams(-1,-2));
+        sv.addView(root); setContentView(sv);
     }
 
-    // --- FUNÇÕES DE ENVIO IR MANTIDAS INTACTAS ---
     private void send(int command){
         if(ir==null||!ir.hasIrEmitter()){
             Toast.makeText(this,"Este telemóvel não possui emissor IR.",Toast.LENGTH_SHORT).show(); return;
