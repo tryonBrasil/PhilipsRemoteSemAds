@@ -25,7 +25,7 @@ public class IrPerfilTeste {
     public boolean hasEmitter(){return ir!=null&&ir.hasIrEmitter();}
 
     public String[] perfis(){
-        return new String[]{"LG / NEC","Samsung TV","Sony TV","Philips / RC5","Philips / RC6","Toshiba / JVC / NEC","Panasonic / Kaseikyo","AC Coolix","AC Midea"};
+        return new String[]{"LG / NEC","Samsung TV","Sony TV","Philips / RC5","Philips / RC6","Toshiba / JVC / NEC","AC Coolix","AC Midea"};
     }
 
     public void selecionar(String p){
@@ -49,9 +49,6 @@ public class IrPerfilTeste {
             int[] addrs={0x00,0x01,0x02,0x04,0x10,0x40};
             int[] cs={0x08,0x02,0x03,0x09,0x00,0x01,0x40,0x41,0x06,0x07,0x44,0x43,0x0B};
             for(int a:addrs)for(int c:cs)itens.add(new Item(String.format(Locale.US,"NEC addr 0x%02X • 0x%02X",a,c),NEC,a,c));
-        } else if(p.equals("Panasonic / Kaseikyo")){
-            int[] cs={0x00002,0x00020,0x00021,0x00022,0x00023,0x00025,0x0002A,0x00030,0x00031};
-            for(int c:cs)itens.add(new Item(String.format(Locale.US,"Kaseikyo • cmd 0x%04X",c),NEC,0x40,c));
         } else if(p.equals("AC Coolix")){
             int[] cs={0xB27BE0,0xB27B00,0xB27B20,0xB27B40,0xB27B60,0xB27B80,0xB27BA0,0xB27BC0};
             for(int c:cs)itens.add(new Item(String.format(Locale.US,"Coolix 24-bit • 0x%06X",c),COOLIX,c));
