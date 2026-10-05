@@ -17,14 +17,12 @@ public class MainActivity extends Activity {
     private static final int FREQ = 36000;
     private static final int UNIT = 444;
 
-    // --- CORES DO DESIGN ---
-    private static final int BG_COLOR = Color.parseColor("#0F1115"); // Fundo escuro
-    private static final int BTN_COLOR = Color.parseColor("#26282E"); // Fundo cinza dos botões
-    private static final int BTN_BORDER = Color.parseColor("#333333"); // Borda leve
+    private static final int BG_COLOR = Color.parseColor("#0F1115");
+    private static final int BTN_COLOR = Color.parseColor("#26282E");
+    private static final int BTN_BORDER = Color.parseColor("#333333");
     private static final int TEXT_COLOR = Color.WHITE;
-    private static final int TEXT_RED = Color.parseColor("#E53935");   // Vermelho vivo
+    private static final int TEXT_RED = Color.parseColor("#E53935");
 
-    // --- CÓDIGOS RC6 ---
     private static final int POWER=0x0C, MUTE=0x0D, VOL_DOWN=0x11, VOL_UP=0x10;
     private static final int CH_DOWN=0x21, CH_UP=0x20;
     private static final int UP=0x58, DOWN=0x59, LEFT=0x5A, RIGHT=0x5B, OK=0x5C;
@@ -64,6 +62,7 @@ public class MainActivity extends Activity {
         return b;
     }
 
+    // Botão Power do código anterior: borda vermelha e símbolo vermelho.
     private Button createPowerBtn(String text, int cmd, int radius, int textSizeSp) {
         Button b = new Button(this);
         b.setText(text);
@@ -135,7 +134,6 @@ public class MainActivity extends Activity {
         addDpadBtn(dpadArea, createBtn("＞", RIGHT, 30, BTN_COLOR, TEXT_COLOR, 22), 85, 0, 55, 55);
 
         addDpadBtn(dpadArea, createPowerBtn("⏻", POWER, 30, 24), 0, -170, 60, 60);
-
         addDpadBtn(dpadArea, createBtn("⎘", SOURCE, 30, BTN_COLOR, TEXT_COLOR, 20), -125, -115, 55, 55);
         addDpadBtn(dpadArea, createBtn("▦", MENU, 30, BTN_COLOR, TEXT_COLOR, 20), 125, -115, 55, 55);
         addDpadBtn(dpadArea, createBtn("←", BACK, 30, BTN_COLOR, TEXT_COLOR, 22), -125, 115, 55, 55);
@@ -169,7 +167,7 @@ public class MainActivity extends Activity {
         chLabel.setText("Canais");
         chLabel.setTextColor(TEXT_COLOR);
         chLabel.setGravity(Gravity.CENTER);
-        
+
         labels.addView(volLabel, new LinearLayout.LayoutParams(0, -2, 1f));
         View space = new View(this);
         labels.addView(space, new LinearLayout.LayoutParams(dp(76), -2));
@@ -180,14 +178,14 @@ public class MainActivity extends Activity {
         row1.setOrientation(LinearLayout.HORIZONTAL);
         row1.setGravity(Gravity.CENTER_VERTICAL);
         row1.setPadding(0, dp(8), 0, dp(4));
-        
+
         addWeightedBtn(row1, "🔊", VOL_UP, BTN_COLOR, 30, 0, 18);
-        
+
         Button exitBtn = createBtn("TV\nEXIT", EXIT, 30, BTN_COLOR, TEXT_COLOR, 10);
         LinearLayout.LayoutParams exitP = new LinearLayout.LayoutParams(dp(60), dp(60));
         exitP.setMargins(dp(12),0,dp(12),0);
         row1.addView(exitBtn, exitP);
-        
+
         addWeightedBtn(row1, "＋", CH_UP, BTN_COLOR, 30, 0, 22);
         root.addView(row1, new LinearLayout.LayoutParams(-1, dp(68)));
 
@@ -195,14 +193,14 @@ public class MainActivity extends Activity {
         row2.setOrientation(LinearLayout.HORIZONTAL);
         row2.setGravity(Gravity.CENTER_VERTICAL);
         row2.setPadding(0, dp(4), 0, dp(16));
-        
-        addWeightedBtn(row2, "🔊", VOL_DOWN, BTN_COLOR, 30, 0, 18);
-        
+
+        addWeightedBtn(row2, "🔉", VOL_DOWN, BTN_COLOR, 30, 0, 18);
+
         Button muteBtn = createBtn("🔇", MUTE, 30, BTN_COLOR, TEXT_COLOR, 18);
         LinearLayout.LayoutParams muteP = new LinearLayout.LayoutParams(dp(60), dp(60));
         muteP.setMargins(dp(12),0,dp(12),0);
         row2.addView(muteBtn, muteP);
-        
+
         addWeightedBtn(row2, "－", CH_DOWN, BTN_COLOR, 30, 0, 22);
         root.addView(row2, new LinearLayout.LayoutParams(-1, dp(68)));
 
@@ -237,7 +235,9 @@ public class MainActivity extends Activity {
         for(int m=0x80;m!=0;m>>=1) appendBit(p,(address&m)!=0?1:0,UNIT);
         for(int m=0x80;m!=0;m>>=1) appendBit(p,(command&m)!=0?1:0,UNIT);
         append(p,false,2666);
-        int[] out=new int[p.size()]; for(int i=0;i<p.size();i++)out[i]=p.get(i); return out;
+        int[] out=new int[p.size()];
+        for(int i=0;i<p.size();i++) out[i]=p.get(i);
+        return out;
     }
 
     private void appendBit(ArrayList<Integer> p,int bit,int half){
@@ -249,7 +249,9 @@ public class MainActivity extends Activity {
         if(duration<=0)return;
         if(p.isEmpty()){if(!mark)p.add(0);p.add(duration);return;}
         boolean expectedMark=(p.size()%2==1);
-        if(expectedMark==mark){int i=p.size()-1;p.set(i,p.get(i)+duration);}
-        else p.add(duration);
+        if(expectedMark==mark){
+            int i=p.size()-1;
+            p.set(i,p.get(i)+duration);
+        } else p.add(duration);
     }
 }
