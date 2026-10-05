@@ -143,6 +143,151 @@ public class MainActivity extends Activity {
     }
 
 
+package com.example.philipsremote;
+
+import android.app.Activity;
+import android.os.Bundle;
+import android.hardware.ConsumerIrManager;
+import android.graphics.Color;
+import android.graphics.Typeface;
+import android.graphics.drawable.GradientDrawable;
+import android.view.Gravity;
+import android.view.View;
+import android.widget.*;
+import android.content.SharedPreferences;
+import java.util.ArrayList;
+import java.util.List;
+
+public class MainActivity extends Activity {
+    private ConsumerIrManager ir;
+    private IrPerfilTeste irPerfilTeste;
+    private boolean toggle = false;
+    private boolean lgMode = false;
+    private boolean showingSelector = true;
+    private SharedPreferences prefs;
+    private ControleStorage controleStorage;
+    private ControleStorage.Controle controleAtivo;
+    private String setupBrand="Philips";
+    private String setupModel="50PUG6513/7";
+
+    private static final int FREQ = 36000;
+    private static final int LG_FREQ = 38000;
+    private static final int UNIT = 444;
+    private static final int LG_UNIT = 560;
+
+    private static final int BG = Color.rgb(12,12,12);
+    private static final int KEY = Color.rgb(48,48,48);
+    private static final int KEY_DARK = Color.rgb(34,34,34);
+    private static final int WHITE = Color.WHITE;
+    private static final int GRAY = Color.rgb(175,175,175);
+
+
+    private static final int POWER=0x0C, MUTE=0x0D, VOL_DOWN=0x11, VOL_UP=0x10;
+    private static final int CH_DOWN=0x21, CH_UP=0x20;
+    private static final int UP=0x58, DOWN=0x59, LEFT=0x5A, RIGHT=0x5B, OK=0x5C;
+    private static final int BACK=0x0A, MENU=0x57, HOME=0x54, SOURCE=0x38;
+    private static final int INFO=0x0F, GUIDE=0xCC, NETFLIX=0x76, SETTINGS=0xBF;
+    private static final int RED=0x6D, GREEN=0x6E, YELLOW=0x6F, BLUE=0x70;
+    private static final int PLAY=0x2C, STOP=0x31, PAUSE=0x30, REWIND=0x2B;
+    private static final int FAST_FORWARD=0x28, RECORD=0x37, SUBTITLE=0x4B, EXIT=0x9F;
+
+    @Override protected void onCreate(Bundle b) {
+        super.onCreate(b);
+        ir=(ConsumerIrManager)getSystemService(CONSUMER_IR_SERVICE);
+        irPerfilTeste=new IrPerfilTeste(this);
+        prefs=getSharedPreferences("remote_prefs",MODE_PRIVATE);
+        controleStorage=new ControleStorage(this);
+        lgMode=prefs.getBoolean("lg_mode",false);
+        showSelector();
+    }
+
+    private int dp(float v){ return (int)(v*getResources().getDisplayMetrics().density+0.5f); }
+
+    private Button key(String text,int cmd,int h){ return key(text,cmd,h,KEY,16); }
+
+    private Button key(String text,int cmd,int h,int color,int size){
+        Button b=new Button(this);
+        b.setText(text); b.setTextColor(WHITE); b.setTextSize(size);
+        b.setAllCaps(false); b.setGravity(Gravity.CENTER); b.setPadding(0,0,0,0);
+        b.setMinHeight(0); b.setMinWidth(0); b.setIncludeFontPadding(false);
+        GradientDrawable g=new GradientDrawable();
+        g.setColor(color); g.setCornerRadius(dp(18));
+        g.setStroke(dp(1),Color.rgb(55,55,58)); b.setBackground(g);
+        b.setOnClickListener(v->send(cmd));
+        LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,dp(h),1);
+        p.setMargins(dp(4),dp(4),dp(4),dp(4)); b.setLayoutParams(p);
+        return b;
+    }
+
+    private TextView label(String s,int sp){
+        TextView t=new TextView(this); t.setText(s); t.setTextColor(WHITE);
+        t.setTextSize(sp); t.setGravity(Gravity.CENTER); t.setIncludeFontPadding(false);
+        return t;
+    }
+
+    private LinearLayout row(){
+        LinearLayout r=new LinearLayout(this); r.setOrientation(LinearLayout.HORIZONTAL);
+        r.setGravity(Gravity.CENTER); return r;
+    }
+
+    private void add(LinearLayout r,Button b){ r.addView(b); }
+
+    private void section(LinearLayout root,String title){
+        TextView t=label(title,13); t.setTextColor(GRAY);
+        t.setTypeface(Typeface.DEFAULT,Typeface.BOLD); t.setLetterSpacing(.03f);
+        LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,dp(34));
+        p.setMargins(0,dp(7),0,0); root.addView(t,p);
+    }
+
+    private void showSelector(){
+        showingSelector=true;
+        ScrollView sv=new ScrollView(this); sv.setFillViewport(true); sv.setBackgroundColor(BG);
+        LinearLayout root=new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL);
+        root.setGravity(Gravity.CENTER_HORIZONTAL); root.setPadding(dp(18),dp(28),dp(18),dp(30));
+        TextView title=label("ESCOLHA O CONTROLE",28); title.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
+        root.addView(title,new LinearLayout.LayoutParams(-1,dp(52)));
+        TextView sub=label("Selecione a TV que você quer controlar",15); sub.setTextColor(GRAY);
+        root.addView(sub,new LinearLayout.LayoutParams(-1,dp(34)));
+        LinearLayout philips=tvCard("PHILIPS","50PUG6513/7",!lgMode,v->{lgMode=false;});
+        LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(-1,dp(125)); cp.setMargins(0,dp(28),0,dp(10)); root.addView(philips,cp);
+        LinearLayout lg=tvCard("LG","32LB620B",lgMode,v->{lgMode=true;});
+        LinearLayout.LayoutParams cl=new LinearLayout.LayoutParams(-1,dp(125)); cl.setMargins(0,dp(10),0,dp(24)); root.addView(lg,cl);
+        TextView chosen=label(lgMode?"✓ LG 32LB620B":"✓ Philips 50PUG6513/7",15); chosen.setTextColor(Color.rgb(75,145,95));
+        root.addView(chosen,new LinearLayout.LayoutParams(-1,dp(34)));
+        Button continueBtn=new Button(this); continueBtn.setText("CONTINUAR"); continueBtn.setTextColor(WHITE); continueBtn.setTextSize(17); continueBtn.setAllCaps(false);
+        GradientDrawable bg=new GradientDrawable(); bg.setColor(Color.rgb(190,24,32)); bg.setCornerRadius(dp(18)); continueBtn.setBackground(bg); continueBtn.setOnClickListener(v->{prefs.edit().putBoolean("lg_mode",lgMode).apply();showingSelector=false;build();});
+        root.addView(continueBtn,new LinearLayout.LayoutParams(-1,dp(58)));
+        TextView info=label("A escolha ficará salva para a próxima vez.",12); info.setTextColor(GRAY); root.addView(info,new LinearLayout.LayoutParams(-1,dp(42)));
+        Button meus=new Button(this); meus.setText("★  MEUS CONTROLES"); meus.setTextColor(WHITE); meus.setTextSize(14); meus.setAllCaps(false);
+        GradientDrawable meusBg=new GradientDrawable(); meusBg.setColor(KEY_DARK); meusBg.setCornerRadius(dp(16)); meus.setBackground(meusBg); meus.setOnClickListener(v->showMeusControles());
+        root.addView(meus,new LinearLayout.LayoutParams(-1,dp(52))); sv.addView(root); setContentView(sv);
+    }
+    private LinearLayout tvCard(String brand,String model,boolean selected,View.OnClickListener click){
+        LinearLayout card=new LinearLayout(this); card.setOrientation(LinearLayout.VERTICAL); card.setGravity(Gravity.CENTER_VERTICAL); card.setPadding(dp(20),dp(10),dp(20),dp(10));
+        GradientDrawable bg=new GradientDrawable(); bg.setColor(selected?Color.rgb(42,42,48):Color.rgb(27,27,30)); bg.setCornerRadius(dp(20)); bg.setStroke(dp(2),selected?Color.rgb(210,30,38):Color.rgb(55,55,58)); card.setBackground(bg);
+        TextView b=label(brand,18); b.setTypeface(Typeface.DEFAULT,Typeface.BOLD); card.addView(b,new LinearLayout.LayoutParams(-1,dp(34)));
+        TextView m=label(model,16); m.setTextColor(GRAY); card.addView(m,new LinearLayout.LayoutParams(-1,dp(30)));
+        TextView s=label(selected?"✓ SELECIONADA":"TOQUE PARA SELECIONAR",12); s.setTextColor(selected?Color.rgb(75,145,95):GRAY); card.addView(s,new LinearLayout.LayoutParams(-1,dp(28)));
+        card.setOnClickListener(v->{ click.onClick(v); showSelector(); });
+        return card;
+    }
+
+    @Override public void onBackPressed(){
+        if(!showingSelector){ showSelector(); } else { super.onBackPressed(); }
+    }
+
+    private int perfilInicialPara(String marca,String modelo,String[] perfis){
+        if(marca==null) marca="";
+        String alvo="";
+        if("LG".equalsIgnoreCase(marca)) alvo="LG / NEC";
+        else if("Samsung".equalsIgnoreCase(marca)) alvo="Samsung TV";
+        else if("Sony".equalsIgnoreCase(marca)) alvo="Sony TV";
+        else if("Philips".equalsIgnoreCase(marca)) alvo="Philips / RC6";
+        for(int i=0;i<perfis.length;i++) if(perfis[i].equals(alvo)) return i;
+        return 0;
+    }
+
+
     private void showAprenderComandos(ControleStorage.Controle controle){
         if(controle==null){ showMeusControles(); return; }
         final String[] funcoes=
@@ -151,6 +296,8 @@ public class MainActivity extends Activity {
         final String[] chaves=
             ? new String[]{"FAN_POWER","FAN_REVERSE","FAN_TIMER","FAN_SPEED_1","FAN_SPEED_2","FAN_SPEED_3","FAN_SPEED_4","FAN_SPEED_5","FAN_EXHAUST_1","FAN_EXHAUST_2","FAN_EXHAUST_3","FAN_EXHAUST_4","FAN_EXHAUST_5","FAN_STOP","FAN_LIGHT","FAN_DIM_UP","FAN_DIM_DOWN"}
             : new String[]{"POWER","MUTE","VOL_UP","VOL_DOWN","CH_UP","CH_DOWN","UP","DOWN","LEFT","RIGHT","OK","BACK","MENU","HOME","SOURCE","INFO","GUIDE","NETFLIX","SETTINGS","PLAY","PAUSE","STOP","REWIND","FAST_FORWARD","SUBTITLE","EXIT"};
+        final String[] funcoes={"Ligar/desligar","Mute","Volume +","Volume -","Canal +","Canal -","Cima","Baixo","Esquerda","Direita","OK","Voltar","Menu","Home","Source","Info","Guide","Netflix","Configurações","Play","Pause","Stop","Retroceder","Avançar","Subtitle","Exit"};
+        final String[] chaves={"POWER","MUTE","VOL_UP","VOL_DOWN","CH_UP","CH_DOWN","UP","DOWN","LEFT","RIGHT","OK","BACK","MENU","HOME","SOURCE","INFO","GUIDE","NETFLIX","SETTINGS","PLAY","PAUSE","STOP","REWIND","FAST_FORWARD","SUBTITLE","EXIT"};
         final int[] pos={0};
         final String[] perfis=irPerfilTeste.perfis();
         final Spinner[] spinner={null};
@@ -364,55 +511,14 @@ public class MainActivity extends Activity {
 
     private String funcaoDoComando(int command){
         switch(command){
-            case POWER: return "POWER";
-            case MUTE: return "MUTE";
-            case VOL_UP: return "VOL_UP";
-            case VOL_DOWN: return "VOL_DOWN";
-            case CH_UP: return "CH_UP";
-            case CH_DOWN: return "CH_DOWN";
-            case UP: return "UP";
-            case DOWN: return "DOWN";
-            case LEFT: return "LEFT";
-            case RIGHT: return "RIGHT";
-            case OK: return "OK";
-            case BACK: return "BACK";
-            case MENU: return "MENU";
-            case HOME: return "HOME";
-            case SOURCE: return "SOURCE";
-            case INFO: return "INFO";
-            case GUIDE: return "GUIDE";
-            case NETFLIX: return "NETFLIX";
-            case SETTINGS: return "SETTINGS";
-            case RED: return "RED";
-            case GREEN: return "GREEN";
-            case YELLOW: return "YELLOW";
-            case BLUE: return "BLUE";
-            case PLAY: return "PLAY";
-            case STOP: return "STOP";
-            case PAUSE: return "PAUSE";
-            case REWIND: return "REWIND";
-            case FAST_FORWARD: return "FAST_FORWARD";
-            case SUBTITLE: return "SUBTITLE";
-            case EXIT: return "EXIT";
-            case FAN_POWER: return "FAN_POWER";
-            case FAN_REVERSE: return "FAN_REVERSE";
-            case FAN_TIMER: return "FAN_TIMER";
-            case FAN_SPEED_0: return "FAN_SPEED_0";
-            case FAN_SPEED_1: return "FAN_SPEED_1";
-            case FAN_SPEED_2: return "FAN_SPEED_2";
-            case FAN_SPEED_3: return "FAN_SPEED_3";
-            case FAN_SPEED_4: return "FAN_SPEED_4";
-            case FAN_SPEED_5: return "FAN_SPEED_5";
-            case FAN_EXHAUST_1: return "FAN_EXHAUST_1";
-            case FAN_EXHAUST_2: return "FAN_EXHAUST_2";
-            case FAN_EXHAUST_3: return "FAN_EXHAUST_3";
-            case FAN_EXHAUST_4: return "FAN_EXHAUST_4";
-            case FAN_EXHAUST_5: return "FAN_EXHAUST_5";
-            case FAN_STOP: return "FAN_STOP";
-            case FAN_LIGHT: return "FAN_LIGHT";
-            case FAN_DIM_UP: return "FAN_DIM_UP";
-            case FAN_DIM_DOWN: return "FAN_DIM_DOWN";
-            default: return "";
+            case POWER:return "POWER"; case MUTE:return "MUTE";
+            case VOL_UP:return "VOL_UP"; case VOL_DOWN:return "VOL_DOWN";
+            case CH_UP:return "CH_UP"; case CH_DOWN:return "CH_DOWN";
+            case UP:return "UP"; case DOWN:return "DOWN"; case LEFT:return "LEFT"; case RIGHT:return "RIGHT"; case OK:return "OK";
+            case BACK:return "BACK"; case MENU:return "MENU"; case HOME:return "HOME"; case SOURCE:return "SOURCE"; case INFO:return "INFO"; case GUIDE:return "GUIDE";
+            case NETFLIX:return "NETFLIX"; case SETTINGS:return "SETTINGS"; case PLAY:return "PLAY"; case PAUSE:return "PAUSE"; case STOP:return "STOP";
+            case REWIND:return "REWIND"; case FAST_FORWARD:return "FAST_FORWARD"; case SUBTITLE:return "SUBTITLE"; case EXIT:return "EXIT";
+            default:return "";
         }
     }
 
