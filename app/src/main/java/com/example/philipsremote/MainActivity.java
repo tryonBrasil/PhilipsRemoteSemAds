@@ -15,6 +15,7 @@ import java.util.ArrayList;
 public class MainActivity extends Activity {
     private ConsumerIrManager ir;
     private FanIrTeste fanTeste;
+    private FanLgTeste fanLgTeste;
     private boolean toggle = false;
     private boolean lgMode = false;
     private boolean fanMode = false;
@@ -50,6 +51,7 @@ public class MainActivity extends Activity {
         super.onCreate(b);
         ir=(ConsumerIrManager)getSystemService(CONSUMER_IR_SERVICE);
         fanTeste=new FanIrTeste(this);
+        fanLgTeste=new FanLgTeste(this);
         prefs=getSharedPreferences("remote_prefs",MODE_PRIVATE);
         lgMode=prefs.getBoolean("lg_mode",false);
         showSelector();
@@ -182,10 +184,34 @@ public class MainActivity extends Activity {
 
         Button resetTest=new Button(this); resetTest.setText("↺  REINICIAR TESTES"); resetTest.setTextColor(WHITE); resetTest.setTextSize(13); resetTest.setAllCaps(false);
         GradientDrawable resetBg=new GradientDrawable(); resetBg.setColor(KEY_DARK); resetBg.setCornerRadius(dp(16)); resetTest.setBackground(resetBg);
-        resetTest.setOnClickListener(v->{ fanTeste.reset(); Toast.makeText(this,"Sequência de testes reiniciada.",Toast.LENGTH_SHORT).show(); });
+        resetTest.setOnClickListener(v->{ fanTeste.reset(); fanLgTeste.reset(); Toast.makeText(this,"Sequências reiniciadas.",Toast.LENGTH_SHORT).show(); });
         LinearLayout.LayoutParams rp=new LinearLayout.LayoutParams(-1,dp(48)); rp.setMargins(dp(4),0,dp(4),dp(4)); root.addView(resetTest,rp);
 
-        TextView note=label("Os códigos abaixo são candidatos experimentais: não foram identificados publicamente como o protocolo original do PW-789/LE-7507. O botão envia um por vez para você testar no ventilador.",11); note.setTextColor(GRAY); note.setGravity(Gravity.CENTER); root.addView(note,new LinearLayout.LayoutParams(-1,dp(54)));
+        TextView lgTitle=label("VARREDURA LG • PISTA DO VENTILADOR",13); lgTitle.setTextColor(GRAY); lgTitle.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
+        root.addView(lgTitle,new LinearLayout.LayoutParams(-1,dp(34)));
+
+        TextView lgStatus=label("Nenhum código LG testado.",13); lgStatus.setTextColor(Color.rgb(75,145,95)); lgStatus.setGravity(Gravity.CENTER);
+        root.addView(lgStatus,new LinearLayout.LayoutParams(-1,dp(38)));
+
+        TextView lgLog=label("LOG: aguardando teste...",12); lgLog.setTextColor(GRAY); lgLog.setGravity(Gravity.CENTER);
+        root.addView(lgLog,new LinearLayout.LayoutParams(-1,dp(44)));
+
+        Button lgNext=new Button(this); lgNext.setText("📡  TESTAR PRÓXIMO LG"); lgNext.setTextColor(WHITE); lgNext.setTextSize(14); lgNext.setAllCaps(false);
+        GradientDrawable lgBg=new GradientDrawable(); lgBg.setColor(Color.rgb(55,80,55)); lgBg.setCornerRadius(dp(16)); lgNext.setBackground(lgBg);
+        lgNext.setOnClickListener(v->{
+            String resultado=fanLgTeste.next();
+            int codigo=fanLgTeste.currentCodeValue();
+            lgStatus.setText(resultado);
+            if(codigo>=0){
+                lgLog.setText(String.format("LOG: enviado LG 0x%02X  •  teste %d/%d\nSe o ventilador reagir, anote este código e a função.", codigo, fanLgTeste.position(), fanLgTeste.total()));
+            } else {
+                lgLog.setText("LOG: nenhum comando enviado.");
+            }
+            Toast.makeText(this,resultado,Toast.LENGTH_SHORT).show();
+        });
+        LinearLayout.LayoutParams lnp=new LinearLayout.LayoutParams(-1,dp(54)); lnp.setMargins(dp(4),dp(4),dp(4),dp(6)); root.addView(lgNext,lnp);
+
+        TextView note=label("A varredura LG usa exatamente o mesmo formato IR LG que já funciona nos comandos da TV. Os códigos são enviados um por vez. Quando o ventilador responder, o LOG mostra o código exato.",11); note.setTextColor(GRAY); note.setGravity(Gravity.CENTER); root.addView(note,new LinearLayout.LayoutParams(-1,dp(54)));
         sv.addView(root); setContentView(sv);
     }
 
