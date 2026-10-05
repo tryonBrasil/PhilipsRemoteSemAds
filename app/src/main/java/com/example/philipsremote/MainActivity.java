@@ -37,6 +37,8 @@ public class MainActivity extends Activity {
     private static final int FAN_SPEED_0=1010, FAN_SPEED_1=1011, FAN_SPEED_2=1012, FAN_SPEED_3=1013, FAN_SPEED_4=1014, FAN_SPEED_5=1015;
     private static final int FAN_EXHAUST_1=1021, FAN_EXHAUST_2=1022, FAN_EXHAUST_3=1023, FAN_EXHAUST_4=1024, FAN_EXHAUST_5=1025, FAN_STOP=1026;
     private static final int FAN_LIGHT=1031, FAN_DIM_UP=1032, FAN_DIM_DOWN=1033;
+    // Código confirmado pelo usuário: LG 0x18 liga o ventilador.
+    private static final int FAN_IR_POWER_ON=0x18;
 
     private static final int POWER=0x0C, MUTE=0x0D, VOL_DOWN=0x11, VOL_UP=0x10;
     private static final int CH_DOWN=0x21, CH_UP=0x20;
@@ -308,7 +310,17 @@ public class MainActivity extends Activity {
         if(ir==null||!ir.hasIrEmitter()){
             Toast.makeText(this,"Este telemóvel não possui emissor IR.",Toast.LENGTH_SHORT).show(); return;
         }
-        Toast.makeText(this,"PW-789: código IR do botão ainda não disponível na base pública.",Toast.LENGTH_SHORT).show();
+        try{
+            int code = (command==FAN_POWER) ? FAN_IR_POWER_ON : -1;
+            if(code>=0){
+                ir.transmit(LG_FREQ, fanLgFrame(code));
+                Toast.makeText(this,"Ventilador: LG 0x18 enviado (LIGA)",Toast.LENGTH_SHORT).show();
+            } else {
+                Toast.makeText(this,"Código desta função ainda não identificado. Use a varredura LG.",Toast.LENGTH_SHORT).show();
+            }
+        }catch(Exception e){
+            Toast.makeText(this,"Falha ao enviar IR: "+e.getMessage(),Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void send(int command){
@@ -339,6 +351,20 @@ public class MainActivity extends Activity {
             case 5:return 0x15; case 6:return 0x16; case 7:return 0x17; case 8:return 0x18; case 9:return 0x19;
             default:return c & 0xFF;
         }
+    }
+
+    private int[] fanLgFrame(int data){
+        int[] bytes={0x04,0xFB,data&0xFF,(~data)&0xFF};
+        ArrayList<Integer> p=new ArrayList<>();
+        append(p,true,9000); append(p,false,4500);
+        for(int b:bytes) for(int m=1;m<=0x80;m<<=1){
+            append(p,true,LG_UNIT);
+            append(p,false,(b&m)!=0?1690:560);
+        }
+        append(p,true,LG_UNIT); append(p,false,20000);
+        int[] out=new int[p.size()];
+        for(int i=0;i<p.size();i++) out[i]=p.get(i);
+        return out;
     }
 
     private int[] lgNec(int command){
