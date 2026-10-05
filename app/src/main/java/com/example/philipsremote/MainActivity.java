@@ -20,6 +20,7 @@ public class MainActivity extends Activity {
     private boolean fanMode = false;
     private boolean showingSelector = true;
     private SharedPreferences prefs;
+    private ControleStorage controleStorage;
 
     private static final int FREQ = 36000;
     private static final int LG_FREQ = 38000;
@@ -53,6 +54,7 @@ public class MainActivity extends Activity {
         ir=(ConsumerIrManager)getSystemService(CONSUMER_IR_SERVICE);
         irPerfilTeste=new IrPerfilTeste(this);
         prefs=getSharedPreferences("remote_prefs",MODE_PRIVATE);
+        controleStorage=new ControleStorage(this);
         lgMode=prefs.getBoolean("lg_mode",false);
         showSelector();
     }
@@ -125,6 +127,14 @@ public class MainActivity extends Activity {
 
         TextView info=label("A escolha ficará salva para a próxima vez.",12); info.setTextColor(GRAY);
         root.addView(info,new LinearLayout.LayoutParams(-1,dp(42)));
+
+        Button meus=new Button(this);
+        meus.setText("★  MEUS CONTROLES");
+        meus.setTextColor(WHITE); meus.setTextSize(14); meus.setAllCaps(false);
+        GradientDrawable meusBg=new GradientDrawable(); meusBg.setColor(KEY_DARK); meusBg.setCornerRadius(dp(16)); meus.setBackground(meusBg);
+        meus.setOnClickListener(v->showMeusControles());
+        root.addView(meus,new LinearLayout.LayoutParams(-1,dp(52)));
+
         sv.addView(root); setContentView(sv);
     }
 
@@ -228,6 +238,27 @@ public class MainActivity extends Activity {
             prefs.edit().putString(chave,salvo).apply();
             universalLog.setText("✓ RESULTADO SALVO\n"+salvo+"\n\nEste código ficará guardado neste aparelho.");
             Toast.makeText(this,"Código salvo neste aparelho",Toast.LENGTH_SHORT).show();
+            new android.app.AlertDialog.Builder(this)
+                .setTitle("Salvar como meu controle")
+                .setMessage("Quer adicionar este código confirmado à sua lista de controles?")
+                .setNegativeButton("Agora não",null)
+                .setPositiveButton("SALVAR", (d,w)->{
+                    final EditText nome=new EditText(this);
+                    nome.setSingleLine(true); nome.setHint("Nome do controle");
+                    nome.setText(fanMode?"PW-789":"Meu "+(lgMode?"LG":"Philips"));
+                    new android.app.AlertDialog.Builder(this).setTitle("Nome do controle")
+                        .setView(nome).setNegativeButton("CANCELAR",null)
+                        .setPositiveButton("SALVAR",(d2,w2)->{
+                            String n=nome.getText().toString().trim();
+                            if(n.isEmpty()) n=fanMode?"PW-789":"Meu controle";
+                            controleStorage.salvar(n,fanMode?"Ventilador":"TV",
+                                fanMode?"PW-789":(lgMode?"LG":"Philips"),
+                                fanMode?"PW-789":(lgMode?"32LB620B":"50PUG6513/7"),
+                                irPerfilTeste.getPerfil(),irPerfilTeste.lastDescription(),
+                                irPerfilTeste.currentCode(),fanMode?38000:(lgMode?38000:36000));
+                            Toast.makeText(this,"Controle adicionado em Meus controles",Toast.LENGTH_SHORT).show();
+                        }).show();
+                }).show();
         });
         resultRow.addView(worked,new LinearLayout.LayoutParams(0,dp(50),1));
         Button notWorked=new Button(this);
@@ -258,6 +289,47 @@ public class MainActivity extends Activity {
         TextView note=label("Inclui famílias de TVs LG/NEC, Samsung, Sony, Philips RC5/RC6, Toshiba/JVC, além de candidatos para ar-condicionado Coolix e Midea. São testes experimentais; compatibilidade depende do receptor do aparelho.",11);
         note.setTextColor(GRAY); note.setGravity(Gravity.CENTER);
         root.addView(note,new LinearLayout.LayoutParams(-1,dp(64)));
+        sv.addView(root); setContentView(sv);
+    }
+
+    private void showMeusControles(){
+        ScrollView sv=new ScrollView(this); sv.setFillViewport(true); sv.setBackgroundColor(BG);
+        LinearLayout root=new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL);
+        root.setPadding(dp(14),dp(16),dp(14),dp(28)); root.setBackgroundColor(BG);
+        LinearLayout top=row();
+        TextView title=label("MEUS CONTROLES",24); title.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
+        top.addView(title,new LinearLayout.LayoutParams(0,dp(50),1));
+        Button voltar=new Button(this); voltar.setText("VOLTAR"); voltar.setTextColor(WHITE); voltar.setTextSize(12); voltar.setAllCaps(false);
+        GradientDrawable vb=new GradientDrawable(); vb.setColor(KEY_DARK); vb.setCornerRadius(dp(14)); voltar.setBackground(vb); voltar.setOnClickListener(v->showSelector());
+        top.addView(voltar,new LinearLayout.LayoutParams(dp(90),dp(44))); root.addView(top);
+
+        List<ControleStorage.Controle> lista=controleStorage.listar();
+        if(lista.isEmpty()){
+            TextView vazio=label("Você ainda não salvou nenhum controle.\n\nUse o teste universal, confirme um código e salve em Meus controles.",15);
+            vazio.setTextColor(GRAY); vazio.setGravity(Gravity.CENTER);
+            root.addView(vazio,new LinearLayout.LayoutParams(-1,dp(180)));
+        }else{
+            for(ControleStorage.Controle c:lista){
+                LinearLayout card=new LinearLayout(this); card.setOrientation(LinearLayout.VERTICAL); card.setPadding(dp(16),dp(10),dp(16),dp(10));
+                GradientDrawable cb=new GradientDrawable(); cb.setColor(KEY_DARK); cb.setCornerRadius(dp(18)); cb.setStroke(dp(1),Color.rgb(55,55,58)); card.setBackground(cb);
+                TextView n=label(c.nome,18); n.setTypeface(Typeface.DEFAULT,Typeface.BOLD); n.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
+                card.addView(n,new LinearLayout.LayoutParams(-1,dp(34)));
+                TextView detail=label(c.categoria+" • "+c.marca+" • "+c.modelo+"\n"+c.perfil+" • "+c.descricao,12);
+                detail.setTextColor(GRAY); detail.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
+                card.addView(detail,new LinearLayout.LayoutParams(-1,dp(48)));
+                Button abrir=new Button(this); abrir.setText("ABRIR CONTROLE"); abrir.setTextColor(WHITE); abrir.setTextSize(12); abrir.setAllCaps(false);
+                GradientDrawable ab=new GradientDrawable(); ab.setColor(Color.rgb(55,80,55)); ab.setCornerRadius(dp(12)); abrir.setBackground(ab);
+                abrir.setOnClickListener(v->{
+                    if("Ventilador".equals(c.categoria)){ fanMode=true; lgMode=false; buildFan(); }
+                    else { fanMode=false; lgMode="LG".equals(c.marca); build(); }
+                });
+                card.addView(abrir,new LinearLayout.LayoutParams(-1,dp(46)));
+                LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(-1,dp(140)); cp.setMargins(0,dp(8),0,dp(8)); root.addView(card,cp);
+            }
+        }
+        Button add=new Button(this); add.setText("+  ADICIONAR OUTRO CONTROLE"); add.setTextColor(WHITE); add.setTextSize(13); add.setAllCaps(false);
+        GradientDrawable addBg=new GradientDrawable(); addBg.setColor(Color.rgb(55,55,60)); addBg.setCornerRadius(dp(16)); add.setBackground(addBg);
+        add.setOnClickListener(v->showSelector()); root.addView(add,new LinearLayout.LayoutParams(-1,dp(52)));
         sv.addView(root); setContentView(sv);
     }
 
