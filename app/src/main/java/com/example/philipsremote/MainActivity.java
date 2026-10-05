@@ -79,7 +79,10 @@ public class MainActivity extends Activity {
     private void build(){
         ScrollView sv=new ScrollView(this);
         sv.setFillViewport(true);
-        sv.setClipToPadding(false); sv.setBackgroundColor(BG);\n        getWindow().setStatusBarColor(BG);\n        getWindow().setNavigationBarColor(BG);\n        getWindow().getDecorView().setSystemUiVisibility(0);
+        sv.setClipToPadding(false); sv.setBackgroundColor(BG);
+        getWindow().setStatusBarColor(BG);
+        getWindow().setNavigationBarColor(BG);
+        getWindow().getDecorView().setSystemUiVisibility(0);
 
         LinearLayout root=new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
