@@ -5,6 +5,8 @@ import android.os.Bundle;
 import android.hardware.ConsumerIrManager;
 import android.graphics.Color;
 import android.graphics.Typeface;
+import android.content.res.ColorStateList;
+import android.graphics.drawable.RippleDrawable;
 import android.graphics.drawable.GradientDrawable;
 import android.view.Gravity;
 import android.view.View;
@@ -65,13 +67,15 @@ public class MainActivity extends Activity {
 
     private Button key(String text,int cmd,int h,int color,int size){
         Button b=new Button(this);
-        b.setText(text); b.setTextColor(WHITE); b.setTextSize(size);
+        b.setText(text); b.setTextColor(WHITE); b.setTextSize(size); b.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
         b.setAllCaps(false); b.setGravity(Gravity.CENTER); b.setPadding(0,0,0,0);
         b.setMinHeight(0); b.setMinWidth(0); b.setIncludeFontPadding(false);
         GradientDrawable g=new GradientDrawable();
         g.setColor(color); g.setCornerRadius(dp(18));
-        g.setStroke(dp(1),Color.rgb(55,55,58)); b.setBackground(g);
-        b.setOnClickListener(v->send(cmd));
+        g.setStroke(dp(1),Color.rgb(55,55,58));
+        b.setBackground(new RippleDrawable(ColorStateList.valueOf(Color.rgb(85,85,90)),g,null));
+        b.setHapticFeedbackEnabled(true);
+        b.setOnClickListener(v->{ v.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP); send(cmd); });
         LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,dp(h),1);
         p.setMargins(dp(4),dp(4),dp(4),dp(4)); b.setLayoutParams(p);
         return b;
@@ -420,8 +424,8 @@ public class MainActivity extends Activity {
         modelRow.addView(change,new LinearLayout.LayoutParams(dp(112),dp(44)));
         root.addView(modelRow);
 
-        TextView selected=label(lgMode?"LG • 32LB620B":"PHILIPS • 50PUG6513/7",13);
-        selected.setTextColor(GRAY);
+        TextView selected=label(controleAtivo!=null ? "✓ "+controleAtivo.nome+"  •  "+controleAtivo.marca+" "+controleAtivo.modelo : (lgMode?"LG • 32LB620B":"PHILIPS • 50PUG6513/7"),13);
+        selected.setTextColor(controleAtivo!=null?Color.rgb(90,170,105):GRAY);
         root.addView(selected,new LinearLayout.LayoutParams(-1,dp(26)));
 
         LinearLayout r=row();
