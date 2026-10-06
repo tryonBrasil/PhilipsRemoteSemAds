@@ -717,6 +717,22 @@ public class MainActivity extends Activity {
                 if(!ok) Toast.makeText(this,"Não foi possível enviar o código salvo",Toast.LENGTH_SHORT).show();
                 return;
             }
+            // Para controles universais, não envie um código genérico de outro protocolo.
+            // Se o botão não foi aprendido, peça ao usuário para configurá-lo.
+            if(controleAtivo!=null){
+                String perfil=controleAtivo.perfil==null?"":controleAtivo.perfil;
+                if("LG / NEC".equals(perfil)) {
+                    ir.transmit(LG_FREQ,lgNec(command));
+                    return;
+                }
+                if("Philips / RC6".equals(perfil)) {
+                    toggle=!toggle;
+                    ir.transmit(FREQ,rc6(0x00,command,toggle));
+                    return;
+                }
+                Toast.makeText(this,"Este botão ainda não foi configurado. Toque em EDITAR para aprendê-lo.",Toast.LENGTH_SHORT).show();
+                return;
+            }
             if(lgMode) ir.transmit(LG_FREQ,lgNec(command));
             else { toggle=!toggle; ir.transmit(FREQ,rc6(0x00,command,toggle)); }
         }catch(Exception e){
