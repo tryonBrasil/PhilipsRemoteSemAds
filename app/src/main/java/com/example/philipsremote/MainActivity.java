@@ -302,7 +302,7 @@ public class MainActivity extends Activity {
         new android.app.AlertDialog.Builder(this)
             .setTitle("APRENDER BOTÕES • "+controle.nome)
             .setMessage(controleStorage.quantidadeComandos(controle)+" botão"+(controleStorage.quantidadeComandos(controle)==1?"":"ões")+" já configurado"+(controleStorage.quantidadeComandos(controle)==1?"":"s")+"\n\nSelecione uma função. O teste avança um código por vez; quando a TV reagir, salve o código.")
-            .setSingleChoiceItems(funcoes,pos[0],(d,which)->{ pos[0]=which; aprenderFuncaoPos=which; })
+            .setSingleChoiceItems(funcoes,pos[0],(d,which)->{ pos[0]=which; aprenderFuncaoPos=which; irPerfilTeste.reset(); })
             .setNegativeButton("FECHAR",(d,w)->showMeusControles())
             .setNeutralButton("TESTAR CÓDIGO",(d,w)->{
                 String perfil=controle.perfil;
