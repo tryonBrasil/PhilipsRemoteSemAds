@@ -92,7 +92,7 @@ public class UpdateManager {
         executor.execute(() -> {
             HttpURLConnection connection = null;
             try {
-                URL url = new URL(RELEASES_URL);
+                URL url = new URL(RELEASES_URL + "?t=" + System.currentTimeMillis());
                 connection = (HttpURLConnection) url.openConnection();
                 connection.setRequestMethod("GET");
                 connection.setConnectTimeout(7000);
@@ -101,6 +101,7 @@ public class UpdateManager {
                 connection.setRequestProperty("User-Agent", "IR-Remote-BR");
                 connection.setRequestProperty("Cache-Control", "no-cache");
                 connection.setRequestProperty("Pragma", "no-cache");
+                connection.setUseCaches(false);
 
                 if (connection.getResponseCode() != 200) throw new Exception("HTTP " + connection.getResponseCode());
 
