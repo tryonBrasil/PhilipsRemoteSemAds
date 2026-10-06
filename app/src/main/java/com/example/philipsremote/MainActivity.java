@@ -115,9 +115,21 @@ public class MainActivity extends Activity {
 
     private void section(LinearLayout root,String title){
         TextView t=label(title,13); t.setTextColor(GRAY);
-        t.setTypeface(Typeface.DEFAULT,Typeface.BOLD); t.setLetterSpacing(.03f);
+        t.setTypeface(Typeface.DEFAULT,Typeface.BOLD); t.setLetterSpacing(.05f);
+        t.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
         LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,dp(34));
-        p.setMargins(0,dp(7),0,0); root.addView(t,p);
+        p.setMargins(dp(4),dp(8),dp(4),0); root.addView(t,p);
+    }
+
+    private TextView badge(String text, int color){
+        TextView b=label(text,11);
+        b.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
+        b.setTextColor(WHITE);
+        b.setPadding(dp(10),0,dp(10),0);
+        GradientDrawable bg=new GradientDrawable();
+        bg.setColor(color); bg.setCornerRadius(dp(12));
+        b.setBackground(bg);
+        return b;
     }
 
     private void showSelector(){
@@ -465,20 +477,45 @@ public class MainActivity extends Activity {
         root.setPadding(dp(10),dp(8),dp(10),dp(28)); root.setBackgroundColor(BG);
 
         LinearLayout modelRow=row();
-        TextView title=label("CONTROLE REMOTO",22);
+        TextView title=label("IR REMOTE BR",22);
         title.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
         modelRow.addView(title,new LinearLayout.LayoutParams(0,dp(48),1));
 
         Button change= new Button(this);
-        change.setText("TROCAR TV"); change.setTextColor(WHITE); change.setTextSize(12); change.setAllCaps(false);
+        change.setText("TROCAR"); change.setTextColor(WHITE); change.setTextSize(12); change.setAllCaps(false);
         GradientDrawable changeBg=new GradientDrawable(); changeBg.setColor(KEY_DARK); changeBg.setCornerRadius(dp(14));
         change.setBackground(changeBg); actionFeedback(change); change.setOnClickListener(v->showSelector());
-        modelRow.addView(change,new LinearLayout.LayoutParams(dp(112),dp(44)));
+        modelRow.addView(change,new LinearLayout.LayoutParams(dp(88),dp(44)));
         root.addView(modelRow);
 
-        TextView selected=label(controleAtivo!=null ? "●  "+controleAtivo.nome+"  •  "+controleAtivo.marca+" "+controleAtivo.modelo : (lgMode?"●  LG • 32LB620B":"●  PHILIPS • 50PUG6513/7"),13);
-        selected.setTextColor(controleAtivo!=null?Color.rgb(90,170,105):Color.rgb(150,150,155));
-        LinearLayout.LayoutParams selectedParams=new LinearLayout.LayoutParams(-1,dp(32)); selectedParams.setMargins(0,0,0,dp(2)); root.addView(selected,selectedParams);
+        LinearLayout deviceCard=new LinearLayout(this);
+        deviceCard.setOrientation(LinearLayout.VERTICAL);
+        deviceCard.setPadding(dp(14),dp(8),dp(14),dp(8));
+        GradientDrawable deviceBg=new GradientDrawable();
+        deviceBg.setColor(controleAtivo!=null?Color.rgb(30,54,37):Color.rgb(28,28,32));
+        deviceBg.setCornerRadius(dp(16));
+        deviceBg.setStroke(dp(1),controleAtivo!=null?Color.rgb(75,145,95):Color.rgb(55,55,58));
+        deviceCard.setBackground(deviceBg);
+
+        LinearLayout deviceTop=row();
+        TextView selected=label(controleAtivo!=null ? controleAtivo.nome : (lgMode?"LG 32LB620B":"Philips 50PUG6513/7"),16);
+        selected.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
+        selected.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
+        selected.setTextColor(WHITE);
+        deviceTop.addView(selected,new LinearLayout.LayoutParams(0,dp(34),1));
+        TextView ativoBadge=badge(controleAtivo!=null?"ATIVO":"PADRÃO",controleAtivo!=null?Color.rgb(55,110,65):Color.rgb(65,65,72));
+        deviceTop.addView(ativoBadge,new LinearLayout.LayoutParams(-2,dp(28)));
+        deviceCard.addView(deviceTop);
+
+        TextView selectedDetail=label(controleAtivo!=null
+                ? controleAtivo.marca+" "+controleAtivo.modelo+"  •  "+controleStorage.quantidadeComandos(controleAtivo)+" botões configurados"
+                : (lgMode?"LG • perfil NEC":"Philips • perfil RC6"),12);
+        selectedDetail.setTextColor(controleAtivo!=null?Color.rgb(175,205,180):GRAY);
+        selectedDetail.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
+        deviceCard.addView(selectedDetail,new LinearLayout.LayoutParams(-1,dp(28)));
+        LinearLayout.LayoutParams deviceParams=new LinearLayout.LayoutParams(-1,dp(76));
+        deviceParams.setMargins(dp(2),0,dp(2),dp(5));
+        root.addView(deviceCard,deviceParams);
 
         LinearLayout r=row();
         Button powerButton=new Button(this); powerButton.setText("");
@@ -494,6 +531,12 @@ public class MainActivity extends Activity {
         LinearLayout.LayoutParams powerParams=new LinearLayout.LayoutParams(dp(82),dp(82));
         powerParams.setMargins(dp(4),dp(2),dp(4),dp(2)); powerButton.setLayoutParams(powerParams);
         r.addView(powerButton); root.addView(r);
+
+        TextView hint=label(controleAtivo!=null
+                ? "Controle ativo • "+controleStorage.quantidadeComandos(controleAtivo)+" botões personalizados"
+                : "Controle padrão • você pode salvar seu próprio controle",11);
+        hint.setTextColor(GRAY);
+        root.addView(hint,new LinearLayout.LayoutParams(-1,dp(28)));
 
         r=row();
         add(r,key("SOURCE",SOURCE,50,KEY,16)); add(r,key("INFO",INFO,50,KEY,16));
@@ -553,27 +596,35 @@ public class MainActivity extends Activity {
 
         if(controleAtivo!=null){
             LinearLayout deviceBar=row();
-            TextView deviceInfo=label("✓  ATIVO  •  "+controleAtivo.nome+"  •  "+controleStorage.quantidadeComandos(controleAtivo)+" botões configurados",13);
-            deviceInfo.setTextColor(Color.rgb(75,145,95));
-            deviceBar.addView(deviceInfo,new LinearLayout.LayoutParams(0,dp(44),1));
+            deviceBar.setPadding(dp(2),dp(2),dp(2),dp(2));
+            GradientDrawable barBg=new GradientDrawable();
+            barBg.setColor(Color.rgb(24,30,26)); barBg.setCornerRadius(dp(14));
+            deviceBar.setBackground(barBg);
+
+            TextView deviceInfo=label("✓  "+controleAtivo.nome+"\n"+controleStorage.quantidadeComandos(controleAtivo)+" botões configurados",12);
+            deviceInfo.setTextColor(Color.rgb(105,175,115));
+            deviceInfo.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
+            deviceBar.addView(deviceInfo,new LinearLayout.LayoutParams(0,dp(52),1));
 
             Button configurar=new Button(this);
-            configurar.setText("CONFIGURAR");
+            configurar.setText("EDITAR");
             configurar.setTextColor(WHITE);
             configurar.setTextSize(11);
             configurar.setAllCaps(false);
             GradientDrawable configBg=new GradientDrawable();
-            configBg.setColor(KEY_DARK);
+            configBg.setColor(Color.rgb(55,75,60));
             configBg.setCornerRadius(dp(12));
             configurar.setBackground(configBg);
             actionFeedback(configurar);
             configurar.setOnClickListener(v->showAprenderComandos(controleAtivo));
-            deviceBar.addView(configurar,new LinearLayout.LayoutParams(dp(108),dp(42)));
-            root.addView(deviceBar);
+            deviceBar.addView(configurar,new LinearLayout.LayoutParams(dp(82),dp(44)));
+            LinearLayout.LayoutParams barParams=new LinearLayout.LayoutParams(-1,dp(56));
+            barParams.setMargins(dp(2),dp(5),dp(2),dp(2));
+            root.addView(deviceBar,barParams);
         }
 
         Button meusControles=new Button(this);
-        meusControles.setText("★  MEUS CONTROLES");
+        meusControles.setText("★  MEUS CONTROLES  •  "+controleStorage.listar().size());
         meusControles.setTextColor(WHITE);
         meusControles.setTextSize(13);
         meusControles.setAllCaps(false);
