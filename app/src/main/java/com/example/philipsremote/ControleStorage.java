@@ -190,6 +190,26 @@ public class ControleStorage {
         db.delete("controls","id=?",new String[]{String.valueOf(controle.id)});
     }
 
+    public Controle duplicar(Controle original,String novoNome){
+        if(original==null) return null;
+        salvar(novoNome==null||novoNome.trim().isEmpty()?original.nome+" (cópia)":novoNome.trim(),
+                original.categoria,original.marca,original.modelo,original.perfil,original.descricao,
+                original.codigo,original.frequencia);
+        List<Controle> lista=listar();
+        if(lista.isEmpty()) return null;
+        Controle novo=lista.get(lista.size()-1);
+        if(original.comandos!=null){
+            JSONArray names=original.comandos.names();
+            if(names!=null) for(int i=0;i<names.length();i++){
+                String funcao=names.optString(i,"");
+                JSONObject item=original.comandos.optJSONObject(funcao);
+                if(item!=null) salvarComando(novo,funcao,item.optInt("codigo",-1),
+                        item.optString("perfil",""),item.optInt("frequencia",0));
+            }
+        }
+        return novo;
+    }
+
     public void limpar(){
         SQLiteDatabase db=helper.getWritableDatabase();
         db.delete("commands",null,null);
