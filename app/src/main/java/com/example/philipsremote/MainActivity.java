@@ -808,6 +808,7 @@ render[0]=()->{
     }
 
     private void build(){
+        if(controleAtivo!=null && "Ventilador Universal".equals(controleAtivo.perfil)){ showFanRemote(); return; }
         ScrollView sv=new ScrollView(this); sv.setFillViewport(true);
         sv.setBackgroundColor(BG); sv.setClipToPadding(false);
 
