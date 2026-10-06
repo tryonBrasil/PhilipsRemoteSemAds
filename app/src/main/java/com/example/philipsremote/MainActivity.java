@@ -317,17 +317,128 @@ private static final int CARD_2 = Color.rgb(31,31,36);
 
     private void showAprenderComandos(ControleStorage.Controle controle){
         if(controle==null){ showMeusControles(); return; }
+
         final String[] funcoes={"Ligar/desligar","Mute","Volume +","Volume -","Canal +","Canal -","Cima","Baixo","Esquerda","Direita","OK","Voltar","Menu","Home","Source","Info","Guide","Netflix","Configurações","Vermelho","Verde","Amarelo","Azul","Play","Pause","Stop","Retroceder","Avançar","Subtitle","Exit"};
         final String[] chaves={"POWER","MUTE","VOL_UP","VOL_DOWN","CH_UP","CH_DOWN","UP","DOWN","LEFT","RIGHT","OK","BACK","MENU","HOME","SOURCE","INFO","GUIDE","NETFLIX","SETTINGS","RED","GREEN","YELLOW","BLUE","PLAY","PAUSE","STOP","REWIND","FAST_FORWARD","SUBTITLE","EXIT"};
         final int[] pos={Math.max(0,Math.min(aprenderFuncaoPos,funcoes.length-1))};
         final String[] perfis=irPerfilTeste.perfis();
+        final int configuradosInicial=controleStorage.quantidadeComandos(controle);
 
-        new android.app.AlertDialog.Builder(this)
-            .setTitle("APRENDER BOTÕES • "+controle.nome)
-            .setMessage(controleStorage.quantidadeComandos(controle)+" botão"+(controleStorage.quantidadeComandos(controle)==1?"":"ões")+" já configurado"+(controleStorage.quantidadeComandos(controle)==1?"":"s")+"\n\nSelecione uma função. O teste avança um código por vez; quando a TV reagir, salve o código.")
-            .setSingleChoiceItems(funcoes,pos[0],(d,which)->{ pos[0]=which; aprenderFuncaoPos=which; irPerfilTeste.reset(); })
+        LinearLayout box=new LinearLayout(this);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setPadding(dp(18),dp(4),dp(18),dp(4));
+
+        TextView intro=label("Configure os botões um por vez. Teste os códigos até a TV responder e depois salve.",13);
+        intro.setTextColor(GRAY);
+        intro.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
+        box.addView(intro,new LinearLayout.LayoutParams(-1,dp(54)));
+
+        LinearLayout device=row();
+        TextView deviceName=label(controle.nome,18);
+        deviceName.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
+        deviceName.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
+        device.addView(deviceName,new LinearLayout.LayoutParams(0,dp(38),1));
+        TextView profileBadge=badge(controle.perfil==null||controle.perfil.isEmpty()?"IR":controle.perfil,Color.rgb(60,60,68));
+        device.addView(profileBadge,new LinearLayout.LayoutParams(-2,dp(28)));
+        box.addView(device,new LinearLayout.LayoutParams(-1,dp(42)));
+
+        TextView progress=label("",12);
+        progress.setTextColor(Color.rgb(105,175,115));
+        progress.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
+        box.addView(progress,new LinearLayout.LayoutParams(-1,dp(30)));
+
+        TextView selectedTitle=label("",16);
+        selectedTitle.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
+        selectedTitle.setTextColor(WHITE);
+        selectedTitle.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
+        box.addView(selectedTitle,new LinearLayout.LayoutParams(-1,dp(34)));
+
+        final TextView status=label("Aguardando teste",13);
+        status.setTextColor(GRAY);
+        status.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
+        GradientDrawable statusBg=new GradientDrawable();
+        statusBg.setColor(CARD);
+        statusBg.setCornerRadius(dp(12));
+        statusBg.setStroke(dp(1),BORDER);
+        status.setBackground(statusBg);
+        status.setPadding(dp(12),0,dp(12),0);
+        box.addView(status,new LinearLayout.LayoutParams(-1,dp(44)));
+
+        TextView listaTitulo=label("BOTÕES DO CONTROLE",11);
+        listaTitulo.setTextColor(GRAY);
+        listaTitulo.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
+        listaTitulo.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
+        LinearLayout.LayoutParams lt=new LinearLayout.LayoutParams(-1,dp(30));
+        lt.setMargins(0,dp(8),0,0);
+        box.addView(listaTitulo,lt);
+
+        ScrollView listaScroll=new ScrollView(this);
+        listaScroll.setFillViewport(false);
+        LinearLayout lista=new LinearLayout(this);
+        lista.setOrientation(LinearLayout.VERTICAL);
+        listaScroll.addView(lista);
+        LinearLayout.LayoutParams lsp=new LinearLayout.LayoutParams(-1,dp(260));
+        lsp.setMargins(0,dp(2),0,dp(2));
+        box.addView(listaScroll,lsp);
+
+        final Button[] botoes=new Button[funcoes.length];
+
+        Runnable atualizarLista=()->{
+            int qtd=controleStorage.quantidadeComandos(controle);
+            progress.setText(qtd+" de "+funcoes.length+" botões configurados");
+            selectedTitle.setText("Configurando: "+funcoes[pos[0]]);
+            for(int i=0;i<botoes.length;i++){
+                if(botoes[i]==null) continue;
+                boolean selecionado=i==pos[0];
+                boolean feito=controleStorage.possuiComando(controle,chaves[i]);
+                botoes[i].setText((selecionado?"●  ":"")+(feito?"✓  ":"")+funcoes[i]);
+                botoes[i].setTextColor(selecionado?WHITE:(feito?Color.rgb(120,190,135):GRAY));
+                GradientDrawable bg=new GradientDrawable();
+                bg.setColor(selecionado?Color.rgb(58,58,68):CARD_2);
+                bg.setCornerRadius(dp(11));
+                bg.setStroke(dp(1),selecionado?ACCENT:(feito?Color.rgb(65,105,75):BORDER));
+                botoes[i].setBackground(bg);
+            }
+        };
+
+        for(int i=0;i<funcoes.length;i++){
+            final int indice=i;
+            Button item=new Button(this);
+            item.setTextSize(12);
+            item.setAllCaps(false);
+            item.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
+            item.setPadding(dp(12),0,dp(10),0);
+            item.setMinHeight(0);
+            item.setMinWidth(0);
+            item.setOnClickListener(v->{
+                pos[0]=indice;
+                aprenderFuncaoPos=indice;
+                irPerfilTeste.reset();
+                status.setText("Aguardando teste para "+funcoes[indice]);
+                status.setTextColor(GRAY);
+                atualizarLista.run();
+            });
+            LinearLayout.LayoutParams ip=new LinearLayout.LayoutParams(-1,dp(42));
+            ip.setMargins(0,dp(2),0,dp(2));
+            lista.addView(item,ip);
+            botoes[i]=item;
+        }
+
+        atualizarLista.run();
+
+        android.app.AlertDialog dialog=new android.app.AlertDialog.Builder(this)
+            .setTitle("Configurar botões")
+            .setView(box)
             .setNegativeButton("FECHAR",(d,w)->showMeusControles())
-            .setNeutralButton("TESTAR CÓDIGO",(d,w)->{
+            .setNeutralButton("TESTAR CÓDIGO",null)
+            .setPositiveButton("FUNCIONOU / SALVAR",null)
+            .create();
+
+        dialog.setOnShowListener(x->{
+            Button testar=dialog.getButton(android.app.AlertDialog.BUTTON_NEUTRAL);
+            Button salvar=dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE);
+
+            testar.setOnClickListener(v->{
                 String perfil=controle.perfil;
                 if(perfil==null || perfil.isEmpty()){
                     perfil=perfis[perfilInicialPara(controle.marca,controle.modelo,perfis)];
@@ -336,22 +447,29 @@ private static final int CARD_2 = Color.rgb(31,31,36);
                     irPerfilTeste.selecionar(perfil);
                 }
                 String resultado=irPerfilTeste.next();
-                Toast.makeText(this,resultado+" • "+funcoes[pos[0]],Toast.LENGTH_SHORT).show();
-                showAprenderComandos(controle);
-            })
-            .setPositiveButton("FUNCIONOU / SALVAR",(d,w)->{
+                status.setText("●  "+resultado+"  •  "+funcoes[pos[0]]);
+                status.setTextColor(Color.rgb(205,180,90));
+                salvar.setEnabled(true);
+            });
+
+            salvar.setOnClickListener(v->{
                 int codigo=irPerfilTeste.currentCode();
                 String perfil=irPerfilTeste.getPerfil();
                 if(codigo<0 || perfil==null || perfil.isEmpty()){
-                    Toast.makeText(this,"Primeiro use TESTAR CÓDIGO.",Toast.LENGTH_SHORT).show();
-                    showAprenderComandos(controle);
+                    status.setText("Faça pelo menos um teste antes de salvar.");
+                    status.setTextColor(ACCENT);
                     return;
                 }
                 String funcao=chaves[pos[0]];
                 controleStorage.salvarComando(controle,funcao,codigo,perfil,frequenciaPerfil(perfil));
+                status.setText("✓  "+funcoes[pos[0]]+" configurado com sucesso");
+                status.setTextColor(Color.rgb(105,190,125));
+                atualizarLista.run();
                 Toast.makeText(this,"✓ "+funcoes[pos[0]]+" configurado",Toast.LENGTH_SHORT).show();
-                showAprenderComandos(controle);
-            }).show();
+            });
+        });
+
+        dialog.show();
     }
 
     private void showMeusControles(){
