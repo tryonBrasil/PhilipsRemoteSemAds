@@ -453,7 +453,7 @@ public class MainActivity extends Activity {
         if("Philips".equals(marca)) modelos=new String[]{"50PUG6513/7","Outro modelo"};
         else if("LG".equals(marca)) modelos=new String[]{"32LB620B","Outro modelo"};
         else modelos=new String[]{"Modelo não informado","Outro modelo"};
-        wizardDialog("2 de 3 • Escolha o modelo","Marca selecionada: "+marca+"\n\nSe o modelo não estiver listado, escolha "Outro modelo". O scanner continuará procurando códigos compatíveis.")
+        wizardDialog("2 de 3 • Escolha o modelo","Marca selecionada: "+marca+"\n\nSe o modelo não estiver listado, escolha \"Outro modelo\". O scanner continuará procurando códigos compatíveis.")
             .setItems(modelos,(d,w)->{
                 lgMode="LG".equals(marca);
                 controleAtivo=null;
