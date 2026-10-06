@@ -27,6 +27,7 @@ public class MainActivity extends Activity {
     private String setupBrand="Philips";
     private String setupModel="50PUG6513/7";
     private UpdateManager updateManager;
+    private int aprenderFuncaoPos = 0;
 
     private static final int FREQ = 36000;
     private static final int LG_FREQ = 38000;
@@ -234,7 +235,13 @@ public class MainActivity extends Activity {
             testar.setOnClickListener(v->{
                 String resultado=irPerfilTeste.next();
                 status.setText(resultado);
-                detalhe.setText("Se a TV respondeu, toque em FUNCIONOU / SALVAR.");
+                int atual=irPerfilTeste.position();
+                int total=irPerfilTeste.total();
+                if(atual>=total){
+                    detalhe.setText("Fim dos candidatos deste perfil. Se a TV não respondeu, cancele e tente outro perfil.");
+                }else{
+                    detalhe.setText("Candidato "+atual+" de "+total+" • Se a TV respondeu, toque em FUNCIONOU / SALVAR.");
+                }
             });
             salvar.setOnClickListener(v->{
                 int codigo=irPerfilTeste.currentCode();
@@ -266,13 +273,13 @@ public class MainActivity extends Activity {
         if(controle==null){ showMeusControles(); return; }
         final String[] funcoes={"Ligar/desligar","Mute","Volume +","Volume -","Canal +","Canal -","Cima","Baixo","Esquerda","Direita","OK","Voltar","Menu","Home","Source","Info","Guide","Netflix","Configurações","Play","Pause","Stop","Retroceder","Avançar","Subtitle","Exit"};
         final String[] chaves={"POWER","MUTE","VOL_UP","VOL_DOWN","CH_UP","CH_DOWN","UP","DOWN","LEFT","RIGHT","OK","BACK","MENU","HOME","SOURCE","INFO","GUIDE","NETFLIX","SETTINGS","PLAY","PAUSE","STOP","REWIND","FAST_FORWARD","SUBTITLE","EXIT"};
-        final int[] pos={0};
+        final int[] pos={Math.max(0,Math.min(aprenderFuncaoPos,funcoes.length-1))};
         final String[] perfis=irPerfilTeste.perfis();
 
         new android.app.AlertDialog.Builder(this)
             .setTitle("APRENDER BOTÕES • "+controle.nome)
             .setMessage("Selecione uma função. O teste avança um código por vez; quando a TV reagir, salve o código.")
-            .setSingleChoiceItems(funcoes,0,(d,which)->pos[0]=which)
+            .setSingleChoiceItems(funcoes,pos[0],(d,which)->{ pos[0]=which; aprenderFuncaoPos=which; })
             .setNegativeButton("FECHAR",(d,w)->showMeusControles())
             .setNeutralButton("TESTAR CÓDIGO",(d,w)->{
                 String perfil=controle.perfil;
@@ -309,7 +316,7 @@ public class MainActivity extends Activity {
         TextView title=label("MEUS CONTROLES",24); title.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
         top.addView(title,new LinearLayout.LayoutParams(0,dp(50),1));
         Button voltar=new Button(this); voltar.setText("VOLTAR"); voltar.setTextColor(WHITE); voltar.setTextSize(12); voltar.setAllCaps(false);
-        GradientDrawable vb=new GradientDrawable(); vb.setColor(KEY_DARK); vb.setCornerRadius(dp(14)); voltar.setBackground(vb); voltar.setOnClickListener(v->showSelector());
+        GradientDrawable vb=new GradientDrawable(); vb.setColor(KEY_DARK); vb.setCornerRadius(dp(14)); voltar.setBackground(vb); actionFeedback(voltar); voltar.setOnClickListener(v->showSelector());
         top.addView(voltar,new LinearLayout.LayoutParams(dp(90),dp(44))); root.addView(top);
 
         List<ControleStorage.Controle> lista=controleStorage.listar();
@@ -320,6 +327,10 @@ public class MainActivity extends Activity {
             TextView vazio=label("Você ainda não salvou nenhum controle.\n\nUse o teste universal, confirme um código e salve em Meus controles.",15);
             vazio.setTextColor(GRAY); vazio.setGravity(Gravity.CENTER);
             root.addView(vazio,new LinearLayout.LayoutParams(-1,dp(180)));
+            Button iniciar= new Button(this); iniciar.setText("CONFIGURAR PRIMEIRO CONTROLE"); iniciar.setTextColor(WHITE); iniciar.setTextSize(13); iniciar.setAllCaps(false);
+            GradientDrawable ib=new GradientDrawable(); ib.setColor(Color.rgb(190,24,32)); ib.setCornerRadius(dp(16)); iniciar.setBackground(ib);
+            actionFeedback(iniciar); iniciar.setOnClickListener(v->showAddControlWizard());
+            root.addView(iniciar,new LinearLayout.LayoutParams(-1,dp(52)));
         }else{
             for(ControleStorage.Controle c:lista){
                 LinearLayout card=new LinearLayout(this); card.setOrientation(LinearLayout.VERTICAL); card.setPadding(dp(16),dp(10),dp(16),dp(10));
@@ -331,6 +342,7 @@ public class MainActivity extends Activity {
                 card.addView(detail,new LinearLayout.LayoutParams(-1,dp(48)));
                 Button abrir=new Button(this); abrir.setText("ABRIR CONTROLE"); abrir.setTextColor(WHITE); abrir.setTextSize(12); abrir.setAllCaps(false);
                 GradientDrawable ab=new GradientDrawable(); ab.setColor(Color.rgb(55,80,55)); ab.setCornerRadius(dp(12)); abrir.setBackground(ab);
+                actionFeedback(abrir);
                 abrir.setOnClickListener(v->{
                     controleAtivo=c;
                     prefs.edit().putLong("active_control_id",c.id).apply();
@@ -340,6 +352,7 @@ public class MainActivity extends Activity {
                 card.addView(abrir,new LinearLayout.LayoutParams(-1,dp(46)));
                 Button editar=new Button(this); editar.setText("✎  RENOMEAR"); editar.setTextColor(WHITE); editar.setTextSize(12); editar.setAllCaps(false);
                 GradientDrawable edb=new GradientDrawable(); edb.setColor(Color.rgb(55,65,80)); edb.setCornerRadius(dp(12)); editar.setBackground(edb);
+                actionFeedback(editar);
                 editar.setOnClickListener(v->{
                     final EditText campo=new EditText(this); campo.setSingleLine(true); campo.setText(c.nome); campo.setSelectAllOnFocus(true); campo.setHint("Nome do controle");
                     int pad=dp(8); campo.setPadding(pad,pad,pad,pad);
@@ -357,10 +370,12 @@ public class MainActivity extends Activity {
 
                 Button aprender=new Button(this); aprender.setText("⚙  CONFIGURAR BOTÕES"); aprender.setTextColor(WHITE); aprender.setTextSize(12); aprender.setAllCaps(false);
                 GradientDrawable apb=new GradientDrawable(); apb.setColor(Color.rgb(65,65,72)); apb.setCornerRadius(dp(12)); aprender.setBackground(apb);
+                actionFeedback(aprender);
                 aprender.setOnClickListener(v->{ controleAtivo=c; showAprenderComandos(c); });
                 LinearLayout.LayoutParams app=new LinearLayout.LayoutParams(-1,dp(42)); app.setMargins(0,dp(5),0,dp(0)); card.addView(aprender,app);
                 Button excluir=new Button(this); excluir.setText("EXCLUIR DISPOSITIVO"); excluir.setTextColor(WHITE); excluir.setTextSize(12); excluir.setAllCaps(false);
                 GradientDrawable exb=new GradientDrawable(); exb.setColor(Color.rgb(95,48,48)); exb.setCornerRadius(dp(12)); excluir.setBackground(exb);
+                actionFeedback(excluir);
                 excluir.setOnClickListener(v->{
                     new android.app.AlertDialog.Builder(this).setTitle("Excluir dispositivo?")
                         .setMessage("O controle " + c.nome + " será removido deste aparelho.")
@@ -373,15 +388,17 @@ public class MainActivity extends Activity {
                         .show();
                 });
                 LinearLayout.LayoutParams exp=new LinearLayout.LayoutParams(-1,dp(42)); exp.setMargins(0,dp(5),0,dp(0)); card.addView(excluir,exp);
-                LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(-1,dp(240)); cp.setMargins(0,dp(8),0,dp(8)); root.addView(card,cp);
+                LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(-1,dp(292)); cp.setMargins(0,dp(8),0,dp(8)); root.addView(card,cp);
             }
         }
         Button sobre=new Button(this); sobre.setText("ⓘ  SOBRE O APLICATIVO"); sobre.setTextColor(WHITE); sobre.setTextSize(13); sobre.setAllCaps(false);
         GradientDrawable sobreBg=new GradientDrawable(); sobreBg.setColor(Color.rgb(45,45,50)); sobreBg.setCornerRadius(dp(16)); sobre.setBackground(sobreBg);
+        actionFeedback(sobre);
         sobre.setOnClickListener(v->showSobre()); root.addView(sobre,new LinearLayout.LayoutParams(-1,dp(50)));
 
         Button add=new Button(this); add.setText("+  ADICIONAR OUTRO CONTROLE"); add.setTextColor(WHITE); add.setTextSize(13); add.setAllCaps(false);
         GradientDrawable addBg=new GradientDrawable(); addBg.setColor(Color.rgb(55,55,60)); addBg.setCornerRadius(dp(16)); add.setBackground(addBg);
+        actionFeedback(add);
         add.setOnClickListener(v->showAddControlWizard()); root.addView(add,new LinearLayout.LayoutParams(-1,dp(52)));
         sv.addView(root); setContentView(sv);
     }
@@ -523,7 +540,8 @@ public class MainActivity extends Activity {
         add(r,key("▶▶",FAST_FORWARD,50,KEY,19)); root.addView(r);
 
         boolean available=ir!=null&&ir.hasIrEmitter();
-        TextView status=label(available?"●  Emissor IR detectado  •  "+(lgMode?"LG 38":"Philips 36")+" kHz":"○  Emissor IR não detectado",12);
+        String perfilStatus=controleAtivo!=null?controleAtivo.perfil:(lgMode?"LG / NEC":"Philips / RC6");
+        TextView status=label(available?"●  Emissor IR detectado  •  "+perfilStatus+" • "+(controleAtivo!=null?controleAtivo.frequencia:(lgMode?38000:36000))+" Hz":"○  Emissor IR não detectado",12);
         status.setTextColor(available?Color.rgb(75,145,95):GRAY);
         root.addView(status,new LinearLayout.LayoutParams(-1,dp(38)));
 
