@@ -14,6 +14,8 @@ public class IrPerfilTeste {
     private String perfil="LG / NEC";
     private Item ultimoFuncionou;
     private boolean rc6Toggle=false;
+    private final android.content.SharedPreferences savedPrefs;
+    private static final String SAVED_KEY="fan_test_saved_v1";
 
 
     private static class Item {
@@ -22,7 +24,11 @@ public class IrPerfilTeste {
         Item(String n,int t,int c){nome=n;tipo=t;code=c;}
     }
 
-    public IrPerfilTeste(Context c){ir=(ConsumerIrManager)c.getSystemService(Context.CONSUMER_IR_SERVICE); selecionar("LG / NEC");}
+    public IrPerfilTeste(Context c){
+        ir=(ConsumerIrManager)c.getSystemService(Context.CONSUMER_IR_SERVICE);
+        savedPrefs=c.getSharedPreferences("ir_test_codes",Context.MODE_PRIVATE);
+        selecionar("LG / NEC");
+    }
 
     public boolean hasEmitter(){return ir!=null&&ir.hasIrEmitter();}
 
@@ -103,6 +109,37 @@ public class IrPerfilTeste {
     public int position(){return pos;}
     public int total(){return itens.size();}
     public void reset(){pos=0; ultimoFuncionou=null; rc6Toggle=false;}
+    public String previous(){
+        if(itens.isEmpty()) return "Nenhum código disponível.";
+        if(pos<=1) pos=0; else pos--;
+        ultimoFuncionou=null;
+        return pos==0 ? "Pronto para testar o primeiro código." : "Voltou para o candidato "+pos+" de "+itens.size()+".";
+    }
+    public String saveCurrentCode(String nome){
+        int codigo=currentCode();
+        if(codigo<0 || itens.isEmpty()) return "Nenhum código testado.";
+        String n=(nome==null||nome.trim().isEmpty()) ? "Código "+(savedCount()+1) : nome.trim();
+        String old=savedPrefs.getString(SAVED_KEY,"");
+        String item=perfil+"|"+n.replace("|","/")+"|"+codigo;
+        String all=old.isEmpty()?item:old+"\\n"+item;
+        savedPrefs.edit().putString(SAVED_KEY,all).apply();
+        return "Código salvo: "+n;
+    }
+    public String savedCodes(){return savedPrefs.getString(SAVED_KEY,"");}
+    public int savedCount(){String s=savedCodes();return s.isEmpty()?0:s.split("\\n").length;}
+    public void clearSavedCodes(){savedPrefs.edit().remove(SAVED_KEY).apply();}
+    public boolean transmitManual(String value){
+        if(!hasEmitter() || value==null) return false;
+        try{
+            String s=value.trim().replace("0x","").replace("0X","").replace(" ","");
+            if(s.isEmpty()) return false;
+            long v=Long.parseLong(s,16);
+            int addr,cmd;
+            if(s.length()<=2){addr=0x04;cmd=(int)v&0xFF;} else {addr=(int)((v>>8)&0xFF);cmd=(int)(v&0xFF);}
+            tx(38000,nec(addr,cmd));
+            return true;
+        }catch(Exception e){return false;}
+    }
     public String lastDescription(){
         return ultimoFuncionou==null ? "" : ultimoFuncionou.nome;
     }
