@@ -21,6 +21,7 @@ public class MainActivity extends Activity {
     private boolean toggle = false;
     private boolean lgMode = false;
     private boolean showingSelector = true;
+    private boolean fanMode = false;
     private SharedPreferences prefs;
     private ControleStorage controleStorage;
     private ControleStorage.Controle controleAtivo;
@@ -141,7 +142,7 @@ private static final int CARD_2 = Color.rgb(31,31,36);
     }
 
     private void showSelector(){
-        showingSelector=true;
+        showingSelector=true; fanMode=false;
         ScrollView sv=new ScrollView(this); sv.setFillViewport(true); sv.setBackgroundColor(BG);
         LinearLayout root=new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL);
         root.setGravity(Gravity.CENTER_HORIZONTAL); root.setPadding(dp(18),dp(28),dp(18),dp(30));
@@ -687,6 +688,7 @@ render[0]=()->{
     }
 
     private void showFanRemote(){
+        showingSelector=false; fanMode=true;
         ScrollView sv=new ScrollView(this); sv.setFillViewport(true); sv.setBackgroundColor(BG);
         LinearLayout root=new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL); root.setPadding(dp(14),dp(14),dp(14),dp(24));
         TextView title=label("VENTILADOR UNIVERSAL",22); title.setTypeface(Typeface.DEFAULT,Typeface.BOLD); title.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
@@ -1006,7 +1008,7 @@ render[0]=()->{
     }
 
     private void send(int command){
-        if(controleAtivo!=null && "Ventilador Universal".equals(controleAtivo.perfil) && command>=1 && command<=5){ irPerfilTeste.transmitirVentilador(command); return; }
+        if(fanMode && command>=1 && command<=5){ irPerfilTeste.transmitirVentilador(command); return; }
         if(ir==null||!ir.hasIrEmitter()){
             Toast.makeText(this,"Este telemóvel não possui emissor IR.",Toast.LENGTH_SHORT).show(); return;
         }
