@@ -249,44 +249,70 @@ private static final int CARD_2 = Color.rgb(31,31,36);
 
     private void showUniversalScanner(String marca,String modelo){
         final String[] perfis=irPerfilTeste.perfis();
-        int idx=perfilInicialPara(marca,modelo,perfis);
-        final String perfilInicial=perfis[idx];
-        irPerfilTeste.selecionar(perfilInicial);
-        irPerfilTeste.limparResultado();
+        final String[] nomes={
+            "Philips TV","LG TV","Samsung TV","Sony TV","Panasonic TV",
+            "AOC TV","TCL TV","Philco TV","Semp TV","Toshiba / JVC TV",
+            "Ar-condicionado Coolix","Ar-condicionado Midea"
+        };
+        final String[] marcas={
+            "Philips","LG","Samsung","Sony","Panasonic",
+            "AOC","TCL","Philco","Semp","Toshiba",
+            "Coolix","Midea"
+        };
+        final String[] perfisMapa={
+            "Philips / RC6","LG / NEC","Samsung TV","Sony TV","Panasonic TV",
+            "AOC / NEC","TCL / NEC","Philco / NEC","Semp / NEC","Toshiba / JVC / NEC",
+            "AC Coolix","AC Midea"
+        };
+        final String[] marcaSelecionada={marca};
+        final String[] perfilSelecionado={perfis[perfilInicialPara(marca,modelo,perfis)]};
+        final String[] nomeSelecionado={marca+" "+modelo};
 
         LinearLayout box=new LinearLayout(this);
         box.setOrientation(LinearLayout.VERTICAL);
-        box.setPadding(dp(18),dp(8),dp(18),dp(8));
+        box.setPadding(dp(18),dp(6),dp(18),dp(6));
 
-        TextView etapa=label("PASSO 3 DE 3  •  TESTE IR",12);
-        etapa.setTextColor(ACCENT);
-        etapa.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
-        box.addView(etapa,new LinearLayout.LayoutParams(-1,dp(28)));
+        TextView etapa=label("PASSO 3 DE 3  •  ESCOLHA O DISPOSITIVO",12);
+        etapa.setTextColor(ACCENT); etapa.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
+        box.addView(etapa,new LinearLayout.LayoutParams(-1,dp(30)));
 
-        TextView aparelho=label(marca+" "+modelo,18);
-        aparelho.setTextColor(WHITE);
-        aparelho.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
-        box.addView(aparelho,new LinearLayout.LayoutParams(-1,dp(34)));
+        TextView aparelho=label(nomeSelecionado[0],18);
+        aparelho.setTextColor(WHITE); aparelho.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
+        aparelho.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
+        box.addView(aparelho,new LinearLayout.LayoutParams(-1,dp(36)));
+
+        TextView subtitulo=label("Selecione o aparelho mais próximo. O teste usará o protocolo correspondente.",12);
+        subtitulo.setTextColor(GRAY); subtitulo.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
+        box.addView(subtitulo,new LinearLayout.LayoutParams(-1,dp(42)));
+
+        Spinner spinner=new Spinner(this);
+        ArrayAdapter<String> adapter=new ArrayAdapter<String>(this,android.R.layout.simple_spinner_item,nomes){
+            @Override public View getView(int position, android.view.View convertView, android.view.ViewGroup parent){
+                TextView v=(TextView)super.getView(position,convertView,parent); v.setTextColor(WHITE); v.setTextSize(15); v.setPadding(dp(14),0,dp(10),0); return v;
+            }
+        };
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spinner.setAdapter(adapter);
+        int inicial=0; for(int i=0;i<perfisMapa.length;i++) if(perfisMapa[i].equals(perfilSelecionado[0])) inicial=i;
+        spinner.setSelection(inicial);
+        GradientDrawable spinnerBg=new GradientDrawable(); spinnerBg.setColor(CARD); spinnerBg.setCornerRadius(dp(14)); spinnerBg.setStroke(dp(1),BORDER);
+        spinner.setBackground(spinnerBg); spinner.setPadding(dp(4),0,dp(4),0);
+        box.addView(spinner,new LinearLayout.LayoutParams(-1,dp(54)));
+
+        TextView perfilInfo=label("Perfil: "+perfilSelecionado[0],12);
+        perfilInfo.setTextColor(GRAY); perfilInfo.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
+        box.addView(perfilInfo,new LinearLayout.LayoutParams(-1,dp(32)));
 
         TextView status=label("●  Pronto para testar",15);
-        status.setTextColor(GRAY);
-        status.setGravity(Gravity.CENTER_VERTICAL);
-        GradientDrawable statusBg=new GradientDrawable();
-        statusBg.setColor(CARD);
-        statusBg.setCornerRadius(dp(14));
-        statusBg.setStroke(dp(1),BORDER);
-        status.setPadding(dp(14),0,dp(14),0);
-        status.setBackground(statusBg);
-        box.addView(status,new LinearLayout.LayoutParams(-1,dp(58)));
+        status.setTextColor(GRAY); status.setGravity(Gravity.CENTER_VERTICAL); status.setPadding(dp(14),0,dp(14),0);
+        GradientDrawable statusBg=new GradientDrawable(); statusBg.setColor(CARD); statusBg.setCornerRadius(dp(14)); statusBg.setStroke(dp(1),BORDER); status.setBackground(statusBg);
+        box.addView(status,new LinearLayout.LayoutParams(-1,dp(56)));
 
-        TextView detalhe=label("Perfil automático: "+perfilInicial+"\nAponte o celular para a TV e toque em TESTAR PRÓXIMO.",13);
-        detalhe.setTextColor(GRAY);
-        detalhe.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
-        box.addView(detalhe,new LinearLayout.LayoutParams(-1,dp(70)));
+        TextView detalhe=label("Aponte o celular para o aparelho e toque em TESTAR PRÓXIMO.",13);
+        detalhe.setTextColor(GRAY); detalhe.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
+        box.addView(detalhe,new LinearLayout.LayoutParams(-1,dp(58)));
 
-        TextView progresso=label("Candidato 0",12);
-        progresso.setTextColor(GRAY);
-        progresso.setGravity(Gravity.CENTER);
+        TextView progresso=label("Candidato 0",12); progresso.setTextColor(GRAY); progresso.setGravity(Gravity.CENTER);
         box.addView(progresso,new LinearLayout.LayoutParams(-1,dp(28)));
 
         android.app.AlertDialog dialog=new android.app.AlertDialog.Builder(this)
@@ -297,40 +323,47 @@ private static final int CARD_2 = Color.rgb(31,31,36);
             .setPositiveButton("FUNCIONOU / SALVAR",null)
             .create();
 
+        spinner.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener(){
+            public void onNothingSelected(android.widget.AdapterView<?> p){}
+            public void onItemSelected(android.widget.AdapterView<?> p,View v,int pos,long id){
+                marcaSelecionada[0]=marcas[pos];
+                perfilSelecionado[0]=perfisMapa[pos];
+                nomeSelecionado[0]=marcas[pos]+" "+modelo;
+                aparelho.setText(nomeSelecionado[0]);
+                perfilInfo.setText("Perfil: "+perfilSelecionado[0]);
+                irPerfilTeste.selecionar(perfilSelecionado[0]);
+                irPerfilTeste.limparResultado();
+                status.setText("●  Pronto para testar"); status.setTextColor(GRAY);
+                progresso.setText("Candidato 0");
+                detalhe.setText("Aponte o celular para o aparelho e toque em TESTAR PRÓXIMO.");
+            }
+        });
+
         dialog.setOnShowListener(x->{
+            irPerfilTeste.selecionar(perfilSelecionado[0]); irPerfilTeste.limparResultado();
             Button testar=dialog.getButton(android.app.AlertDialog.BUTTON_NEUTRAL);
             Button salvar=dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE);
             testar.setOnClickListener(v->{
                 String resultado=irPerfilTeste.next();
-                status.setText("●  "+resultado);
-                status.setTextColor(SUCCESS);
-                int atual=irPerfilTeste.position();
-                int total=irPerfilTeste.total();
+                status.setText("●  "+resultado); status.setTextColor(SUCCESS);
+                int atual=irPerfilTeste.position(); int total=irPerfilTeste.total();
                 progresso.setText("Candidato "+atual+" de "+total);
-                if(atual>=total){
-                    detalhe.setText("Fim dos candidatos deste perfil. Se a TV não respondeu, cancele e tente novamente.");
-                }else{
-                    detalhe.setText("Código enviado. Observe a TV.\nSe ela respondeu, toque em FUNCIONOU / SALVAR.");
-                }
+                if(atual>=total) detalhe.setText("Fim dos candidatos. Escolha outro aparelho na lista ou cancele e tente novamente.");
+                else detalhe.setText("Código enviado. Observe o aparelho.\\nSe respondeu, toque em FUNCIONOU / SALVAR.");
             });
             salvar.setOnClickListener(v->{
-                int codigo=irPerfilTeste.currentCode();
-                String perfil=irPerfilTeste.getPerfil();
+                int codigo=irPerfilTeste.currentCode(); String perfil=irPerfilTeste.getPerfil();
                 if(codigo<0 || perfil==null || perfil.isEmpty()){
-                    Toast.makeText(this,"Teste pelo menos um código antes de salvar.",Toast.LENGTH_SHORT).show();
-                    return;
+                    Toast.makeText(this,"Teste pelo menos um código antes de salvar.",Toast.LENGTH_SHORT).show(); return;
                 }
                 int freq=frequenciaPerfil(perfil);
-                String nome=marca+" "+modelo;
-                String descricao=irPerfilTeste.lastDescription();
-                controleStorage.salvar(nome,"TV",marca,modelo,perfil,descricao,codigo,freq);
+                String nome=nomeSelecionado[0]; String descricao=irPerfilTeste.lastDescription();
+                String categoria=perfil.startsWith("AC ")?"AR-CONDICIONADO":"TV";
+                controleStorage.salvar(nome,categoria,marcaSelecionada[0],modelo,perfil,descricao,codigo,freq);
                 dialog.dismiss();
                 List<ControleStorage.Controle> salvos=controleStorage.listar();
-                if(!salvos.isEmpty()){
-                    controleAtivo=salvos.get(salvos.size()-1);
-                    prefs.edit().putLong("active_control_id",controleAtivo.id).apply();
-                }
-                lgMode="LG".equalsIgnoreCase(marca);
+                if(!salvos.isEmpty()){ controleAtivo=salvos.get(salvos.size()-1); prefs.edit().putLong("active_control_id",controleAtivo.id).apply(); }
+                lgMode="LG".equalsIgnoreCase(marcaSelecionada[0]);
                 prefs.edit().putBoolean("lg_mode",lgMode).apply();
                 Toast.makeText(this,"✓ Controle salvo e definido como ativo.",Toast.LENGTH_SHORT).show();
                 showMeusControles();
