@@ -211,12 +211,12 @@ public class MainActivity extends Activity {
         LinearLayout box=new LinearLayout(this);
         box.setOrientation(LinearLayout.VERTICAL);
         box.setPadding(dp(18),dp(8),dp(18),dp(4));
-        TextView status=label("Pronto para testar • "+perfilInicial,15);
+        TextView status=label("Candidato 0 • "+perfilInicial,15);
         status.setTextColor(GRAY);
         status.setGravity(Gravity.CENTER);
         box.addView(status,new LinearLayout.LayoutParams(-1,dp(70)));
 
-        TextView detalhe=label("Pressione TESTAR PRÓXIMO até a TV reagir.\nDepois toque em FUNCIONOU / SALVAR.",13);
+        TextView detalhe=label("Perfil automático: "+perfilInicial+"\nPressione TESTAR PRÓXIMO até a TV reagir.",13);
         detalhe.setTextColor(GRAY);
         detalhe.setGravity(Gravity.CENTER);
         box.addView(detalhe,new LinearLayout.LayoutParams(-1,dp(64)));
@@ -262,7 +262,7 @@ public class MainActivity extends Activity {
                 }
                 lgMode="LG".equalsIgnoreCase(marca);
                 prefs.edit().putBoolean("lg_mode",lgMode).apply();
-                Toast.makeText(this,"✓ Controle salvo em Meus Controles.",Toast.LENGTH_SHORT).show();
+                Toast.makeText(this,"✓ Controle salvo e definido como ativo.",Toast.LENGTH_SHORT).show();
                 showMeusControles();
             });
         });
@@ -417,18 +417,23 @@ public class MainActivity extends Activity {
             .setPositiveButton("OK",null).show();
     }
 
+    private android.app.AlertDialog.Builder wizardDialog(String titulo,String mensagem){
+        return new android.app.AlertDialog.Builder(this)
+            .setTitle(titulo)
+            .setMessage(mensagem);
+    }
+
     private void showAddControlWizard(){
-        new android.app.AlertDialog.Builder(this)
-            .setTitle("Adicionar controle")
-            .setMessage("Vamos configurar sua TV passo a passo.")
-            .setPositiveButton("CONTINUAR",(d,w)->showBrandWizard())
+        wizardDialog("Adicionar controle","Você vai escolher a marca e o modelo e depois testar os códigos IR.\n\nNada é salvo até você confirmar que a TV respondeu.")
+            .setPositiveButton("COMEÇAR",(d,w)->showBrandWizard())
             .setNegativeButton("CANCELAR",null).show();
     }
 
     private void showBrandWizard(){
         final String[] marcas={"Philips","LG","Samsung","Sony"};
-        new android.app.AlertDialog.Builder(this).setTitle("1 de 3 • Marca da TV")
-            .setItems(marcas,(d,w)->showModelWizard(marcas[w])).setNegativeButton("VOLTAR",(x,y)->showAddControlWizard()).show();
+        wizardDialog("1 de 3 • Escolha a marca","Escolha a marca da sua TV. O aplicativo selecionará automaticamente o perfil IR mais provável.")
+            .setItems(marcas,(d,w)->showModelWizard(marcas[w]))
+            .setNegativeButton("CANCELAR",(x,y)->showMeusControles()).show();
     }
 
     private void showModelWizard(String marca){
@@ -436,7 +441,7 @@ public class MainActivity extends Activity {
         if("Philips".equals(marca)) modelos=new String[]{"50PUG6513/7","Outro modelo"};
         else if("LG".equals(marca)) modelos=new String[]{"32LB620B","Outro modelo"};
         else modelos=new String[]{"Modelo não informado","Outro modelo"};
-        new android.app.AlertDialog.Builder(this).setTitle("2 de 3 • Modelo")
+        wizardDialog("2 de 3 • Escolha o modelo","Marca selecionada: "+marca+"\n\nSe o modelo não estiver listado, escolha "Outro modelo". O scanner continuará procurando códigos compatíveis.")
             .setItems(modelos,(d,w)->{
                 lgMode="LG".equals(marca);
                 controleAtivo=null;
@@ -447,10 +452,9 @@ public class MainActivity extends Activity {
     }
 
     private void showTvSetup(String marca,String modelo){
-        new android.app.AlertDialog.Builder(this).setTitle("3 de 3 • Testar controle")
-            .setMessage("Vamos procurar automaticamente um código compatível com sua TV. Teste os candidatos e salve somente quando a TV responder.")
-            .setNegativeButton("CANCELAR",null)
-            .setPositiveButton("ABRIR TESTE UNIVERSAL",(d,w)->showUniversalScanner(marca,modelo)).show();
+        wizardDialog("3 de 3 • Teste IR","TV: "+marca+" "+modelo+"\n\n1. Aponte o celular para a TV.\n2. Toque em TESTAR PRÓXIMO.\n3. Quando a TV responder, toque em FUNCIONOU / SALVAR.\n\nO primeiro código confirmado será usado como base do controle.")
+            .setNegativeButton("CANCELAR",(d,w)->showMeusControles())
+            .setPositiveButton("INICIAR TESTE",(d,w)->showUniversalScanner(marca,modelo)).show();
     }
 
     private void build(){
