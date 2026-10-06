@@ -76,18 +76,27 @@ public class IrPerfilTeste {
     }
     public void limparResultado(){ ultimoFuncionou=null; }
 
-    public int currentCode(){return pos==0?-1:itens.get(pos-1).code;}
+    public int currentCode(){
+        if(pos==0 || itens.isEmpty()) return -1;
+        Item x=itens.get(pos-1);
+        if(x.tipo==NEC || x.tipo==SAMSUNG || x.tipo==SONY || x.tipo==RC5 || x.tipo==RC6) {
+            return ((x.addr & 0xFF) << 8) | (x.cmd & 0xFF);
+        }
+        return x.code;
+    }
 
     /** Transmite um código já confirmado e salvo pelo usuário. */
     public boolean transmitirSalvo(String perfilSalvo,int codigo){
         if(!hasEmitter() || codigo<0) return false;
         try{
-            if(perfilSalvo.equals("LG / NEC")) ir.transmit(38000,nec(0x04,codigo));
-            else if(perfilSalvo.equals("Samsung TV")) ir.transmit(38000,samsung(0x07,codigo));
-            else if(perfilSalvo.equals("Sony TV")) ir.transmit(40000,sony(0x01,codigo));
-            else if(perfilSalvo.equals("Philips / RC5")) ir.transmit(36000,rc5(0x00,codigo,false));
-            else if(perfilSalvo.equals("Philips / RC6")) ir.transmit(36000,rc6(0x00,codigo,false));
-            else if(perfilSalvo.equals("Panasonic TV") || perfilSalvo.equals("AOC / NEC") || perfilSalvo.equals("TCL / NEC") || perfilSalvo.equals("Philco / NEC") || perfilSalvo.equals("Semp / NEC") || perfilSalvo.equals("Toshiba / JVC / NEC")) ir.transmit(38000,nec(0x00,codigo));
+            int addr=(codigo >> 8) & 0xFF;
+            int cmd=codigo & 0xFF;
+            if(perfilSalvo.equals("LG / NEC")) ir.transmit(38000,nec(codigo>255?addr:0x04,cmd));
+            else if(perfilSalvo.equals("Samsung TV")) ir.transmit(38000,samsung(codigo>255?addr:0x07,cmd));
+            else if(perfilSalvo.equals("Sony TV")) ir.transmit(40000,sony(codigo>255?addr:0x01,cmd));
+            else if(perfilSalvo.equals("Philips / RC5")) ir.transmit(36000,rc5(codigo>255?addr:0x00,cmd,false));
+            else if(perfilSalvo.equals("Philips / RC6")) ir.transmit(36000,rc6(codigo>255?addr:0x00,cmd,false));
+            else if(perfilSalvo.equals("Panasonic TV") || perfilSalvo.equals("AOC / NEC") || perfilSalvo.equals("TCL / NEC") || perfilSalvo.equals("Philco / NEC") || perfilSalvo.equals("Semp / NEC") || perfilSalvo.equals("Toshiba / JVC / NEC")) ir.transmit(38000,nec(codigo>255?addr:0x00,cmd));
             else if(perfilSalvo.equals("AC Coolix")) ir.transmit(38000,coolix(codigo));
             else if(perfilSalvo.equals("AC Midea")) ir.transmit(38000,midea(codigo));
             else return false;
