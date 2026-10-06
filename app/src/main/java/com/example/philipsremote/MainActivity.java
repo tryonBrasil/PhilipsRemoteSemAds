@@ -38,7 +38,7 @@ public class MainActivity extends Activity {
     private static final int KEY = Color.rgb(48,48,48);
     private static final int KEY_DARK = Color.rgb(34,34,34);
     private static final int WHITE = Color.WHITE;
-    private static final int GRAY = Color.rgb(175,175,175);
+    private static final int GRAY = Color.rgb(175,175,175);\n    private static final int ACCENT = Color.rgb(210,30,38);\n    private static final int CARD = Color.rgb(24,24,28);\n    private static final int CARD_2 = Color.rgb(31,31,36);
 
 
     private static final int POWER=0x0C, MUTE=0x0D, VOL_DOWN=0x11, VOL_UP=0x10;
@@ -140,14 +140,24 @@ public class MainActivity extends Activity {
         ScrollView sv=new ScrollView(this); sv.setFillViewport(true); sv.setBackgroundColor(BG);
         LinearLayout root=new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL);
         root.setGravity(Gravity.CENTER_HORIZONTAL); root.setPadding(dp(18),dp(28),dp(18),dp(30));
-        TextView title=label("ESCOLHA O CONTROLE",28); title.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
-        root.addView(title,new LinearLayout.LayoutParams(-1,dp(52)));
-        TextView sub=label("Controle remoto por infravermelho • rápido e sem anúncios",14); sub.setTextColor(GRAY);
+        TextView brand=label("IR REMOTE BR",13); brand.setTextColor(ACCENT);
+        brand.setTypeface(Typeface.DEFAULT,Typeface.BOLD); brand.setLetterSpacing(.14f);
+        root.addView(brand,new LinearLayout.LayoutParams(-1,dp(24)));
+        TextView title=label("Escolha seu controle",28); title.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
+        title.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
+        root.addView(title,new LinearLayout.LayoutParams(-1,dp(48)));
+        TextView sub=label("Infravermelho • rápido • sem anúncios",14); sub.setTextColor(GRAY);
+        sub.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
         root.addView(sub,new LinearLayout.LayoutParams(-1,dp(30)));
         List<ControleStorage.Controle> salvosHome=controleStorage.listar();
-        TextView resumo=label(salvosHome.isEmpty()?"Nenhum dispositivo salvo":"● "+salvosHome.size()+" dispositivo"+(salvosHome.size()>1?"s":"")+" salvo"+(salvosHome.size()>1?"s":""),13);
-        resumo.setTextColor(salvosHome.isEmpty()?GRAY:Color.rgb(75,145,95));
-        root.addView(resumo,new LinearLayout.LayoutParams(-1,dp(30)));
+        LinearLayout bancoCard=new LinearLayout(this); bancoCard.setOrientation(LinearLayout.HORIZONTAL); bancoCard.setGravity(Gravity.CENTER_VERTICAL);
+        bancoCard.setPadding(dp(14),0,dp(14),0);
+        GradientDrawable bancoBg=new GradientDrawable(); bancoBg.setColor(CARD); bancoBg.setCornerRadius(dp(15)); bancoBg.setStroke(dp(1),Color.rgb(55,55,60)); bancoCard.setBackground(bancoBg);
+        TextView bancoTitulo=label("●  BANCO LOCAL",12); bancoTitulo.setTextColor(Color.rgb(105,190,125)); bancoTitulo.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
+        bancoCard.addView(bancoTitulo,new LinearLayout.LayoutParams(0,dp(42),1));
+        TextView bancoQtd=label(salvosHome.size()+" "+(salvosHome.size()==1?"controle":"controles"),12); bancoQtd.setTextColor(GRAY);
+        bancoCard.addView(bancoQtd,new LinearLayout.LayoutParams(-2,dp(42)));
+        LinearLayout.LayoutParams bp=new LinearLayout.LayoutParams(-1,dp(44)); bp.setMargins(0,dp(10),0,dp(4)); root.addView(bancoCard,bp);
         if(controleAtivo!=null){
             TextView ativo=label("CONTROLE ATIVO  •  "+controleAtivo.nome,13);
             ativo.setTextColor(WHITE);
@@ -519,13 +529,17 @@ public class MainActivity extends Activity {
         root.setPadding(dp(8),dp(6),dp(8),dp(18)); root.setBackgroundColor(BG);
 
         LinearLayout modelRow=row();
-        TextView title=label("IR REMOTE BR",22);
-        title.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
-        modelRow.addView(title,new LinearLayout.LayoutParams(0,dp(48),1));
+        LinearLayout brandBox=new LinearLayout(this); brandBox.setOrientation(LinearLayout.VERTICAL); brandBox.setGravity(Gravity.CENTER_VERTICAL);
+        TextView title=label("IR REMOTE BR",21); title.setTypeface(Typeface.DEFAULT,Typeface.BOLD); title.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
+        brandBox.addView(title,new LinearLayout.LayoutParams(-1,dp(28)));
+        TextView subtitle=label(controleAtivo!=null ? controleAtivo.nome : (lgMode?"LG 32LB620B":"Philips 50PUG6513/7"),11);
+        subtitle.setTextColor(GRAY); subtitle.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
+        brandBox.addView(subtitle,new LinearLayout.LayoutParams(-1,dp(20)));
+        modelRow.addView(brandBox,new LinearLayout.LayoutParams(0,dp(50),1));
 
         Button change= new Button(this);
         change.setText("TROCAR"); change.setTextColor(WHITE); change.setTextSize(12); change.setAllCaps(false);
-        GradientDrawable changeBg=new GradientDrawable(); changeBg.setColor(KEY_DARK); changeBg.setCornerRadius(dp(14));
+        GradientDrawable changeBg=new GradientDrawable(); changeBg.setColor(CARD_2); changeBg.setCornerRadius(dp(14)); changeBg.setStroke(dp(1),Color.rgb(60,60,66));
         change.setBackground(changeBg); actionFeedback(change); change.setOnClickListener(v->showSelector());
         modelRow.addView(change,new LinearLayout.LayoutParams(dp(88),dp(44)));
         root.addView(modelRow);
@@ -534,9 +548,9 @@ public class MainActivity extends Activity {
         deviceCard.setOrientation(LinearLayout.VERTICAL);
         deviceCard.setPadding(dp(14),dp(8),dp(14),dp(8));
         GradientDrawable deviceBg=new GradientDrawable();
-        deviceBg.setColor(controleAtivo!=null?Color.rgb(30,54,37):Color.rgb(28,28,32));
+        deviceBg.setColor(controleAtivo!=null?Color.rgb(28,55,36):CARD);
         deviceBg.setCornerRadius(dp(16));
-        deviceBg.setStroke(dp(1),controleAtivo!=null?Color.rgb(75,145,95):Color.rgb(55,55,58));
+        deviceBg.setStroke(dp(1),controleAtivo!=null?Color.rgb(80,160,100):Color.rgb(55,55,60));
         deviceCard.setBackground(deviceBg);
 
         LinearLayout deviceTop=row();
