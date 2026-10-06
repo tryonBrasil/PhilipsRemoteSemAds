@@ -278,7 +278,7 @@ public class MainActivity extends Activity {
 
         new android.app.AlertDialog.Builder(this)
             .setTitle("APRENDER BOTÕES • "+controle.nome)
-            .setMessage("Selecione uma função. O teste avança um código por vez; quando a TV reagir, salve o código.")
+            .setMessage(controleStorage.quantidadeComandos(controle)+" botão"+(controleStorage.quantidadeComandos(controle)==1?"":"ões")+" já configurado"+(controleStorage.quantidadeComandos(controle)==1?"":"s")+"\n\nSelecione uma função. O teste avança um código por vez; quando a TV reagir, salve o código.")
             .setSingleChoiceItems(funcoes,pos[0],(d,which)->{ pos[0]=which; aprenderFuncaoPos=which; })
             .setNegativeButton("FECHAR",(d,w)->showMeusControles())
             .setNeutralButton("TESTAR CÓDIGO",(d,w)->{
@@ -334,19 +334,21 @@ public class MainActivity extends Activity {
         }else{
             for(ControleStorage.Controle c:lista){
                 LinearLayout card=new LinearLayout(this); card.setOrientation(LinearLayout.VERTICAL); card.setPadding(dp(16),dp(10),dp(16),dp(10));
-                GradientDrawable cb=new GradientDrawable(); cb.setColor(KEY_DARK); cb.setCornerRadius(dp(18)); cb.setStroke(dp(1),Color.rgb(55,55,58)); card.setBackground(cb);
-                TextView n=label(c.nome,18); n.setTypeface(Typeface.DEFAULT,Typeface.BOLD); n.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
+                boolean ativoAtual=controleAtivo!=null && controleAtivo.id==c.id;
+                GradientDrawable cb=new GradientDrawable(); cb.setColor(ativoAtual?Color.rgb(38,62,44):KEY_DARK); cb.setCornerRadius(dp(18)); cb.setStroke(dp(2),ativoAtual?Color.rgb(75,145,95):Color.rgb(55,55,58)); card.setBackground(cb);
+                TextView n=label((ativoAtual?"✓  ATIVO  •  ":"")+c.nome,18); n.setTypeface(Typeface.DEFAULT,Typeface.BOLD); n.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
                 card.addView(n,new LinearLayout.LayoutParams(-1,dp(34)));
-                TextView detail=label(c.categoria+" • "+c.marca+" • "+c.modelo+"\n"+c.perfil+" • "+c.descricao,12);
+                int comandosConfigurados=controleStorage.quantidadeComandos(c);
+                TextView detail=label(c.categoria+" • "+c.marca+" • "+c.modelo+"\n"+c.perfil+" • "+c.descricao+"\n"+comandosConfigurados+" botão"+(comandosConfigurados==1?"":"ões")+" configurado"+(comandosConfigurados==1?"":"s"),12);
                 detail.setTextColor(GRAY); detail.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
-                card.addView(detail,new LinearLayout.LayoutParams(-1,dp(48)));
+                card.addView(detail,new LinearLayout.LayoutParams(-1,dp(64)));
                 Button abrir=new Button(this); abrir.setText("ABRIR CONTROLE"); abrir.setTextColor(WHITE); abrir.setTextSize(12); abrir.setAllCaps(false);
                 GradientDrawable ab=new GradientDrawable(); ab.setColor(Color.rgb(55,80,55)); ab.setCornerRadius(dp(12)); abrir.setBackground(ab);
                 actionFeedback(abrir);
                 abrir.setOnClickListener(v->{
                     controleAtivo=c;
-                    prefs.edit().putLong("active_control_id",c.id).apply();
-                    lgMode="LG".equals(c.marca); build();
+                    prefs.edit().putLong("active_control_id",c.id).putBoolean("lg_mode","LG".equals(c.marca)).apply();
+                    lgMode="LG".equalsIgnoreCase(c.marca); build();
                     Toast.makeText(this,"Controle "+c.nome+" carregado",Toast.LENGTH_SHORT).show();
                 });
                 card.addView(abrir,new LinearLayout.LayoutParams(-1,dp(46)));
@@ -371,7 +373,7 @@ public class MainActivity extends Activity {
                 Button aprender=new Button(this); aprender.setText("⚙  CONFIGURAR BOTÕES"); aprender.setTextColor(WHITE); aprender.setTextSize(12); aprender.setAllCaps(false);
                 GradientDrawable apb=new GradientDrawable(); apb.setColor(Color.rgb(65,65,72)); apb.setCornerRadius(dp(12)); aprender.setBackground(apb);
                 actionFeedback(aprender);
-                aprender.setOnClickListener(v->{ controleAtivo=c; showAprenderComandos(c); });
+                aprender.setOnClickListener(v->{ controleAtivo=c; prefs.edit().putLong("active_control_id",c.id).apply(); lgMode="LG".equalsIgnoreCase(c.marca); prefs.edit().putBoolean("lg_mode",lgMode).apply(); showAprenderComandos(c); });
                 LinearLayout.LayoutParams app=new LinearLayout.LayoutParams(-1,dp(42)); app.setMargins(0,dp(5),0,dp(0)); card.addView(aprender,app);
                 Button excluir=new Button(this); excluir.setText("EXCLUIR DISPOSITIVO"); excluir.setTextColor(WHITE); excluir.setTextSize(12); excluir.setAllCaps(false);
                 GradientDrawable exb=new GradientDrawable(); exb.setColor(Color.rgb(95,48,48)); exb.setCornerRadius(dp(12)); excluir.setBackground(exb);
@@ -388,7 +390,7 @@ public class MainActivity extends Activity {
                         .show();
                 });
                 LinearLayout.LayoutParams exp=new LinearLayout.LayoutParams(-1,dp(42)); exp.setMargins(0,dp(5),0,dp(0)); card.addView(excluir,exp);
-                LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(-1,dp(292)); cp.setMargins(0,dp(8),0,dp(8)); root.addView(card,cp);
+                LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(-1,dp(308)); cp.setMargins(0,dp(8),0,dp(8)); root.addView(card,cp);
             }
         }
         Button sobre=new Button(this); sobre.setText("ⓘ  SOBRE O APLICATIVO"); sobre.setTextColor(WHITE); sobre.setTextSize(13); sobre.setAllCaps(false);
@@ -547,7 +549,7 @@ public class MainActivity extends Activity {
 
         if(controleAtivo!=null){
             LinearLayout deviceBar=row();
-            TextView deviceInfo=label("✓ "+controleAtivo.nome,13);
+            TextView deviceInfo=label("✓  ATIVO  •  "+controleAtivo.nome+"  •  "+controleStorage.quantidadeComandos(controleAtivo)+" botões configurados",13);
             deviceInfo.setTextColor(Color.rgb(75,145,95));
             deviceBar.addView(deviceInfo,new LinearLayout.LayoutParams(0,dp(44),1));
 
