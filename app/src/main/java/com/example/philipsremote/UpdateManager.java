@@ -262,7 +262,7 @@ public class UpdateManager {
     private void mostrarAtualizacao(String versao, String apkUrl) {
         new android.app.AlertDialog.Builder(activity)
             .setTitle("Nova atualização disponível")
-            .setMessage("Versão " + versao + " está disponível.\\n\\nO aplicativo pode baixar e instalar a atualização mantendo seus controles salvos.")
+            .setMessage("Versão " + versao + " está disponível.\n\nO aplicativo pode baixar e instalar a atualização mantendo seus controles salvos.")
             .setNegativeButton("AGORA NÃO", null)
             .setPositiveButton("ATUALIZAR", (d, w) -> baixar(apkUrl, versao))
             .show();
