@@ -13,6 +13,7 @@ public class IrPerfilTeste {
     private int pos=0;
     private String perfil="LG / NEC";
     private Item ultimoFuncionou;
+    private boolean rc6Toggle=false;
 
 
     private static class Item {
@@ -30,7 +31,7 @@ public class IrPerfilTeste {
     }
 
     public void selecionar(String p){
-        perfil=p; itens.clear(); pos=0;
+        perfil=p; itens.clear(); pos=0; rc6Toggle=false; ultimoFuncionou=null;
         if(p.equals("LG / NEC")){
             int[] cs={0x08,0x09,0x02,0x03,0x00,0x01,0x40,0x41,0x07,0x06,0x44,0x28,0x43,0x7C,0x0B,0xAA,0xAB,0x72,0x71,0x63,0x61,0xB0,0xB1,0xBA,0x8F,0x8E,0x39,0x5B,0xB5,0x18};
             for(int c:cs)itens.add(new Item(String.format(Locale.US,"NEC addr 0x04 • 0x%02X",c),NEC,0x04,c));
@@ -73,7 +74,7 @@ public class IrPerfilTeste {
     public String getPerfil(){return perfil;}
     public int position(){return pos;}
     public int total(){return itens.size();}
-    public void reset(){pos=0;}
+    public void reset(){pos=0; ultimoFuncionou=null;}
     public String lastDescription(){
         return ultimoFuncionou==null ? "" : ultimoFuncionou.nome;
     }
@@ -103,7 +104,7 @@ public class IrPerfilTeste {
             else if(perfilSalvo.equals("Samsung TV")) ir.transmit(38000,samsung(codigo>255?addr:0x07,cmd));
             else if(perfilSalvo.equals("Sony TV")) ir.transmit(40000,sony(codigo>255?addr:0x01,cmd));
             else if(perfilSalvo.equals("Philips / RC5")) ir.transmit(36000,rc5(codigo>255?addr:0x00,cmd,false));
-            else if(perfilSalvo.equals("Philips / RC6")) ir.transmit(36000,rc6(codigo>255?addr:0x00,cmd,false));
+            else if(perfilSalvo.equals("Philips / RC6")) { rc6Toggle=!rc6Toggle; ir.transmit(36000,rc6(codigo>255?addr:0x00,cmd,rc6Toggle)); }
             else if(perfilSalvo.equals("Panasonic TV") || perfilSalvo.equals("AOC / NEC") || perfilSalvo.equals("TCL / NEC") || perfilSalvo.equals("Philco / NEC") || perfilSalvo.equals("Semp / NEC") || perfilSalvo.equals("Toshiba / JVC / NEC")) ir.transmit(38000,nec(codigo>255?addr:0x00,cmd));
             else if(perfilSalvo.equals("AC Coolix")) ir.transmit(38000,coolix(codigo));
             else if(perfilSalvo.equals("AC Midea")) ir.transmit(38000,midea(codigo));
