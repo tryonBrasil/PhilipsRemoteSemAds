@@ -74,6 +74,9 @@ public class UpdateManager {
 
     public void verificarAoAbrir() {
         verificarDownloadPendente(false);
+        // Ao abrir o aplicativo, a verificação é feita novamente para garantir
+        // que uma nova versão publicada no GitHub seja detectada imediatamente.
+        prefs.edit().putLong("last_silent_check", 0L).apply();
         verificar(false);
     }
 
