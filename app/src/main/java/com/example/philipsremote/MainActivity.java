@@ -502,3 +502,164 @@ public class MainActivity extends Activity {
         r=row(); add(r,key("📡 VOL +",VOL_UP,50,KEY,16)); add(r,key("🔇",MUTE,50,KEY,20));
         add(r,key("CH +  +",CH_UP,50,KEY,16)); root.addView(r);
         r=row(); add(r,key("📡 VOL −",VOL_DOWN,50,KEY,16)); add(r,key("TV",SOURCE,50,KEY,16));
+        add(r,key("CH −  −",CH_DOWN,50,KEY,16)); root.addView(r);
+
+        section(root,"SMART TV");
+        r=row(); add(r,key("RED",RED,50,Color.rgb(145,18,18),14));
+        add(r,key("GREEN",GREEN,50,Color.rgb(18,118,48),14));
+        add(r,key("YELLOW",YELLOW,50,Color.rgb(166,132,8),14));
+        add(r,key("BLUE",BLUE,50,Color.rgb(24,78,155),14)); root.addView(r);
+
+        section(root,"TECLADO");
+        String[][] nums={{"1","2 ABC","3 DEF"},{"4 GHI","5 JKL","6 MNO"},{"7 PQRS","8 TUV","9 WXYZ"},{"CC","0","SUBTITLE"}};
+        int[][] cmds={{1,2,3},{4,5,6},{7,8,9},{0,0x3C,SUBTITLE}};
+        for(int i=0;i<nums.length;i++){ r=row(); for(int j=0;j<3;j++){
+            int fs=(i==0&&j==0)?20:14; add(r,key(nums[i][j],cmds[i][j],50,KEY_DARK,fs));
+        } root.addView(r); }
+
+        section(root,"CONTROLE DE MÍDIA");
+        r=row(); add(r,key("◀◀",REWIND,50,KEY,19)); add(r,key("▶",PLAY,50,KEY,19));
+        add(r,key("Ⅱ",PAUSE,50,KEY,19)); add(r,key("■",STOP,50,KEY,19));
+        add(r,key("▶▶",FAST_FORWARD,50,KEY,19)); root.addView(r);
+
+        boolean available=ir!=null&&ir.hasIrEmitter();
+        TextView status=label(available?"●  Emissor IR detectado  •  "+(lgMode?"LG 38":"Philips 36")+" kHz":"○  Emissor IR não detectado",12);
+        status.setTextColor(available?Color.rgb(75,145,95):GRAY);
+        root.addView(status,new LinearLayout.LayoutParams(-1,dp(38)));
+
+        if(controleAtivo!=null){
+            LinearLayout deviceBar=row();
+            TextView deviceInfo=label("✓ "+controleAtivo.nome,13);
+            deviceInfo.setTextColor(Color.rgb(75,145,95));
+            deviceBar.addView(deviceInfo,new LinearLayout.LayoutParams(0,dp(44),1));
+
+            Button configurar=new Button(this);
+            configurar.setText("CONFIGURAR");
+            configurar.setTextColor(WHITE);
+            configurar.setTextSize(11);
+            configurar.setAllCaps(false);
+            GradientDrawable configBg=new GradientDrawable();
+            configBg.setColor(KEY_DARK);
+            configBg.setCornerRadius(dp(12));
+            configurar.setBackground(configBg);
+            actionFeedback(configurar);
+            configurar.setOnClickListener(v->showAprenderComandos(controleAtivo));
+            deviceBar.addView(configurar,new LinearLayout.LayoutParams(dp(108),dp(42)));
+            root.addView(deviceBar);
+        }
+
+        Button meusControles=new Button(this);
+        meusControles.setText("★  MEUS CONTROLES");
+        meusControles.setTextColor(WHITE);
+        meusControles.setTextSize(13);
+        meusControles.setAllCaps(false);
+        GradientDrawable meusBg=new GradientDrawable();
+        meusBg.setColor(KEY_DARK);
+        meusBg.setCornerRadius(dp(16));
+        meusControles.setBackground(meusBg);
+        actionFeedback(meusControles);
+        meusControles.setOnClickListener(v->showMeusControles());
+        LinearLayout.LayoutParams meusParams=new LinearLayout.LayoutParams(-1,dp(50));
+        meusParams.setMargins(dp(2),dp(6),dp(2),0);
+        root.addView(meusControles,meusParams);
+        sv.addView(root); setContentView(sv);
+    }
+
+    private String funcaoDoComando(int command){
+        switch(command){
+            case POWER:return "POWER"; case MUTE:return "MUTE";
+            case VOL_UP:return "VOL_UP"; case VOL_DOWN:return "VOL_DOWN";
+            case CH_UP:return "CH_UP"; case CH_DOWN:return "CH_DOWN";
+            case UP:return "UP"; case DOWN:return "DOWN"; case LEFT:return "LEFT"; case RIGHT:return "RIGHT"; case OK:return "OK";
+            case BACK:return "BACK"; case MENU:return "MENU"; case HOME:return "HOME"; case SOURCE:return "SOURCE"; case INFO:return "INFO"; case GUIDE:return "GUIDE";
+            case NETFLIX:return "NETFLIX"; case SETTINGS:return "SETTINGS"; case PLAY:return "PLAY"; case PAUSE:return "PAUSE"; case STOP:return "STOP";
+            case REWIND:return "REWIND"; case FAST_FORWARD:return "FAST_FORWARD"; case SUBTITLE:return "SUBTITLE"; case EXIT:return "EXIT";
+            default:return "";
+        }
+    }
+
+    private boolean enviarComandoSalvo(String funcao){
+        if(controleAtivo==null || funcao.isEmpty()) return false;
+        int codigo=controleStorage.codigoComando(controleAtivo,funcao);
+        String perfil=controleStorage.perfilComando(controleAtivo,funcao);
+        if(codigo<0 || perfil.isEmpty()) return false;
+        return irPerfilTeste.transmitirSalvo(perfil,codigo);
+    }
+
+    private void send(int command){
+        if(ir==null||!ir.hasIrEmitter()){
+            Toast.makeText(this,"Este telemóvel não possui emissor IR.",Toast.LENGTH_SHORT).show(); return;
+        }
+        try{
+            String funcao=funcaoDoComando(command);
+            if(enviarComandoSalvo(funcao)){
+                Toast.makeText(this,"Código salvo enviado",Toast.LENGTH_SHORT).show();
+                return;
+            }
+            if(command==POWER && controleAtivo!=null && controleAtivo.codigo>=0){
+                boolean ok=irPerfilTeste.transmitirSalvo(controleAtivo.perfil,controleAtivo.codigo);
+                if(!ok) Toast.makeText(this,"Não foi possível enviar o código salvo",Toast.LENGTH_SHORT).show();
+                return;
+            }
+            if(lgMode) ir.transmit(LG_FREQ,lgNec(command));
+            else { toggle=!toggle; ir.transmit(FREQ,rc6(0x00,command,toggle)); }
+        }catch(Exception e){
+            Toast.makeText(this,"Falha ao enviar IR: "+e.getMessage(),Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private int lgCode(int c){
+        switch(c){
+            case POWER:return 0x08; case MUTE:return 0x09; case VOL_UP:return 0x02; case VOL_DOWN:return 0x03;
+            case CH_UP:return 0x00; case CH_DOWN:return 0x01; case UP:return 0x40; case DOWN:return 0x41;
+            case LEFT:return 0x07; case RIGHT:return 0x06; case OK:return 0x44; case BACK:return 0x28;
+            case MENU:return 0x43; case HOME:return 0x7C; case SOURCE:return 0x0B; case INFO:return 0xAA;
+            case GUIDE:return 0xAB; case SETTINGS:return 0x43; case RED:return 0x72; case GREEN:return 0x71;
+            case YELLOW:return 0x63; case BLUE:return 0x61; case PLAY:return 0xB0; case STOP:return 0xB1;
+            case PAUSE:return 0xBA; case REWIND:return 0x8F; case FAST_FORWARD:return 0x8E;
+            case SUBTITLE:return 0x39; case EXIT:return 0x5B; case NETFLIX:return 0xB5;
+            case 0x3C:return 0x10; case 0:return 0x10;
+            case 1:return 0x11; case 2:return 0x12; case 3:return 0x13; case 4:return 0x14;
+            case 5:return 0x15; case 6:return 0x16; case 7:return 0x17; case 8:return 0x18; case 9:return 0x19;
+            default:return c & 0xFF;
+        }
+    }
+
+    private int[] lgNec(int command){
+        int data=lgCode(command)&0xFF;
+        int[] bytes={0x04,0xFB,data,(~data)&0xFF};
+        ArrayList<Integer> p=new ArrayList<>();
+        append(p,true,9000); append(p,false,4500);
+        for(int b:bytes) for(int m=1;m<=0x80;m<<=1){
+            append(p,true,LG_UNIT);
+            append(p,false,(b&m)!=0?1690:560);
+        }
+        append(p,true,LG_UNIT); append(p,false,20000);
+        int[] out=new int[p.size()]; for(int i=0;i<p.size();i++) out[i]=p.get(i);
+        return out;
+    }
+
+    private int[] rc6(int address,int command,boolean tog){
+        ArrayList<Integer> p=new ArrayList<>();
+        append(p,true,2666); append(p,false,889);
+        appendBit(p,1,UNIT); appendBit(p,0,UNIT); appendBit(p,0,UNIT); appendBit(p,0,UNIT);
+        appendBit(p,tog?1:0,UNIT*2);
+        for(int m=0x80;m!=0;m>>=1) appendBit(p,(address&m)!=0?1:0,UNIT);
+        for(int m=0x80;m!=0;m>>=1) appendBit(p,(command&m)!=0?1:0,UNIT);
+        append(p,false,2666);
+        int[] out=new int[p.size()]; for(int i=0;i<p.size();i++)out[i]=p.get(i); return out;
+    }
+
+    private void appendBit(ArrayList<Integer> p,int bit,int half){
+        if(bit==1){append(p,true,half);append(p,false,half);}
+        else{append(p,false,half);append(p,true,half);}
+    }
+
+    private void append(ArrayList<Integer> p,boolean mark,int duration){
+        if(duration<=0)return;
+        if(p.isEmpty()){if(!mark)p.add(0);p.add(duration);return;}
+        boolean expectedMark=(p.size()%2==1);
+        if(expectedMark==mark){int i=p.size()-1;p.set(i,p.get(i)+duration);}
+        else p.add(duration);
+    }
+}
