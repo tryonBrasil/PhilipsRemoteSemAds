@@ -367,7 +367,7 @@ public class MainActivity extends Activity {
     }
 
     private void showSobre(){
-        String versao="1.2.0";
+        String versao="1.2.2";
         try{
             android.content.pm.PackageInfo info=getPackageManager().getPackageInfo(getPackageName(),0);
             if(info.versionName!=null) versao=info.versionName;
@@ -440,7 +440,13 @@ public class MainActivity extends Activity {
         Button powerButton=new Button(this); powerButton.setText("");
         powerButton.setBackgroundResource(R.drawable.power_button); powerButton.setPadding(0,0,0,0);
         powerButton.setContentDescription("Ligar ou desligar a TV");
-        powerButton.setOnClickListener(v->send(POWER));
+        powerButton.setHapticFeedbackEnabled(true);
+        powerButton.setOnTouchListener((view,event)->{
+            if(event.getAction()==android.view.MotionEvent.ACTION_DOWN)
+                view.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP);
+            return false;
+        });
+        powerButton.setOnClickListener(v->{ v.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP); send(POWER); });
         LinearLayout.LayoutParams powerParams=new LinearLayout.LayoutParams(dp(82),dp(82));
         powerParams.setMargins(dp(4),dp(2),dp(4),dp(2)); powerButton.setLayoutParams(powerParams);
         r.addView(powerButton); root.addView(r);
