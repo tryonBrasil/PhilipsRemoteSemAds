@@ -38,7 +38,7 @@ public class UpdateManager {
     private final SharedPreferences prefs;
     private BroadcastReceiver receiver;
     private boolean checking = false;
-    private boolean esperandoPermissaoInstalacao = false;
+    private boolean esperandoPermissaoInstalacao = false;\n    private boolean instaladorAberto = false;
 
     public UpdateManager(Activity activity) {
         this.activity = activity;
