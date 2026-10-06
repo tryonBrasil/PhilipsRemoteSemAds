@@ -52,6 +52,9 @@ public class MainActivity extends Activity {
 
     @Override protected void onCreate(Bundle b) {
         super.onCreate(b);
+        getWindow().setStatusBarColor(BG);
+        getWindow().setNavigationBarColor(BG);
+        getWindow().getDecorView().setSystemUiVisibility(0);
         ir=(ConsumerIrManager)getSystemService(CONSUMER_IR_SERVICE);
         irPerfilTeste=new IrPerfilTeste(this);
         prefs=getSharedPreferences("remote_prefs",MODE_PRIVATE);
@@ -96,7 +99,7 @@ public class MainActivity extends Activity {
         b.setHapticFeedbackEnabled(true);
         b.setOnClickListener(v->{ v.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP); send(cmd); });
         LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,dp(h),1);
-        p.setMargins(dp(4),dp(4),dp(4),dp(4)); b.setLayoutParams(p);
+        p.setMargins(dp(3),dp(3),dp(3),dp(3)); b.setLayoutParams(p);
         return b;
     }
 
@@ -474,7 +477,7 @@ public class MainActivity extends Activity {
         sv.setBackgroundColor(BG); sv.setClipToPadding(false);
 
         LinearLayout root=new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(dp(10),dp(8),dp(10),dp(28)); root.setBackgroundColor(BG);
+        root.setPadding(dp(8),dp(6),dp(8),dp(18)); root.setBackgroundColor(BG);
 
         LinearLayout modelRow=row();
         TextView title=label("IR REMOTE BR",22);
@@ -528,15 +531,15 @@ public class MainActivity extends Activity {
             return false;
         });
         powerButton.setOnClickListener(v->{ v.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP); send(POWER); });
-        LinearLayout.LayoutParams powerParams=new LinearLayout.LayoutParams(dp(82),dp(82));
-        powerParams.setMargins(dp(4),dp(2),dp(4),dp(2)); powerButton.setLayoutParams(powerParams);
+        LinearLayout.LayoutParams powerParams=new LinearLayout.LayoutParams(dp(88),dp(88));
+        powerParams.setMargins(dp(4),dp(0),dp(4),dp(0)); powerButton.setLayoutParams(powerParams);
         r.addView(powerButton); root.addView(r);
 
         TextView hint=label(controleAtivo!=null
                 ? "Controle ativo • "+controleStorage.quantidadeComandos(controleAtivo)+" botões personalizados"
                 : "Controle padrão • você pode salvar seu próprio controle",11);
         hint.setTextColor(GRAY);
-        root.addView(hint,new LinearLayout.LayoutParams(-1,dp(28)));
+        root.addView(hint,new LinearLayout.LayoutParams(-1,dp(24)));
 
         r=row();
         add(r,key("SOURCE",SOURCE,50,KEY,16)); add(r,key("INFO",INFO,50,KEY,16));
@@ -548,7 +551,7 @@ public class MainActivity extends Activity {
 
         section(root,"NAVEGAÇÃO");
         LinearLayout nav=new LinearLayout(this); nav.setOrientation(LinearLayout.VERTICAL);
-        nav.setGravity(Gravity.CENTER); nav.setPadding(dp(42),dp(8),dp(42),dp(8));
+        nav.setGravity(Gravity.CENTER); nav.setPadding(dp(34),dp(6),dp(34),dp(6));
         GradientDrawable navBg=new GradientDrawable(); navBg.setColor(Color.rgb(26,26,28));
         navBg.setCornerRadius(dp(26)); navBg.setStroke(dp(1),Color.rgb(55,55,58));
         nav.setBackground(navBg); LinearLayout.LayoutParams np=new LinearLayout.LayoutParams(-1,-2);
