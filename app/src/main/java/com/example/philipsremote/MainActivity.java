@@ -186,7 +186,7 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         Button continueBtn=new Button(this); continueBtn.setText("CONTINUAR"); continueBtn.setTextColor(WHITE); continueBtn.setTextSize(17); continueBtn.setAllCaps(false);
         GradientDrawable bg=new GradientDrawable(); bg.setColor(Color.rgb(190,24,32)); bg.setCornerRadius(dp(18)); continueBtn.setBackground(bg); continueBtn.setOnClickListener(v->{prefs.edit().putBoolean("lg_mode",lgMode).apply();showingSelector=false;build();});
         root.addView(continueBtn,new LinearLayout.LayoutParams(-1,dp(58)));
-        TextView info=label("Versão instalada: "+getPackageManager().getPackageInfo(getPackageName(),0).versionName+"  •  atualizações automáticas ativas",12); info.setTextColor(GRAY); root.addView(info,new LinearLayout.LayoutParams(-1,dp(42)));
+        String versao=""; try{ versao=getPackageManager().getPackageInfo(getPackageName(),0).versionName; }catch(Exception ignored){} TextView info=label("Versão instalada: "+versao+"  •  atualizações automáticas ativas",12); info.setTextColor(GRAY); root.addView(info,new LinearLayout.LayoutParams(-1,dp(42)));
         Button meus=new Button(this); meus.setText("★  MEUS CONTROLES"); meus.setTextColor(WHITE); meus.setTextSize(14); meus.setAllCaps(false);
         GradientDrawable meusBg=new GradientDrawable(); meusBg.setColor(KEY_DARK); meusBg.setCornerRadius(dp(16)); meus.setBackground(meusBg); actionFeedback(meus); meus.setOnClickListener(v->showMeusControles());
         root.addView(meus,new LinearLayout.LayoutParams(-1,dp(52)));
