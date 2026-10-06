@@ -57,11 +57,14 @@ jobs:
         run: |
           VERSION=$(sed -n "s/.*versionName '\([^']*\)'.*/\1/p" app/build.gradle)
           TAG="v$VERSION"
-          if ! gh release view "$TAG" >/dev/null 2>&1; then
-            gh release create "$TAG" app/build/outputs/apk/release/app-release.apk --title "IR Remote BR $VERSION" --generate-notes
-          else
+          if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" app/build/outputs/apk/release/app-release.apk --clobber
             echo "Release $TAG atualizada."
+          else
+            if ! gh release create "$TAG" app/build/outputs/apk/release/app-release.apk --title "IR Remote BR $VERSION" --generate-notes; then
+              echo "A Release foi criada por outra execução; enviando o APK para ela."
+              gh release upload "$TAG" app/build/outputs/apk/release/app-release.apk --clobber
+            fi
           fi
 
       - name: Limpar keystore
