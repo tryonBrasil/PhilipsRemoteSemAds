@@ -135,10 +135,14 @@ public class UpdateManager {
                 activity.runOnUiThread(() -> {
                     if (update) {
                         if (!manual) {
-                            String ultimoPrompt = prefs.getString("last_prompt_version", "");
-                            if (finalLatest.equals(ultimoPrompt)) return;
+                            // Em verificação automática, baixa a nova versão sozinho.
+                            // Não repete o download para a mesma versão.
+                            String baixando = prefs.getString("auto_download_version", "");
+                            if (finalLatest.equals(baixando)) return;
+                            baixarAutomaticamente(finalApkUrl, finalLatest);
+                        } else {
+                            mostrarAtualizacao(finalLatest, finalApkUrl);
                         }
-                        mostrarAtualizacao(finalLatest, finalApkUrl);
                     } else if (manual) {
                         Toast.makeText(activity, "Você já está usando a versão mais recente.", Toast.LENGTH_SHORT).show();
                     }
@@ -195,6 +199,23 @@ public class UpdateManager {
             .setNegativeButton("AGORA NÃO", null)
             .setPositiveButton("ATUALIZAR", (d, w) -> baixar(apkUrl, versao))
             .show();
+    }
+
+    private void baixarAutomaticamente(String apkUrl, String versao) {
+        try {
+            DownloadManager manager = (DownloadManager) activity.getSystemService(Context.DOWNLOAD_SERVICE);
+            DownloadManager.Request request = new DownloadManager.Request(Uri.parse(apkUrl));
+            request.setTitle("IR Remote BR " + versao);
+            request.setDescription("Baixando atualização automaticamente...");
+            request.setMimeType("application/vnd.android.package-archive");
+            request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
+            request.setDestinationInExternalFilesDir(activity, Environment.DIRECTORY_DOWNLOADS, "IRRemoteBR-update-" + versao + ".apk");
+            downloadId = manager.enqueue(request);
+            prefs.edit().putString("auto_download_version", versao).apply();
+            Toast.makeText(activity, "Nova atualização encontrada. Baixando automaticamente...", Toast.LENGTH_LONG).show();
+        } catch (Exception e) {
+            prefs.edit().remove("auto_download_version").apply();
+        }
     }
 
     private void baixar(String apkUrl, String versao) {
