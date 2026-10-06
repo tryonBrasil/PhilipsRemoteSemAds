@@ -609,14 +609,14 @@ render[0]=()->{
     }
 
     private void showAddControlWizard(){
-        wizardDialog("Adicionar controle","Você vai escolher a marca e o modelo e depois testar os códigos IR.\n\nNada é salvo até você confirmar que a TV respondeu.")
+        wizardDialog("ADICIONAR CONTROLE","PASSO 1 → MARCA\nPASSO 2 → MODELO\nPASSO 3 → TESTE IR\n\nO controle só será salvo depois que você confirmar que a TV respondeu. Seus controles existentes não serão alterados.")
             .setPositiveButton("COMEÇAR",(d,w)->showBrandWizard())
-            .setNegativeButton("CANCELAR",null).show();
+            .setNegativeButton("CANCELAR",(d,w)->showMeusControles()).show();
     }
 
     private void showBrandWizard(){
         final String[] marcas={"Philips","LG","Samsung","Sony","Panasonic","AOC","TCL","Philco","Semp"};
-        wizardDialog("1 de 3 • Escolha a marca","Escolha a marca. O aplicativo selecionará automaticamente o banco de códigos mais provável.")
+        wizardDialog("PASSO 1 DE 3 • MARCA","Escolha a marca da TV. O aplicativo usará automaticamente o perfil IR mais provável.")
             .setItems(marcas,(d,w)->showModelWizard(marcas[w]))
             .setNegativeButton("CANCELAR",(x,y)->showMeusControles()).show();
     }
@@ -632,9 +632,10 @@ render[0]=()->{
         else if("TCL".equals(marca)) modelos=new String[]{"Smart TV","Outro modelo"};
         else if("Philco".equals(marca)) modelos=new String[]{"Smart TV","Outro modelo"};
         else modelos=new String[]{"Smart TV","Outro modelo"};
+
         new android.app.AlertDialog.Builder(this)
-            .setTitle("2 de 3 • Escolha o modelo")
-            .setMessage("Marca: "+marca+"\n\nEscolha um modelo ou informe o modelo manualmente.")
+            .setTitle("PASSO 2 DE 3 • MODELO")
+            .setMessage("Marca selecionada: "+marca+"\n\nEscolha um modelo conhecido ou informe o modelo manualmente.")
             .setItems(modelos,(d,w)->{
                 if(w==modelos.length-1){
                     final EditText input=new EditText(this);
@@ -642,10 +643,22 @@ render[0]=()->{
                     input.setHint("Ex.: 50PUG6513/7");
                     input.setTextColor(WHITE);
                     input.setHintTextColor(GRAY);
+                    input.setTextSize(16);
+                    input.setPadding(dp(12),0,dp(12),0);
+                    GradientDrawable inputBg=new GradientDrawable();
+                    inputBg.setColor(CARD);
+                    inputBg.setCornerRadius(dp(12));
+                    inputBg.setStroke(dp(1),BORDER);
+                    input.setBackground(inputBg);
+
                     android.widget.FrameLayout box=new android.widget.FrameLayout(this);
-                    box.setPadding(dp(24),dp(4),dp(24),0);
+                    box.setPadding(dp(22),dp(4),dp(22),0);
                     box.addView(input,new android.widget.FrameLayout.LayoutParams(-1,dp(52)));
-                    new android.app.AlertDialog.Builder(this).setTitle("Modelo da "+marca).setMessage("Digite o modelo do aparelho.").setView(box)
+
+                    new android.app.AlertDialog.Builder(this)
+                        .setTitle("MODELO • "+marca)
+                        .setMessage("Digite o modelo da TV para identificar melhor os códigos.")
+                        .setView(box)
                         .setNegativeButton("VOLTAR",(x,y)->showModelWizard(marca))
                         .setPositiveButton("CONTINUAR",(x,y)->{
                             String modelo=input.getText().toString().trim();
@@ -655,330 +668,8 @@ render[0]=()->{
                 } else {
                     prepararNovoControle(marca,modelos[w]);
                 }
-            }).setNegativeButton("VOLTAR",(x,y)->showBrandWizard()).show();
+            })
+            .setNegativeButton("VOLTAR",(x,y)->showBrandWizard()).show();
     }
 
-    private void prepararNovoControle(String marca,String modelo){
-        lgMode="LG".equals(marca);
-        controleAtivo=null;
-        prefs.edit().remove("active_control_id").putBoolean("lg_mode",lgMode).apply();
-        setupBrand=marca; setupModel=modelo;
-        showTvSetup(marca,modelo);
-    }
 
-    private void showTvSetup(String marca,String modelo){
-        wizardDialog("3 de 3 • Teste IR","TV: "+marca+" "+modelo+"\n\n1. Aponte o celular para a TV.\n2. Toque em TESTAR PRÓXIMO.\n3. Quando a TV responder, toque em FUNCIONOU / SALVAR.\n\nO primeiro código confirmado será usado como base do controle.")
-            .setNegativeButton("CANCELAR",(d,w)->showMeusControles())
-            .setPositiveButton("INICIAR TESTE",(d,w)->showUniversalScanner(marca,modelo)).show();
-    }
-
-    private void build(){
-        ScrollView sv=new ScrollView(this); sv.setFillViewport(true);
-        sv.setBackgroundColor(BG); sv.setClipToPadding(false);
-
-        LinearLayout root=new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(dp(12),dp(8),dp(12),dp(22)); root.setBackgroundColor(BG);
-
-        LinearLayout modelRow=row();
-        LinearLayout brandBox=new LinearLayout(this); brandBox.setOrientation(LinearLayout.VERTICAL); brandBox.setGravity(Gravity.CENTER_VERTICAL);
-        TextView title=label("IR REMOTE BR",22); title.setTypeface(Typeface.DEFAULT,Typeface.BOLD); title.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
-        brandBox.addView(title,new LinearLayout.LayoutParams(-1,dp(28)));
-        TextView subtitle=label(controleAtivo!=null ? controleAtivo.nome : (lgMode?"LG 32LB620B":"Philips 50PUG6513/7"),12);
-        subtitle.setTextColor(GRAY); subtitle.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
-        brandBox.addView(subtitle,new LinearLayout.LayoutParams(-1,dp(20)));
-        modelRow.addView(brandBox,new LinearLayout.LayoutParams(0,dp(50),1));
-
-        Button change= new Button(this);
-        change.setText("TROCAR"); change.setTextColor(WHITE); change.setTextSize(12); change.setAllCaps(false);
-        GradientDrawable changeBg=new GradientDrawable(); changeBg.setColor(CARD_2); changeBg.setCornerRadius(dp(14)); changeBg.setStroke(dp(1),Color.rgb(60,60,66));
-        change.setBackground(changeBg); actionFeedback(change); change.setOnClickListener(v->showSelector());
-        modelRow.addView(change,new LinearLayout.LayoutParams(dp(88),dp(44)));
-        root.addView(modelRow);
-
-        LinearLayout deviceCard=new LinearLayout(this);
-        deviceCard.setOrientation(LinearLayout.VERTICAL);
-        deviceCard.setPadding(dp(14),dp(8),dp(14),dp(8));
-        GradientDrawable deviceBg=new GradientDrawable();
-        deviceBg.setColor(controleAtivo!=null?Color.rgb(28,55,36):CARD);
-        deviceBg.setCornerRadius(dp(16));
-        deviceBg.setStroke(dp(1),controleAtivo!=null?Color.rgb(80,160,100):Color.rgb(55,55,60));
-        deviceCard.setBackground(deviceBg);
-
-        LinearLayout deviceTop=row();
-        TextView selected=label(controleAtivo!=null ? controleAtivo.nome : (lgMode?"LG 32LB620B":"Philips 50PUG6513/7"),16);
-        selected.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
-        selected.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
-        selected.setTextColor(WHITE);
-        deviceTop.addView(selected,new LinearLayout.LayoutParams(0,dp(34),1));
-        TextView ativoBadge=badge(controleAtivo!=null?"ATIVO":"PADRÃO",controleAtivo!=null?Color.rgb(55,110,65):Color.rgb(65,65,72));
-        deviceTop.addView(ativoBadge,new LinearLayout.LayoutParams(-2,dp(28)));
-        deviceCard.addView(deviceTop);
-
-        TextView selectedDetail=label(controleAtivo!=null
-                ? controleAtivo.marca+" "+controleAtivo.modelo+"  •  "+controleStorage.quantidadeComandos(controleAtivo)+" botões configurados"
-                : (lgMode?"LG • perfil NEC":"Philips • perfil RC6"),12);
-        selectedDetail.setTextColor(controleAtivo!=null?Color.rgb(175,205,180):GRAY);
-        selectedDetail.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
-        deviceCard.addView(selectedDetail,new LinearLayout.LayoutParams(-1,dp(28)));
-        LinearLayout.LayoutParams deviceParams=new LinearLayout.LayoutParams(-1,dp(92));
-        deviceParams.setMargins(dp(2),0,dp(2),dp(5));
-        root.addView(deviceCard,deviceParams);
-
-        LinearLayout r=row();
-        Button powerButton=new Button(this); powerButton.setText("");
-        powerButton.setBackgroundResource(R.drawable.power_button); powerButton.setPadding(0,0,0,0);
-        powerButton.setContentDescription("Ligar ou desligar a TV");
-        powerButton.setHapticFeedbackEnabled(true);
-        powerButton.setOnTouchListener((view,event)->{
-            if(event.getAction()==android.view.MotionEvent.ACTION_DOWN)
-                view.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP);
-            return false;
-        });
-        powerButton.setOnClickListener(v->{ v.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP); send(POWER); });
-        LinearLayout.LayoutParams powerParams=new LinearLayout.LayoutParams(dp(88),dp(88));
-        powerParams.setMargins(dp(4),dp(0),dp(4),dp(0)); powerButton.setLayoutParams(powerParams);
-        r.addView(powerButton); root.addView(r);
-
-        TextView hint=label(controleAtivo!=null
-                ? "Controle ativo • "+controleStorage.quantidadeComandos(controleAtivo)+" botões personalizados"
-                : "Controle padrão • você pode salvar seu próprio controle",11);
-        hint.setTextColor(GRAY);
-        root.addView(hint,new LinearLayout.LayoutParams(-1,dp(24)));
-
-        r=row();
-        add(r,key("SOURCE",SOURCE,50,KEY,16)); add(r,key("INFO",INFO,50,KEY,16));
-        add(r,key("⚙",SETTINGS,50,KEY,25)); root.addView(r);
-
-        r=row();
-        add(r,key("GUIDE",GUIDE,50,KEY,16)); add(r,key("HOME",HOME,50,KEY,16));
-        add(r,key(lgMode?"SMART":"NETFLIX",NETFLIX,50,KEY,16)); root.addView(r);
-
-        section(root,"NAVEGAÇÃO");
-        LinearLayout nav=new LinearLayout(this); nav.setOrientation(LinearLayout.VERTICAL);
-        nav.setGravity(Gravity.CENTER); nav.setPadding(dp(34),dp(6),dp(34),dp(6));
-        GradientDrawable navBg=new GradientDrawable(); navBg.setColor(Color.rgb(26,26,28));
-        navBg.setCornerRadius(dp(26)); navBg.setStroke(dp(1),Color.rgb(55,55,58));
-        nav.setBackground(navBg); LinearLayout.LayoutParams np=new LinearLayout.LayoutParams(-1,-2);
-        np.setMargins(dp(3),dp(2),dp(3),dp(2)); nav.setLayoutParams(np);
-
-        r=row(); add(r,key("▲",UP,56,Color.rgb(60,61,70),22)); nav.addView(r);
-        r=row(); add(r,key("◀",LEFT,64,Color.rgb(60,61,70),22));
-        add(r,key("OK",OK,64,Color.rgb(60,61,70),18));
-        add(r,key("▶",RIGHT,64,Color.rgb(60,61,70),22)); nav.addView(r);
-        r=row(); add(r,key("▼",DOWN,56,Color.rgb(60,61,70),22)); nav.addView(r);
-        root.addView(nav);
-
-        r=row(); add(r,key("↩  BACK",BACK,50,KEY,16));
-        add(r,key("☰  MENU",MENU,50,KEY,16)); add(r,key("EXIT",EXIT,50,KEY,16)); root.addView(r);
-
-        section(root,"VOLUME E CANAIS");
-        r=row(); add(r,key("📡 VOL +",VOL_UP,50,KEY,16)); add(r,key("🔇",MUTE,50,KEY,20));
-        add(r,key("CH +  +",CH_UP,50,KEY,16)); root.addView(r);
-        r=row(); add(r,key("📡 VOL −",VOL_DOWN,50,KEY,16)); add(r,key("TV",SOURCE,50,KEY,16));
-        add(r,key("CH −  −",CH_DOWN,50,KEY,16)); root.addView(r);
-
-        section(root,"SMART TV");
-        r=row(); add(r,key("RED",RED,50,Color.rgb(145,18,18),14));
-        add(r,key("GREEN",GREEN,50,Color.rgb(18,118,48),14));
-        add(r,key("YELLOW",YELLOW,50,Color.rgb(166,132,8),14));
-        add(r,key("BLUE",BLUE,50,Color.rgb(24,78,155),14)); root.addView(r);
-
-        section(root,"TECLADO");
-        String[][] nums={{"1","2 ABC","3 DEF"},{"4 GHI","5 JKL","6 MNO"},{"7 PQRS","8 TUV","9 WXYZ"},{"CC","0","SUBTITLE"}};
-        int[][] cmds={{1,2,3},{4,5,6},{7,8,9},{0x3C,0,SUBTITLE}};
-        for(int i=0;i<nums.length;i++){ r=row(); for(int j=0;j<3;j++){
-            int fs=(i==0&&j==0)?20:14; add(r,key(nums[i][j],cmds[i][j],50,KEY_DARK,fs));
-        } root.addView(r); }
-
-        section(root,"CONTROLE DE MÍDIA");
-        r=row(); add(r,key("◀◀",REWIND,50,KEY,19)); add(r,key("▶",PLAY,50,KEY,19));
-        add(r,key("Ⅱ",PAUSE,50,KEY,19)); add(r,key("■",STOP,50,KEY,19));
-        add(r,key("▶▶",FAST_FORWARD,50,KEY,19)); root.addView(r);
-
-        boolean available=ir!=null&&ir.hasIrEmitter();
-        String perfilStatus=controleAtivo!=null?controleAtivo.perfil:(lgMode?"LG / NEC":"Philips / RC6");
-        TextView status=label(available?"●  Emissor IR detectado  •  "+perfilStatus+" • "+(controleAtivo!=null?controleAtivo.frequencia:(lgMode?38000:36000))+" Hz":"○  Emissor IR não detectado",12);
-        status.setTextColor(available?Color.rgb(75,145,95):GRAY);
-        root.addView(status,new LinearLayout.LayoutParams(-1,dp(38)));
-
-        if(controleAtivo!=null){
-            LinearLayout deviceBar=row();
-            deviceBar.setPadding(dp(2),dp(2),dp(2),dp(2));
-            GradientDrawable barBg=new GradientDrawable();
-            barBg.setColor(Color.rgb(24,30,26)); barBg.setCornerRadius(dp(14));
-            deviceBar.setBackground(barBg);
-
-            TextView deviceInfo=label("✓  "+controleAtivo.nome+"\n"+controleStorage.quantidadeComandos(controleAtivo)+" botões configurados",12);
-            deviceInfo.setTextColor(Color.rgb(105,175,115));
-            deviceInfo.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
-            deviceBar.addView(deviceInfo,new LinearLayout.LayoutParams(0,dp(52),1));
-
-            Button configurar=new Button(this);
-            configurar.setText("EDITAR");
-            configurar.setTextColor(WHITE);
-            configurar.setTextSize(11);
-            configurar.setAllCaps(false);
-            GradientDrawable configBg=new GradientDrawable();
-            configBg.setColor(Color.rgb(55,75,60));
-            configBg.setCornerRadius(dp(12));
-            configurar.setBackground(configBg);
-            actionFeedback(configurar);
-            configurar.setOnClickListener(v->showAprenderComandos(controleAtivo));
-            deviceBar.addView(configurar,new LinearLayout.LayoutParams(dp(82),dp(44)));
-            LinearLayout.LayoutParams barParams=new LinearLayout.LayoutParams(-1,dp(56));
-            barParams.setMargins(dp(2),dp(5),dp(2),dp(2));
-            root.addView(deviceBar,barParams);
-        }
-
-        Button meusControles=new Button(this);
-        meusControles.setText("★  MEUS CONTROLES  •  "+controleStorage.listar().size());
-        meusControles.setTextColor(WHITE);
-        meusControles.setTextSize(13);
-        meusControles.setAllCaps(false);
-        GradientDrawable meusBg=new GradientDrawable();
-        meusBg.setColor(KEY_DARK);
-        meusBg.setCornerRadius(dp(16));
-        meusControles.setBackground(meusBg);
-        actionFeedback(meusControles);
-        meusControles.setOnClickListener(v->showMeusControles());
-        LinearLayout.LayoutParams meusParams=new LinearLayout.LayoutParams(-1,dp(50));
-        meusParams.setMargins(dp(2),dp(6),dp(2),0);
-        root.addView(meusControles,meusParams);
-        sv.addView(root); setContentView(sv);
-    }
-
-    private String funcaoDoComando(int command){
-        switch(command){
-            case POWER:return "POWER"; case MUTE:return "MUTE";
-            case VOL_UP:return "VOL_UP"; case VOL_DOWN:return "VOL_DOWN";
-            case CH_UP:return "CH_UP"; case CH_DOWN:return "CH_DOWN";
-            case UP:return "UP"; case DOWN:return "DOWN"; case LEFT:return "LEFT"; case RIGHT:return "RIGHT"; case OK:return "OK";
-            case BACK:return "BACK"; case MENU:return "MENU"; case HOME:return "HOME"; case SOURCE:return "SOURCE"; case INFO:return "INFO"; case GUIDE:return "GUIDE";
-            case NETFLIX:return "NETFLIX"; case SETTINGS:return "SETTINGS"; case RED:return "RED"; case GREEN:return "GREEN"; case YELLOW:return "YELLOW"; case BLUE:return "BLUE"; case PLAY:return "PLAY"; case PAUSE:return "PAUSE"; case STOP:return "STOP";
-            case REWIND:return "REWIND"; case FAST_FORWARD:return "FAST_FORWARD"; case SUBTITLE:return "SUBTITLE"; case EXIT:return "EXIT";
-            default:return "";
-        }
-    }
-
-    private boolean enviarComandoSalvo(String funcao){
-        if(controleAtivo==null || funcao.isEmpty()) return false;
-        int codigo=controleStorage.codigoComando(controleAtivo,funcao);
-        String perfil=controleStorage.perfilComando(controleAtivo,funcao);
-        if(codigo<0 || perfil.isEmpty()) return false;
-        int frequencia=controleStorage.frequenciaComando(controleAtivo,funcao);
-         return irPerfilTeste.transmitirSalvo(perfil,codigo,frequencia);
-    }
-
-    private void send(int command){
-        if(ir==null||!ir.hasIrEmitter()){
-            Toast.makeText(this,"Este telemóvel não possui emissor IR.",Toast.LENGTH_SHORT).show(); return;
-        }
-        try{
-            String funcao=funcaoDoComando(command);
-            if(enviarComandoSalvo(funcao)){
-                Toast.makeText(this,"Código salvo enviado",Toast.LENGTH_SHORT).show();
-                return;
-            }
-            if(command==POWER && controleAtivo!=null && controleAtivo.codigo>=0){
-                boolean ok=irPerfilTeste.transmitirSalvo(controleAtivo.perfil,controleAtivo.codigo,controleAtivo.frequencia);
-                if(!ok) Toast.makeText(this,"Não foi possível enviar o código salvo",Toast.LENGTH_SHORT).show();
-                return;
-            }
-            // Para controles universais, não envie um código genérico de outro protocolo.
-            // Se o botão não foi aprendido, peça ao usuário para configurá-lo.
-            if(controleAtivo!=null){
-                String perfil=controleAtivo.perfil==null?"":controleAtivo.perfil;
-                if("LG / NEC".equals(perfil)) {
-                    transmitirSeguro(LG_FREQ,lgNec(command));
-                    return;
-                }
-                if("Philips / RC6".equals(perfil)) {
-                    toggle=!toggle;
-                    transmitirSeguro(FREQ,rc6(0x00,command,toggle));
-                    return;
-                }
-                Toast.makeText(this,"Este botão ainda não foi configurado. Toque em EDITAR para aprendê-lo.",Toast.LENGTH_SHORT).show();
-                return;
-            }
-            if(lgMode) transmitirSeguro(LG_FREQ,lgNec(command));
-            else { toggle=!toggle; transmitirSeguro(FREQ,rc6(0x00,command,toggle)); }
-        }catch(Exception e){
-            Toast.makeText(this,"Falha ao enviar IR: "+e.getMessage(),Toast.LENGTH_SHORT).show();
-        }
-    }
-
-    private int frequenciaIR(int desejada){
-        if(ir==null) return desejada;
-        try{
-            ConsumerIrManager.CarrierFrequencyRange[] ranges=ir.getCarrierFrequencies();
-            if(ranges==null || ranges.length==0) return desejada;
-            int melhor=desejada; long distancia=Long.MAX_VALUE;
-            for(ConsumerIrManager.CarrierFrequencyRange r:ranges){
-                int candidato=desejada;
-                if(desejada<r.getMinFrequency()) candidato=r.getMinFrequency();
-                else if(desejada>r.getMaxFrequency()) candidato=r.getMaxFrequency();
-                long d=Math.abs((long)candidato-desejada);
-                if(d<distancia){distancia=d;melhor=candidato;}
-                if(d==0) break;
-            }
-            return melhor;
-        }catch(Exception e){return desejada;}
-    }
-
-    private void transmitirSeguro(int frequencia,int[] padrao){ ir.transmit(frequenciaIR(frequencia),padrao); }
-
-    private int lgCode(int c){
-        switch(c){
-            case POWER:return 0x08; case MUTE:return 0x09; case VOL_UP:return 0x02; case VOL_DOWN:return 0x03;
-            case CH_UP:return 0x00; case CH_DOWN:return 0x01; case UP:return 0x40; case DOWN:return 0x41;
-            case LEFT:return 0x07; case RIGHT:return 0x06; case OK:return 0x44; case BACK:return 0x28;
-            case MENU:return 0x43; case HOME:return 0x7C; case SOURCE:return 0x0B; case INFO:return 0xAA;
-            case GUIDE:return 0xAB; case SETTINGS:return 0x43; case RED:return 0x72; case GREEN:return 0x71;
-            case YELLOW:return 0x63; case BLUE:return 0x61; case PLAY:return 0xB0; case STOP:return 0xB1;
-            case PAUSE:return 0xBA; case REWIND:return 0x8F; case FAST_FORWARD:return 0x8E;
-            case SUBTITLE:return 0x39; case EXIT:return 0x5B; case NETFLIX:return 0xB5;
-            case 0x3C:return 0x10; case 0:return 0x10;
-            case 1:return 0x11; case 2:return 0x12; case 3:return 0x13; case 4:return 0x14;
-            case 5:return 0x15; case 6:return 0x16; case 7:return 0x17; case 8:return 0x18; case 9:return 0x19;
-            default:return c & 0xFF;
-        }
-    }
-
-    private int[] lgNec(int command){
-        int data=lgCode(command)&0xFF;
-        int[] bytes={0x04,0xFB,data,(~data)&0xFF};
-        ArrayList<Integer> p=new ArrayList<>();
-        append(p,true,9000); append(p,false,4500);
-        for(int b:bytes) for(int m=1;m<=0x80;m<<=1){
-            append(p,true,LG_UNIT);
-            append(p,false,(b&m)!=0?1690:560);
-        }
-        append(p,true,LG_UNIT); append(p,false,20000);
-        int[] out=new int[p.size()]; for(int i=0;i<p.size();i++) out[i]=p.get(i);
-        return out;
-    }
-
-    private int[] rc6(int address,int command,boolean tog){
-        ArrayList<Integer> p=new ArrayList<>();
-        append(p,true,2666); append(p,false,889);
-        appendBit(p,1,UNIT); appendBit(p,0,UNIT); appendBit(p,0,UNIT); appendBit(p,0,UNIT);
-        appendBit(p,tog?1:0,UNIT*2);
-        for(int m=0x80;m!=0;m>>=1) appendBit(p,(address&m)!=0?1:0,UNIT);
-        for(int m=0x80;m!=0;m>>=1) appendBit(p,(command&m)!=0?1:0,UNIT);
-        append(p,false,2666);
-        int[] out=new int[p.size()]; for(int i=0;i<p.size();i++)out[i]=p.get(i); return out;
-    }
-
-    private void appendBit(ArrayList<Integer> p,int bit,int half){
-        if(bit==1){append(p,true,half);append(p,false,half);}
-        else{append(p,false,half);append(p,true,half);}
-    }
-
-    private void append(ArrayList<Integer> p,boolean mark,int duration){
-        if(duration<=0)return;
-        if(p.isEmpty()){if(!mark)p.add(0);p.add(duration);return;}
-        boolean expectedMark=(p.size()%2==1);
-        if(expectedMark==mark){int i=p.size()-1;p.set(i,p.get(i)+duration);}
-        else p.add(duration);
-    }
-}
