@@ -42,6 +42,8 @@ public class MainActivity extends Activity {
 private static final int ACCENT = Color.rgb(210,30,38);
 private static final int CARD = Color.rgb(24,24,28);
 private static final int CARD_2 = Color.rgb(31,31,36);
+    private static final int BORDER = Color.rgb(52,52,58);
+    private static final int SUCCESS = Color.rgb(82,170,102);
 
 
     private static final int POWER=0x0C, MUTE=0x0D, VOL_DOWN=0x11, VOL_UP=0x10;
@@ -96,8 +98,8 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         b.setAllCaps(false); b.setGravity(Gravity.CENTER); b.setPadding(0,0,0,0);
         b.setMinHeight(0); b.setMinWidth(0); b.setIncludeFontPadding(false);
         GradientDrawable g=new GradientDrawable();
-        g.setColor(color); g.setCornerRadius(dp(18));
-        g.setStroke(dp(1),Color.rgb(55,55,58));
+        g.setColor(color); g.setCornerRadius(dp(16));
+        g.setStroke(dp(1),BORDER);
         b.setBackground(new RippleDrawable(ColorStateList.valueOf(Color.rgb(85,85,90)),g,null));
         b.setHapticFeedbackEnabled(true);
         b.setOnClickListener(v->{ v.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP); send(cmd); });
@@ -471,7 +473,7 @@ render[0]=()->{
     }
 
     private void showSobre(){
-        String versao="1.2.2";
+        String versao="1.3.0";
         try{
             android.content.pm.PackageInfo info=getPackageManager().getPackageInfo(getPackageName(),0);
             if(info.versionName!=null) versao=info.versionName;
@@ -557,13 +559,13 @@ render[0]=()->{
         sv.setBackgroundColor(BG); sv.setClipToPadding(false);
 
         LinearLayout root=new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(dp(8),dp(6),dp(8),dp(18)); root.setBackgroundColor(BG);
+        root.setPadding(dp(12),dp(8),dp(12),dp(22)); root.setBackgroundColor(BG);
 
         LinearLayout modelRow=row();
         LinearLayout brandBox=new LinearLayout(this); brandBox.setOrientation(LinearLayout.VERTICAL); brandBox.setGravity(Gravity.CENTER_VERTICAL);
-        TextView title=label("IR REMOTE BR",21); title.setTypeface(Typeface.DEFAULT,Typeface.BOLD); title.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
+        TextView title=label("IR REMOTE BR",22); title.setTypeface(Typeface.DEFAULT,Typeface.BOLD); title.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
         brandBox.addView(title,new LinearLayout.LayoutParams(-1,dp(28)));
-        TextView subtitle=label(controleAtivo!=null ? controleAtivo.nome : (lgMode?"LG 32LB620B":"Philips 50PUG6513/7"),11);
+        TextView subtitle=label(controleAtivo!=null ? controleAtivo.nome : (lgMode?"LG 32LB620B":"Philips 50PUG6513/7"),12);
         subtitle.setTextColor(GRAY); subtitle.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
         brandBox.addView(subtitle,new LinearLayout.LayoutParams(-1,dp(20)));
         modelRow.addView(brandBox,new LinearLayout.LayoutParams(0,dp(50),1));
