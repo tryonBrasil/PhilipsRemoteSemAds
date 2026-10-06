@@ -366,7 +366,7 @@ public class MainActivity extends Activity {
         }catch(Exception ignored){}
         new android.app.AlertDialog.Builder(this)
             .setTitle("IR Remote BR")
-            .setMessage("Controle remoto por infravermelho\\n\\nVersão "+versao+"\\n\\nControle TVs compatíveis usando o emissor infravermelho do celular.\\n\\nSeus controles e configurações são armazenados localmente no aparelho.\\n\\nPara transmitir IR, o celular precisa possuir emissor infravermelho compatível.")
+            .setMessage("Controle remoto por infravermelho\n\nVersão "+versao+"\n\nControle TVs compatíveis usando o emissor infravermelho do celular.\n\nSeus controles e configurações são armazenados localmente no aparelho.\n\nPara transmitir IR, o celular precisa possuir emissor infravermelho compatível.")
             .setPositiveButton("OK",null).show();
     }
 
