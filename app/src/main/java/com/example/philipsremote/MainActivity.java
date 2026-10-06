@@ -275,7 +275,9 @@ public class MainActivity extends Activity {
                 if(perfil==null || perfil.isEmpty()){
                     perfil=perfis[perfilInicialPara(controle.marca,controle.modelo,perfis)];
                 }
-                irPerfilTeste.selecionar(perfil);
+                if(!perfil.equals(irPerfilTeste.getPerfil())){
+                    irPerfilTeste.selecionar(perfil);
+                }
                 String resultado=irPerfilTeste.next();
                 Toast.makeText(this,resultado+" • "+funcoes[pos[0]],Toast.LENGTH_SHORT).show();
                 showAprenderComandos(controle);
@@ -536,6 +538,7 @@ public class MainActivity extends Activity {
             configBg.setColor(KEY_DARK);
             configBg.setCornerRadius(dp(12));
             configurar.setBackground(configBg);
+            actionFeedback(configurar);
             configurar.setOnClickListener(v->showAprenderComandos(controleAtivo));
             deviceBar.addView(configurar,new LinearLayout.LayoutParams(dp(108),dp(42)));
             root.addView(deviceBar);
