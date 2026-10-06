@@ -346,97 +346,117 @@ public class MainActivity extends Activity {
         ScrollView sv=new ScrollView(this); sv.setFillViewport(true); sv.setBackgroundColor(BG);
         LinearLayout root=new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL);
         root.setPadding(dp(14),dp(16),dp(14),dp(28)); root.setBackgroundColor(BG);
-        LinearLayout top=row();
-        TextView title=label("MEUS CONTROLES",24); title.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
-        top.addView(title,new LinearLayout.LayoutParams(0,dp(50),1));
-        Button voltar=new Button(this); voltar.setText("VOLTAR"); voltar.setTextColor(WHITE); voltar.setTextSize(12); voltar.setAllCaps(false);
-        GradientDrawable vb=new GradientDrawable(); vb.setColor(KEY_DARK); vb.setCornerRadius(dp(14)); voltar.setBackground(vb); actionFeedback(voltar); voltar.setOnClickListener(v->showSelector());
-        top.addView(voltar,new LinearLayout.LayoutParams(dp(90),dp(44))); root.addView(top);
 
-        List<ControleStorage.Controle> lista=controleStorage.listar();
-        TextView resumo=label(lista.isEmpty()?"Gerencie seus dispositivos":"Você tem "+lista.size()+" controle"+(lista.size()>1?"s":"")+" salvo"+(lista.size()>1?"s":"")+" neste aparelho",13);
-        resumo.setTextColor(GRAY);
-        root.addView(resumo,new LinearLayout.LayoutParams(-1,dp(34)));
-        if(lista.isEmpty()){
-            TextView vazio=label("Você ainda não salvou nenhum controle.\n\nUse o teste universal, confirme um código e salve em Meus controles.",15);
-            vazio.setTextColor(GRAY); vazio.setGravity(Gravity.CENTER);
-            root.addView(vazio,new LinearLayout.LayoutParams(-1,dp(180)));
-            Button iniciar= new Button(this); iniciar.setText("CONFIGURAR PRIMEIRO CONTROLE"); iniciar.setTextColor(WHITE); iniciar.setTextSize(13); iniciar.setAllCaps(false);
-            GradientDrawable ib=new GradientDrawable(); ib.setColor(Color.rgb(190,24,32)); ib.setCornerRadius(dp(16)); iniciar.setBackground(ib);
-            actionFeedback(iniciar); iniciar.setOnClickListener(v->showAddControlWizard());
-            root.addView(iniciar,new LinearLayout.LayoutParams(-1,dp(52)));
-        }else{
+        LinearLayout top=row();
+        LinearLayout head=new LinearLayout(this); head.setOrientation(LinearLayout.VERTICAL); head.setGravity(Gravity.CENTER_VERTICAL);
+        TextView title=label("Meus controles",24); title.setTypeface(Typeface.DEFAULT,Typeface.BOLD); title.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
+        head.addView(title,new LinearLayout.LayoutParams(-1,dp(30)));
+        TextView headSub=label("Seus controles ficam salvos neste aparelho",11); headSub.setTextColor(GRAY); headSub.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
+        head.addView(headSub,new LinearLayout.LayoutParams(-1,dp(20)));
+        top.addView(head,new LinearLayout.LayoutParams(0,dp(52),1));
+        Button voltar=new Button(this); voltar.setText("VOLTAR"); voltar.setTextColor(WHITE); voltar.setTextSize(12); voltar.setAllCaps(false);
+        GradientDrawable vb=new GradientDrawable(); vb.setColor(CARD_2); vb.setCornerRadius(dp(14)); vb.setStroke(dp(1),Color.rgb(60,60,66)); voltar.setBackground(vb);
+        actionFeedback(voltar); voltar.setOnClickListener(v->showSelector()); top.addView(voltar,new LinearLayout.LayoutParams(dp(90),dp(44))); root.addView(top);
+
+        final EditText busca=new EditText(this);
+        busca.setSingleLine(true); busca.setHint("Pesquisar marca, modelo ou nome...");
+        busca.setHintTextColor(Color.rgb(125,125,130)); busca.setTextColor(WHITE); busca.setTextSize(14); busca.setPadding(dp(14),0,dp(14),0);
+        GradientDrawable searchBg=new GradientDrawable(); searchBg.setColor(CARD); searchBg.setCornerRadius(dp(15)); searchBg.setStroke(dp(1),Color.rgb(55,55,60)); busca.setBackground(searchBg);
+        LinearLayout.LayoutParams searchP=new LinearLayout.LayoutParams(-1,dp(48)); searchP.setMargins(0,dp(10),0,dp(8)); root.addView(busca,searchP);
+
+        final TextView resumo=label("",12); resumo.setTextColor(GRAY); resumo.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
+        root.addView(resumo,new LinearLayout.LayoutParams(-1,dp(30)));
+        final LinearLayout listaBox=new LinearLayout(this); listaBox.setOrientation(LinearLayout.VERTICAL); root.addView(listaBox,new LinearLayout.LayoutParams(-1,-2));
+
+        Runnable render=()->{
+            listaBox.removeAllViews();
+            String filtro=busca.getText().toString().trim().toLowerCase(java.util.Locale.ROOT);
+            List<ControleStorage.Controle> todos=controleStorage.listar();
+            List<ControleStorage.Controle> lista=new ArrayList<>();
+            for(ControleStorage.Controle c:todos){
+                String alvo=(c.nome+" "+c.marca+" "+c.modelo+" "+c.categoria).toLowerCase(java.util.Locale.ROOT);
+                if(filtro.isEmpty()||alvo.contains(filtro)) lista.add(c);
+            }
+            resumo.setText(filtro.isEmpty() ? (todos.size()+" "+(todos.size()==1?"controle salvo":"controles salvos"))
+                    : (lista.size()+" resultado"+(lista.size()==1?"":"s")+" para ""+filtro+"""));
+            if(lista.isEmpty()){
+                TextView vazio=label(filtro.isEmpty()?"Nenhum controle salvo ainda.":"Nenhum controle encontrado.",15);
+                vazio.setTextColor(GRAY); vazio.setGravity(Gravity.CENTER); listaBox.addView(vazio,new LinearLayout.LayoutParams(-1,dp(130)));
+                Button addVazio=new Button(this); addVazio.setText("+  ADICIONAR CONTROLE"); addVazio.setTextColor(WHITE); addVazio.setTextSize(13); addVazio.setAllCaps(false);
+                GradientDrawable av=new GradientDrawable(); av.setColor(ACCENT); av.setCornerRadius(dp(15)); addVazio.setBackground(av); actionFeedback(addVazio);
+                addVazio.setOnClickListener(v->showAddControlWizard()); listaBox.addView(addVazio,new LinearLayout.LayoutParams(-1,dp(50)));
+                return;
+            }
             for(ControleStorage.Controle c:lista){
-                LinearLayout card=new LinearLayout(this); card.setOrientation(LinearLayout.VERTICAL); card.setPadding(dp(16),dp(10),dp(16),dp(10));
-                boolean ativoAtual=controleAtivo!=null && controleAtivo.id==c.id;
-                GradientDrawable cb=new GradientDrawable(); cb.setColor(ativoAtual?Color.rgb(38,62,44):KEY_DARK); cb.setCornerRadius(dp(18)); cb.setStroke(dp(2),ativoAtual?Color.rgb(75,145,95):Color.rgb(55,55,58)); card.setBackground(cb);
-                TextView n=label((ativoAtual?"✓  ATIVO  •  ":"")+c.nome,18); n.setTypeface(Typeface.DEFAULT,Typeface.BOLD); n.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
-                card.addView(n,new LinearLayout.LayoutParams(-1,dp(34)));
-                int comandosConfigurados=controleStorage.quantidadeComandos(c);
-                TextView detail=label(c.categoria+" • "+c.marca+" • "+c.modelo+"\n"+c.perfil+" • "+c.descricao+"\n"+comandosConfigurados+" botão"+(comandosConfigurados==1?"":"ões")+" configurado"+(comandosConfigurados==1?"":"s"),12);
-                detail.setTextColor(GRAY); detail.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
-                card.addView(detail,new LinearLayout.LayoutParams(-1,dp(64)));
-                Button abrir=new Button(this); abrir.setText("ABRIR CONTROLE"); abrir.setTextColor(WHITE); abrir.setTextSize(12); abrir.setAllCaps(false);
-                GradientDrawable ab=new GradientDrawable(); ab.setColor(Color.rgb(55,80,55)); ab.setCornerRadius(dp(12)); abrir.setBackground(ab);
-                actionFeedback(abrir);
-                abrir.setOnClickListener(v->{
-                    controleAtivo=c;
-                    prefs.edit().putLong("active_control_id",c.id).putBoolean("lg_mode","LG".equals(c.marca)).apply();
-                    lgMode="LG".equalsIgnoreCase(c.marca); build();
-                    Toast.makeText(this,"Controle "+c.nome+" carregado",Toast.LENGTH_SHORT).show();
+                LinearLayout card=new LinearLayout(this); card.setOrientation(LinearLayout.VERTICAL); card.setPadding(dp(15),dp(12),dp(15),dp(12));
+                boolean ativoAtual=controleAtivo!=null&&controleAtivo.id==c.id;
+                GradientDrawable cb=new GradientDrawable(); cb.setColor(ativoAtual?Color.rgb(28,55,36):CARD); cb.setCornerRadius(dp(18)); cb.setStroke(dp(1),ativoAtual?Color.rgb(80,160,100):Color.rgb(55,55,60)); card.setBackground(cb);
+
+                LinearLayout line=row();
+                TextView n=label((ativoAtual?"✓  ":"")+c.nome,17); n.setTypeface(Typeface.DEFAULT,Typeface.BOLD); n.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
+                line.addView(n,new LinearLayout.LayoutParams(0,dp(32),1));
+                TextView badge=badge(ativoAtual?"ATIVO":"IR",ativoAtual?Color.rgb(55,110,65):Color.rgb(60,60,68));
+                line.addView(badge,new LinearLayout.LayoutParams(-2,dp(26))); card.addView(line);
+
+                int qtd=controleStorage.quantidadeComandos(c);
+                TextView detail=label(c.marca+"  •  "+c.modelo+"\n"+c.perfil+"  •  "+qtd+" botão"+(qtd==1?"":"ões")+" configurado"+(qtd==1?"":"s"),12);
+                detail.setTextColor(GRAY); detail.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL); card.addView(detail,new LinearLayout.LayoutParams(-1,dp(54)));
+
+                LinearLayout actions=row();
+                Button abrir=smallAction("ABRIR",Color.rgb(55,110,65));
+                Button config=smallAction("CONFIGURAR",Color.rgb(65,65,72));
+                Button copiar=smallAction("DUPLICAR",Color.rgb(55,65,80));
+                actions.addView(abrir,new LinearLayout.LayoutParams(0,dp(42),1));
+                actions.addView(config,new LinearLayout.LayoutParams(0,dp(42),1));
+                actions.addView(copiar,new LinearLayout.LayoutParams(0,dp(42),1));
+                card.addView(actions);
+                abrir.setOnClickListener(v->{controleAtivo=c;lgMode="LG".equalsIgnoreCase(c.marca);prefs.edit().putLong("active_control_id",c.id).putBoolean("lg_mode",lgMode).apply();showingSelector=false;build();Toast.makeText(this,"✓ "+c.nome+" está ativo",Toast.LENGTH_SHORT).show();});
+                config.setOnClickListener(v->{controleAtivo=c;lgMode="LG".equalsIgnoreCase(c.marca);prefs.edit().putLong("active_control_id",c.id).putBoolean("lg_mode",lgMode).apply();showAprenderComandos(c);});
+                copiar.setOnClickListener(v->{
+                    ControleStorage.Controle novo=controleStorage.duplicar(c,c.nome+" (cópia)");
+                    if(novo!=null) Toast.makeText(this,"✓ Controle duplicado",Toast.LENGTH_SHORT).show();
+                    render.run();
                 });
-                card.addView(abrir,new LinearLayout.LayoutParams(-1,dp(46)));
-                Button editar=new Button(this); editar.setText("✎  RENOMEAR"); editar.setTextColor(WHITE); editar.setTextSize(12); editar.setAllCaps(false);
-                GradientDrawable edb=new GradientDrawable(); edb.setColor(Color.rgb(55,65,80)); edb.setCornerRadius(dp(12)); editar.setBackground(edb);
-                actionFeedback(editar);
-                editar.setOnClickListener(v->{
+
+                LinearLayout editRow=row();
+                Button renomear=smallAction("RENOMEAR",Color.rgb(55,65,80));
+                Button excluir=smallAction("EXCLUIR",Color.rgb(95,48,48));
+                editRow.addView(renomear,new LinearLayout.LayoutParams(0,dp(38),1));
+                editRow.addView(excluir,new LinearLayout.LayoutParams(0,dp(38),1));
+                card.addView(editRow);
+                renomear.setOnClickListener(v->{
                     final EditText campo=new EditText(this); campo.setSingleLine(true); campo.setText(c.nome); campo.setSelectAllOnFocus(true); campo.setHint("Nome do controle");
-                    int pad=dp(8); campo.setPadding(pad,pad,pad,pad);
                     new android.app.AlertDialog.Builder(this).setTitle("Renomear controle").setView(campo)
-                        .setNegativeButton("CANCELAR",null)
-                        .setPositiveButton("SALVAR",(d,w)->{
-                            String novo=campo.getText().toString().trim();
-                            if(novo.isEmpty()){ Toast.makeText(this,"Digite um nome.",Toast.LENGTH_SHORT).show(); return; }
-                            controleStorage.renomear(c,novo);
-                            if(controleAtivo==c) controleAtivo=c;
-                            showMeusControles();
+                        .setNegativeButton("CANCELAR",null).setPositiveButton("SALVAR",(d,w)->{
+                            String novoNome=campo.getText().toString().trim();
+                            if(!novoNome.isEmpty()){controleStorage.renomear(c,novoNome);render.run();}
                         }).show();
                 });
-                LinearLayout.LayoutParams edp=new LinearLayout.LayoutParams(-1,dp(42)); edp.setMargins(0,dp(5),0,0); card.addView(editar,edp);
+                excluir.setOnClickListener(v->new android.app.AlertDialog.Builder(this).setTitle("Excluir controle?")
+                    .setMessage("Remover "+c.nome+"" deste aparelho?").setNegativeButton("CANCELAR",null)
+                    .setPositiveButton("EXCLUIR",(d,w)->{controleStorage.excluir(c);if(controleAtivo!=null&&controleAtivo.id==c.id){controleAtivo=null;prefs.edit().remove("active_control_id").apply();}render.run();}).show());
 
-                Button aprender=new Button(this); aprender.setText("⚙  CONFIGURAR BOTÕES"); aprender.setTextColor(WHITE); aprender.setTextSize(12); aprender.setAllCaps(false);
-                GradientDrawable apb=new GradientDrawable(); apb.setColor(Color.rgb(65,65,72)); apb.setCornerRadius(dp(12)); aprender.setBackground(apb);
-                actionFeedback(aprender);
-                aprender.setOnClickListener(v->{ controleAtivo=c; prefs.edit().putLong("active_control_id",c.id).apply(); lgMode="LG".equalsIgnoreCase(c.marca); prefs.edit().putBoolean("lg_mode",lgMode).apply(); showAprenderComandos(c); });
-                LinearLayout.LayoutParams app=new LinearLayout.LayoutParams(-1,dp(42)); app.setMargins(0,dp(5),0,dp(0)); card.addView(aprender,app);
-                Button excluir=new Button(this); excluir.setText("EXCLUIR DISPOSITIVO"); excluir.setTextColor(WHITE); excluir.setTextSize(12); excluir.setAllCaps(false);
-                GradientDrawable exb=new GradientDrawable(); exb.setColor(Color.rgb(95,48,48)); exb.setCornerRadius(dp(12)); excluir.setBackground(exb);
-                actionFeedback(excluir);
-                excluir.setOnClickListener(v->{
-                    new android.app.AlertDialog.Builder(this).setTitle("Excluir dispositivo?")
-                        .setMessage("O controle " + c.nome + " será removido deste aparelho.")
-                        .setNegativeButton("CANCELAR",null)
-                        .setPositiveButton("EXCLUIR",(d,w)->{ controleStorage.excluir(c);
-                            if(controleAtivo==c){
-                                controleAtivo=null;
-                                prefs.edit().remove("active_control_id").apply();
-                            } showMeusControles(); })
-                        .show();
-                });
-                LinearLayout.LayoutParams exp=new LinearLayout.LayoutParams(-1,dp(42)); exp.setMargins(0,dp(5),0,dp(0)); card.addView(excluir,exp);
-                LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(-1,dp(308)); cp.setMargins(0,dp(8),0,dp(8)); root.addView(card,cp);
+                LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(-1,dp(190)); cp.setMargins(0,dp(6),0,dp(6)); listaBox.addView(card,cp);
             }
-        }
-        Button sobre=new Button(this); sobre.setText("ⓘ  SOBRE O APLICATIVO"); sobre.setTextColor(WHITE); sobre.setTextSize(13); sobre.setAllCaps(false);
-        GradientDrawable sobreBg=new GradientDrawable(); sobreBg.setColor(Color.rgb(45,45,50)); sobreBg.setCornerRadius(dp(16)); sobre.setBackground(sobreBg);
-        actionFeedback(sobre);
-        sobre.setOnClickListener(v->showSobre()); root.addView(sobre,new LinearLayout.LayoutParams(-1,dp(50)));
+        };
+        busca.addTextChangedListener(new android.text.TextWatcher(){
+            public void beforeTextChanged(CharSequence s,int st,int c,int a){}
+            public void onTextChanged(CharSequence s,int st,int before,int count){render.run();}
+            public void afterTextChanged(android.text.Editable e){}
+        });
+        render.run();
 
         Button add=new Button(this); add.setText("+  ADICIONAR OUTRO CONTROLE"); add.setTextColor(WHITE); add.setTextSize(13); add.setAllCaps(false);
-        GradientDrawable addBg=new GradientDrawable(); addBg.setColor(Color.rgb(55,55,60)); addBg.setCornerRadius(dp(16)); add.setBackground(addBg);
-        actionFeedback(add);
-        add.setOnClickListener(v->showAddControlWizard()); root.addView(add,new LinearLayout.LayoutParams(-1,dp(52)));
+        GradientDrawable addBg=new GradientDrawable(); addBg.setColor(ACCENT); addBg.setCornerRadius(dp(16)); add.setBackground(addBg); actionFeedback(add); add.setOnClickListener(v->showAddControlWizard());
+        LinearLayout.LayoutParams addP=new LinearLayout.LayoutParams(-1,dp(52)); addP.setMargins(0,dp(12),0,dp(6)); root.addView(add,addP);
+        Button sobre=new Button(this); sobre.setText("ⓘ  SOBRE O APLICATIVO"); sobre.setTextColor(WHITE); sobre.setTextSize(13); sobre.setAllCaps(false);
+        GradientDrawable sobreBg=new GradientDrawable(); sobreBg.setColor(CARD_2); sobreBg.setCornerRadius(dp(16)); sobre.setBackground(sobreBg); actionFeedback(sobre); sobre.setOnClickListener(v->showSobre()); root.addView(sobre,new LinearLayout.LayoutParams(-1,dp(48)));
         sv.addView(root); setContentView(sv);
+    }
+
+    private Button smallAction(String text,int color){
+        Button b=new Button(this); b.setText(text); b.setTextColor(WHITE); b.setTextSize(11); b.setAllCaps(false); b.setMinHeight(0); b.setMinWidth(0); b.setPadding(0,0,0,0);
+        GradientDrawable g=new GradientDrawable(); g.setColor(color); g.setCornerRadius(dp(11)); g.setStroke(dp(1),Color.rgb(70,70,75)); b.setBackground(g); actionFeedback(b); return b;
     }
 
     private void showSobre(){
