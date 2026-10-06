@@ -28,44 +28,62 @@ import java.util.concurrent.Executors;
 public class UpdateManager {
     private static final String RELEASES_URL =
         "https://api.github.com/repos/tryonBrasil/PhilipsRemoteSemAds/releases/latest";
+    private static final String PREF_DOWNLOAD_ID = "download_id";
+    private static final String PREF_DOWNLOAD_VERSION = "download_version";
+    private static final String PREF_DOWNLOAD_URL = "download_url";
+    private static final long SILENT_COOLDOWN_MS = 6L * 60L * 60L * 1000L;
 
     private final Activity activity;
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
-    private long downloadId = -1;
-    private BroadcastReceiver receiver;
     private final SharedPreferences prefs;
-    private static final long SILENT_COOLDOWN_MS = 6L * 60L * 60L * 1000L;
+    private BroadcastReceiver receiver;
+    private boolean checking = false;
 
     public UpdateManager(Activity activity) {
         this.activity = activity;
         prefs = activity.getSharedPreferences("update_prefs", Context.MODE_PRIVATE);
+
         receiver = new BroadcastReceiver() {
             @Override public void onReceive(Context context, Intent intent) {
                 if (DownloadManager.ACTION_DOWNLOAD_COMPLETE.equals(intent.getAction())) {
                     long id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1);
-                    if (id == downloadId) instalarBaixado(id);
+                    long savedId = prefs.getLong(PREF_DOWNLOAD_ID, -1L);
+                    if (id == savedId) {
+                        instalarBaixado(id);
+                    }
                 }
             }
         };
+
         IntentFilter filter = new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE);
         if (Build.VERSION.SDK_INT >= 33) {
             activity.registerReceiver(receiver, filter, Context.RECEIVER_NOT_EXPORTED);
         } else {
             activity.registerReceiver(receiver, filter);
         }
+
+        // Recupera um download iniciado antes de o processo do app ser encerrado.
+        verificarDownloadPendente(false);
     }
 
     public void verificarSilenciosamente() { verificar(false); }
+
     public void verificarManualmente() {
-        // A verificação manual sempre consulta o GitHub, sem cooldown.
         verificar(true);
     }
 
-    /** Verifica atualizações ao retornar para o aplicativo. */
-    public void verificarAoAbrir() { verificar(false); }
+    public void verificarAoAbrir() {
+        verificarDownloadPendente(false);
+        verificar(false);
+    }
 
     private void verificar(boolean manual) {
         if (!manual && !podeVerificarSilenciosamente()) return;
+        synchronized (this) {
+            if (checking) return;
+            checking = true;
+        }
+
         executor.execute(() -> {
             HttpURLConnection connection = null;
             try {
@@ -78,11 +96,11 @@ public class UpdateManager {
                 connection.setRequestProperty("User-Agent", "IR-Remote-BR");
                 connection.setRequestProperty("Cache-Control", "no-cache");
                 connection.setRequestProperty("Pragma", "no-cache");
-                int code = connection.getResponseCode();
-                if (code != 200) throw new Exception("HTTP " + code);
 
-                InputStream in = connection.getInputStream();
-                BufferedReader br = new BufferedReader(new InputStreamReader(in, "UTF-8"));
+                if (connection.getResponseCode() != 200) throw new Exception("HTTP " + connection.getResponseCode());
+
+                BufferedReader br = new BufferedReader(
+                    new InputStreamReader(connection.getInputStream(), "UTF-8"));
                 StringBuilder json = new StringBuilder();
                 String line;
                 while ((line = br.readLine()) != null) json.append(line);
@@ -92,38 +110,8 @@ public class UpdateManager {
                 String tag = release.optString("tag_name", "");
                 String latest = tag.startsWith("v") ? tag.substring(1) : tag;
                 String current = versaoAtual();
+                String apkUrl = encontrarApk(release);
 
-                JSONArray assets = release.optJSONArray("assets");
-                String apkUrl = "";
-                if (assets != null) {
-                    // Prioriza sempre o APK RELEASE. O APK DEBUG não deve ser usado
-                    // pelo atualizador, mesmo que esteja anexado à mesma Release.
-                    for (int i = 0; i < assets.length(); i++) {
-                        JSONObject asset = assets.getJSONObject(i);
-                        String name = asset.optString("name", "");
-                        if ("app-release.apk".equalsIgnoreCase(name)) {
-                            apkUrl = asset.optString("browser_download_url", "");
-                            break;
-                        }
-                    }
-
-                    // Compatibilidade com futuras mudanças de nome: aceita apenas
-                    // APK que não seja debug.
-                    if (apkUrl.isEmpty()) {
-                        for (int i = 0; i < assets.length(); i++) {
-                            JSONObject asset = assets.getJSONObject(i);
-                            String name = asset.optString("name", "");
-                            String lower = name.toLowerCase();
-                            if (lower.endsWith(".apk") && !lower.contains("debug")) {
-                                apkUrl = asset.optString("browser_download_url", "");
-                                break;
-                            }
-                        }
-                    }
-                }
-
-                // Registra a verificação mesmo quando não existe atualização. Isso evita
-                // uma nova consulta a cada onResume e respeita o intervalo silencioso.
                 if (!manual) {
                     prefs.edit().putLong("last_silent_check", System.currentTimeMillis()).apply();
                 }
@@ -135,11 +123,9 @@ public class UpdateManager {
                 activity.runOnUiThread(() -> {
                     if (update) {
                         if (!manual) {
-                            // Em verificação automática, baixa a nova versão sozinho.
-                            // Não repete o download para a mesma versão.
-                            String baixando = prefs.getString("auto_download_version", "");
-                            if (finalLatest.equals(baixando)) return;
-                            baixarAutomaticamente(finalApkUrl, finalLatest);
+                            if (!temDownloadPendente()) {
+                                baixarAutomaticamente(finalApkUrl, finalLatest);
+                            }
                         } else {
                             mostrarAtualizacao(finalLatest, finalApkUrl);
                         }
@@ -150,23 +136,37 @@ public class UpdateManager {
             } catch (Exception e) {
                 if (manual) {
                     activity.runOnUiThread(() ->
-                        Toast.makeText(activity, "Não foi possível verificar agora.", Toast.LENGTH_SHORT).show()
-                    );
+                        Toast.makeText(activity, "Não foi possível verificar agora.", Toast.LENGTH_SHORT).show());
                 }
             } finally {
                 if (connection != null) connection.disconnect();
+                synchronized (this) { checking = false; }
             }
         });
+    }
+
+    private String encontrarApk(JSONObject release) throws Exception {
+        JSONArray assets = release.optJSONArray("assets");
+        if (assets == null) return "";
+        for (int i = 0; i < assets.length(); i++) {
+            JSONObject asset = assets.getJSONObject(i);
+            if ("app-release.apk".equalsIgnoreCase(asset.optString("name", ""))) {
+                return asset.optString("browser_download_url", "");
+            }
+        }
+        for (int i = 0; i < assets.length(); i++) {
+            JSONObject asset = assets.getJSONObject(i);
+            String name = asset.optString("name", "").toLowerCase();
+            if (name.endsWith(".apk") && !name.contains("debug")) {
+                return asset.optString("browser_download_url", "");
+            }
+        }
+        return "";
     }
 
     private boolean podeVerificarSilenciosamente() {
         long ultima = prefs.getLong("last_silent_check", 0L);
         return System.currentTimeMillis() - ultima >= SILENT_COOLDOWN_MS;
-    }
-
-    private void marcarPrompt(String versao) {
-        prefs.edit().putLong("last_silent_check", System.currentTimeMillis())
-            .putString("last_prompt_version", versao).apply();
     }
 
     private String versaoAtual() {
@@ -184,58 +184,120 @@ public class UpdateManager {
             String[] y = b.split("\\.");
             int n = Math.max(x.length, y.length);
             for (int i = 0; i < n; i++) {
-                int xi = i < x.length ? Integer.parseInt(x[i].replaceAll("[^0-9].*", "")) : 0;
-                int yi = i < y.length ? Integer.parseInt(y[i].replaceAll("[^0-9].*", "")) : 0;
+                int xi = i < x.length ? inteiroSeguro(x[i]) : 0;
+                int yi = i < y.length ? inteiroSeguro(y[i]) : 0;
                 if (xi != yi) return xi > yi ? 1 : -1;
             }
         } catch (Exception ignored) {}
         return 0;
     }
 
+    private int inteiroSeguro(String valor) {
+        String limpo = valor.replaceAll("[^0-9].*", "");
+        return limpo.isEmpty() ? 0 : Integer.parseInt(limpo);
+    }
+
+    private boolean temDownloadPendente() {
+        long id = prefs.getLong(PREF_DOWNLOAD_ID, -1L);
+        if (id < 0) return false;
+        DownloadManager manager = (DownloadManager) activity.getSystemService(Context.DOWNLOAD_SERVICE);
+        DownloadManager.Query query = new DownloadManager.Query().setFilterById(id);
+        android.database.Cursor cursor = null;
+        try {
+            cursor = manager.query(query);
+            if (cursor != null && cursor.moveToFirst()) {
+                int status = cursor.getInt(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS));
+                return status == DownloadManager.STATUS_PENDING ||
+                       status == DownloadManager.STATUS_RUNNING ||
+                       status == DownloadManager.STATUS_PAUSED;
+            }
+        } catch (Exception ignored) {
+        } finally {
+            if (cursor != null) cursor.close();
+        }
+        prefs.edit().remove(PREF_DOWNLOAD_ID).remove(PREF_DOWNLOAD_VERSION)
+            .remove(PREF_DOWNLOAD_URL).apply();
+        return false;
+    }
+
+    private void verificarDownloadPendente(boolean mostrarToast) {
+        long id = prefs.getLong(PREF_DOWNLOAD_ID, -1L);
+        if (id < 0) return;
+
+        DownloadManager manager = (DownloadManager) activity.getSystemService(Context.DOWNLOAD_SERVICE);
+        DownloadManager.Query query = new DownloadManager.Query().setFilterById(id);
+        android.database.Cursor cursor = null;
+        try {
+            cursor = manager.query(query);
+            if (cursor == null || !cursor.moveToFirst()) {
+                limparDownload();
+                return;
+            }
+
+            int status = cursor.getInt(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS));
+            if (status == DownloadManager.STATUS_SUCCESSFUL) {
+                instalarBaixado(id);
+            } else if (status == DownloadManager.STATUS_FAILED) {
+                limparDownload();
+                if (mostrarToast) {
+                    Toast.makeText(activity, "O download da atualização falhou. Tentaremos novamente.", Toast.LENGTH_SHORT).show();
+                }
+            }
+        } catch (Exception e) {
+            limparDownload();
+        } finally {
+            if (cursor != null) cursor.close();
+        }
+    }
+
+    private void limparDownload() {
+        prefs.edit().remove(PREF_DOWNLOAD_ID).remove(PREF_DOWNLOAD_VERSION)
+            .remove(PREF_DOWNLOAD_URL).apply();
+    }
+
     private void mostrarAtualizacao(String versao, String apkUrl) {
         new android.app.AlertDialog.Builder(activity)
             .setTitle("Nova atualização disponível")
-            .setMessage("Versão " + versao + " está disponível.\n\nO aplicativo pode baixar e instalar a atualização mantendo seus controles salvos.")
+            .setMessage("Versão " + versao + " está disponível.\\n\\nO aplicativo pode baixar e instalar a atualização mantendo seus controles salvos.")
             .setNegativeButton("AGORA NÃO", null)
             .setPositiveButton("ATUALIZAR", (d, w) -> baixar(apkUrl, versao))
             .show();
     }
 
     private void baixarAutomaticamente(String apkUrl, String versao) {
-        try {
-            DownloadManager manager = (DownloadManager) activity.getSystemService(Context.DOWNLOAD_SERVICE);
-            DownloadManager.Request request = new DownloadManager.Request(Uri.parse(apkUrl));
-            request.setTitle("IR Remote BR " + versao);
-            request.setDescription("Baixando atualização automaticamente...");
-            request.setMimeType("application/vnd.android.package-archive");
-            request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
-            request.setDestinationInExternalFilesDir(activity, Environment.DIRECTORY_DOWNLOADS, "IRRemoteBR-update-" + versao + ".apk");
-            downloadId = manager.enqueue(request);
-            prefs.edit().putString("auto_download_version", versao).apply();
-            Toast.makeText(activity, "Nova atualização encontrada. Baixando automaticamente...", Toast.LENGTH_LONG).show();
-        } catch (Exception e) {
-            prefs.edit().remove("auto_download_version").apply();
-        }
+        iniciarDownload(apkUrl, versao, true);
     }
 
     private void baixar(String apkUrl, String versao) {
-        // Só registra a versão como avisada quando o usuário realmente inicia
-        // o download. Cancelar o diálogo não bloqueia o próximo aviso.
-        prefs.edit()
-            .putString("last_prompt_version", versao)
-            .putLong("last_silent_check", System.currentTimeMillis())
-            .apply();
+        iniciarDownload(apkUrl, versao, false);
+    }
+
+    private void iniciarDownload(String apkUrl, String versao, boolean automatico) {
+        if (temDownloadPendente()) return;
         try {
             DownloadManager manager = (DownloadManager) activity.getSystemService(Context.DOWNLOAD_SERVICE);
             DownloadManager.Request request = new DownloadManager.Request(Uri.parse(apkUrl));
             request.setTitle("IR Remote BR " + versao);
-            request.setDescription("Baixando atualização...");
+            request.setDescription(automatico ? "Baixando atualização automaticamente..." : "Baixando atualização...");
             request.setMimeType("application/vnd.android.package-archive");
             request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
-            request.setDestinationInExternalFilesDir(activity, Environment.DIRECTORY_DOWNLOADS, "IRRemoteBR-update-" + versao + ".apk");
-            downloadId = manager.enqueue(request);
-            Toast.makeText(activity, "Atualização iniciada. Aguarde o download.", Toast.LENGTH_LONG).show();
+            request.setDestinationInExternalFilesDir(
+                activity, Environment.DIRECTORY_DOWNLOADS, "IRRemoteBR-update-" + versao + ".apk");
+
+            long id = manager.enqueue(request);
+            prefs.edit()
+                .putLong(PREF_DOWNLOAD_ID, id)
+                .putString(PREF_DOWNLOAD_VERSION, versao)
+                .putString(PREF_DOWNLOAD_URL, apkUrl)
+                .putLong("last_download_start", System.currentTimeMillis())
+                .apply();
+
+            Toast.makeText(activity,
+                automatico ? "Nova atualização encontrada. Baixando automaticamente..." :
+                             "Atualização iniciada. Aguarde o download.",
+                Toast.LENGTH_LONG).show();
         } catch (Exception e) {
+            limparDownload();
             Toast.makeText(activity, "Não foi possível iniciar a atualização.", Toast.LENGTH_SHORT).show();
         }
     }
@@ -245,6 +307,7 @@ public class UpdateManager {
             DownloadManager manager = (DownloadManager) activity.getSystemService(Context.DOWNLOAD_SERVICE);
             Uri uri = manager.getUriForDownloadedFile(id);
             if (uri == null) {
+                limparDownload();
                 Toast.makeText(activity, "Download da atualização falhou.", Toast.LENGTH_SHORT).show();
                 return;
             }
@@ -252,7 +315,7 @@ public class UpdateManager {
             if (Build.VERSION.SDK_INT >= 26 && !activity.getPackageManager().canRequestPackageInstalls()) {
                 new android.app.AlertDialog.Builder(activity)
                     .setTitle("Permitir atualização")
-                    .setMessage("O Android precisa permitir que o IR Remote BR instale atualizações baixadas por ele. Ative a permissão e toque novamente em Atualizar.")
+                    .setMessage("Ative a permissão para instalar aplicativos desta fonte. Depois volte ao IR Remote BR para continuar a instalação.")
                     .setNegativeButton("CANCELAR", null)
                     .setPositiveButton("ABRIR CONFIGURAÇÕES", (d, w) -> {
                         Intent settings = new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES);
