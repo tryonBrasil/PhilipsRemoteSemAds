@@ -513,7 +513,7 @@ public class MainActivity extends Activity {
         selectedDetail.setTextColor(controleAtivo!=null?Color.rgb(175,205,180):GRAY);
         selectedDetail.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
         deviceCard.addView(selectedDetail,new LinearLayout.LayoutParams(-1,dp(28)));
-        LinearLayout.LayoutParams deviceParams=new LinearLayout.LayoutParams(-1,dp(76));
+        LinearLayout.LayoutParams deviceParams=new LinearLayout.LayoutParams(-1,dp(92));
         deviceParams.setMargins(dp(2),0,dp(2),dp(5));
         root.addView(deviceCard,deviceParams);
 
