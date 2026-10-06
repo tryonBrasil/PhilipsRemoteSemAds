@@ -221,6 +221,7 @@ public class MainActivity extends Activity {
         if(perfil==null) return 38000;
         if(perfil.contains("Sony")) return 40000;
         if(perfil.contains("Philips")) return 36000;
+        if(perfil.equals("Panasonic TV")) return 37000;
         return 38000;
     }
 
