@@ -316,6 +316,30 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         GradientDrawable statusBg=new GradientDrawable(); statusBg.setColor(CARD); statusBg.setCornerRadius(dp(14)); statusBg.setStroke(dp(1),BORDER); status.setBackground(statusBg);
         box.addView(status,new LinearLayout.LayoutParams(-1,dp(56)));
 
+        LinearLayout navegacao=row();
+        Button anterior=key("◀ ANTERIOR",0,44,KEY_DARK,13);
+        Button proximo=key("PRÓXIMO ▶",0,44,KEY_DARK,13);
+        navegacao.addView(anterior,new LinearLayout.LayoutParams(0,dp(44),1));
+        navegacao.addView(proximo,new LinearLayout.LayoutParams(0,dp(44),1));
+        box.addView(navegacao,new LinearLayout.LayoutParams(-1,dp(50)));
+
+        LinearLayout manual=row();
+        EditText codigoManual=new EditText(this);
+        codigoManual.setHint("Código hexadecimal (ex.: 0x08 ou 0x0408)");
+        codigoManual.setHintTextColor(Color.rgb(120,120,125)); codigoManual.setTextColor(WHITE);
+        codigoManual.setSingleLine(true); codigoManual.setInputType(android.text.InputType.TYPE_CLASS_TEXT);
+        manual.addView(codigoManual,new LinearLayout.LayoutParams(0,dp(48),1));
+        Button testarManual=key("TESTAR",0,44,KEY_DARK,12);
+        manual.addView(testarManual,new LinearLayout.LayoutParams(dp(92),dp(44)));
+        box.addView(manual,new LinearLayout.LayoutParams(-1,dp(54)));
+
+        LinearLayout acoesCodigo=row();
+        Button salvarCodigo=key("💾 SALVAR CÓDIGO",0,44,Color.rgb(45,75,52),12);
+        Button listaCodigos=key("📋 SALVOS",0,44,KEY_DARK,12);
+        acoesCodigo.addView(salvarCodigo,new LinearLayout.LayoutParams(0,dp(44),1));
+        acoesCodigo.addView(listaCodigos,new LinearLayout.LayoutParams(dp(105),dp(44)));
+        box.addView(acoesCodigo,new LinearLayout.LayoutParams(-1,dp(50)));
+
         TextView detalhe=label("Aponte o celular para o aparelho e toque em TESTAR PRÓXIMO.",13);
         detalhe.setTextColor(GRAY); detalhe.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
         box.addView(detalhe,new LinearLayout.LayoutParams(-1,dp(58)));
@@ -382,6 +406,38 @@ private static final int CARD_2 = Color.rgb(31,31,36);
             irPerfilTeste.selecionar(perfilSelecionado[0]); irPerfilTeste.limparResultado();
             Button testar=dialog.getButton(android.app.AlertDialog.BUTTON_NEUTRAL);
             Button salvar=dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE);
+            proximo.setOnClickListener(v->testar.performClick());
+            anterior.setOnClickListener(v->{
+                String resultado=irPerfilTeste.previous();
+                status.setText("●  "+resultado); status.setTextColor(GRAY);
+                int atual=irPerfilTeste.position(); progresso.setText("Candidato "+atual+" de "+irPerfilTeste.total());
+            });
+            testarManual.setOnClickListener(v->{
+                String valor=codigoManual.getText().toString().trim();
+                if(valor.isEmpty()){ codigoManual.setError("Digite o código"); return; }
+                boolean ok=irPerfilTeste.transmitManual(valor);
+                status.setText(ok?"●  Código manual enviado":"●  Código inválido ou falha no emissor IR");
+                status.setTextColor(ok?SUCCESS:ACCENT);
+            });
+            salvarCodigo.setOnClickListener(v->{
+                int codigo=irPerfilTeste.currentCode();
+                if(codigo<0){ Toast.makeText(this,"Teste um código antes de salvar.",Toast.LENGTH_SHORT).show(); return; }
+                EditText nome=new EditText(this); nome.setHint("Ex.: Liga / Desliga"); nome.setSingleLine(true); nome.setTextColor(WHITE); nome.setHintTextColor(GRAY);
+                new android.app.AlertDialog.Builder(this).setTitle("Salvar código").setView(nome)
+                    .setNegativeButton("CANCELAR",null)
+                    .setPositiveButton("SALVAR",(d,w)->{ String msg=irPerfilTeste.saveCurrentCode(nome.getText().toString()); status.setText("●  "+msg); status.setTextColor(SUCCESS); })
+                    .show();
+            });
+            listaCodigos.setOnClickListener(v->{
+                String dados=irPerfilTeste.savedCodes();
+                if(dados.isEmpty()){ Toast.makeText(this,"Nenhum código salvo ainda.",Toast.LENGTH_SHORT).show(); return; }
+                String[] linhas=dados.split("\\n");
+                new android.app.AlertDialog.Builder(this).setTitle("CÓDIGOS SALVOS ("+linhas.length+")")
+                    .setItems(linhas,(d,w)->{
+                        String[] partes=linhas[w].split("\\|");
+                        if(partes.length>=3){ codigoManual.setText("0x"+Integer.toHexString(Integer.parseInt(partes[2]))); codigoManual.setSelection(codigoManual.length()); }
+                    }).setNegativeButton("FECHAR",null).show();
+            });
             testar.setOnClickListener(v->{
                 String resultado=irPerfilTeste.next();
                 status.setText("●  "+resultado); status.setTextColor(SUCCESS);
