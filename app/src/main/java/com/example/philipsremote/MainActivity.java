@@ -281,23 +281,19 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         aparelho.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
         box.addView(aparelho,new LinearLayout.LayoutParams(-1,dp(36)));
 
-        TextView subtitulo=label("Selecione o aparelho mais próximo. O teste usará o protocolo correspondente.",12);
+        TextView subtitulo=label("Toque diretamente no aparelho que deseja testar. A opção selecionada fica destacada.",12);
         subtitulo.setTextColor(GRAY); subtitulo.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
         box.addView(subtitulo,new LinearLayout.LayoutParams(-1,dp(42)));
 
-        Spinner spinner=new Spinner(this);
-        ArrayAdapter<String> adapter=new ArrayAdapter<String>(this,android.R.layout.simple_spinner_item,nomes){
-            @Override public View getView(int position, android.view.View convertView, android.view.ViewGroup parent){
-                TextView v=(TextView)super.getView(position,convertView,parent); v.setTextColor(WHITE); v.setTextSize(15); v.setPadding(dp(14),0,dp(10),0); return v;
-            }
-        };
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        spinner.setAdapter(adapter);
-        int inicial=0; for(int i=0;i<perfisMapa.length;i++) if(perfisMapa[i].equals(perfilSelecionado[0])) inicial=i;
-        spinner.setSelection(inicial);
-        GradientDrawable spinnerBg=new GradientDrawable(); spinnerBg.setColor(CARD); spinnerBg.setCornerRadius(dp(14)); spinnerBg.setStroke(dp(1),BORDER);
-        spinner.setBackground(spinnerBg); spinner.setPadding(dp(4),0,dp(4),0);
-        box.addView(spinner,new LinearLayout.LayoutParams(-1,dp(54)));
+        LinearLayout lista=new LinearLayout(this);
+        lista.setOrientation(LinearLayout.VERTICAL);
+        lista.setPadding(0,dp(2),0,dp(2));
+
+        ScrollView listaScroll=new ScrollView(this);
+        listaScroll.setFillViewport(false);
+        listaScroll.setBackgroundColor(Color.TRANSPARENT);
+        listaScroll.addView(lista);
+        box.addView(listaScroll,new LinearLayout.LayoutParams(-1,dp(210)));
 
         TextView perfilInfo=label("Perfil: "+perfilSelecionado[0],12);
         perfilInfo.setTextColor(GRAY); perfilInfo.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
@@ -315,17 +311,28 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         TextView progresso=label("Candidato 0",12); progresso.setTextColor(GRAY); progresso.setGravity(Gravity.CENTER);
         box.addView(progresso,new LinearLayout.LayoutParams(-1,dp(28)));
 
-        android.app.AlertDialog dialog=new android.app.AlertDialog.Builder(this)
-            .setTitle("TESTE UNIVERSAL")
-            .setView(box)
-            .setNegativeButton("CANCELAR",(d,w)->showMeusControles())
-            .setNeutralButton("TESTAR PRÓXIMO",null)
-            .setPositiveButton("FUNCIONOU / SALVAR",null)
-            .create();
+        final TextView[] itens=new TextView[nomes.length];
+        final int[] selecionado={-1};
+        int inicial=0;
+        for(int i=0;i<perfisMapa.length;i++){
+            if(perfisMapa[i].equals(perfilSelecionado[0])){ inicial=i; break; }
+        }
+        selecionado[0]=inicial;
 
-        spinner.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener(){
-            public void onNothingSelected(android.widget.AdapterView<?> p){}
-            public void onItemSelected(android.widget.AdapterView<?> p,View v,int pos,long id){
+        for(int i=0;i<nomes.length;i++){
+            final int pos=i;
+            TextView item=label(nomes[i],15);
+            item.setGravity(Gravity.CENTER_VERTICAL|Gravity.LEFT);
+            item.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
+            item.setPadding(dp(14),0,dp(10),0);
+            item.setTextColor(WHITE);
+            GradientDrawable itemBg=new GradientDrawable();
+            itemBg.setCornerRadius(dp(12));
+            itemBg.setStroke(dp(1),i==inicial?ACCENT:BORDER);
+            itemBg.setColor(i==inicial?Color.rgb(48,30,32):CARD);
+            item.setBackground(itemBg);
+            item.setOnClickListener(v->{
+                selecionado[0]=pos;
                 marcaSelecionada[0]=marcas[pos];
                 perfilSelecionado[0]=perfisMapa[pos];
                 nomeSelecionado[0]=marcas[pos]+" "+modelo;
@@ -333,11 +340,31 @@ private static final int CARD_2 = Color.rgb(31,31,36);
                 perfilInfo.setText("Perfil: "+perfilSelecionado[0]);
                 irPerfilTeste.selecionar(perfilSelecionado[0]);
                 irPerfilTeste.limparResultado();
-                status.setText("●  Pronto para testar"); status.setTextColor(GRAY);
+                status.setText("●  Pronto para testar");
+                status.setTextColor(GRAY);
                 progresso.setText("Candidato 0");
                 detalhe.setText("Aponte o celular para o aparelho e toque em TESTAR PRÓXIMO.");
-            }
-        });
+                for(int j=0;j<itens.length;j++){
+                    GradientDrawable g=new GradientDrawable();
+                    g.setCornerRadius(dp(12));
+                    g.setStroke(dp(1),j==selecionado[0]?ACCENT:BORDER);
+                    g.setColor(j==selecionado[0]?Color.rgb(48,30,32):CARD);
+                    itens[j].setBackground(g);
+                }
+            });
+            LinearLayout.LayoutParams ip=new LinearLayout.LayoutParams(-1,dp(44));
+            ip.setMargins(0,dp(3),0,dp(3));
+            lista.addView(item,ip);
+            itens[i]=item;
+        }
+
+        android.app.AlertDialog dialog=new android.app.AlertDialog.Builder(this)
+            .setTitle("TESTE UNIVERSAL")
+            .setView(box)
+            .setNegativeButton("CANCELAR",(d,w)->showMeusControles())
+            .setNeutralButton("TESTAR PRÓXIMO",null)
+            .setPositiveButton("FUNCIONOU / SALVAR",null)
+            .create();
 
         dialog.setOnShowListener(x->{
             irPerfilTeste.selecionar(perfilSelecionado[0]); irPerfilTeste.limparResultado();
@@ -349,7 +376,7 @@ private static final int CARD_2 = Color.rgb(31,31,36);
                 int atual=irPerfilTeste.position(); int total=irPerfilTeste.total();
                 progresso.setText("Candidato "+atual+" de "+total);
                 if(atual>=total) detalhe.setText("Fim dos candidatos. Escolha outro aparelho na lista ou cancele e tente novamente.");
-                else detalhe.setText("Código enviado. Observe o aparelho.\\nSe respondeu, toque em FUNCIONOU / SALVAR.");
+                else detalhe.setText("Código enviado.\nSe respondeu, toque em FUNCIONOU / SALVAR.");
             });
             salvar.setOnClickListener(v->{
                 int codigo=irPerfilTeste.currentCode(); String perfil=irPerfilTeste.getPerfil();
