@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.Locale;
 
 public class IrPerfilTeste {
-    private static final int NEC=1, SAMSUNG=2, SONY=3, RC5=4, RC6=5, COOLIX=6, MIDEA=7, PANASONIC=8;
+    private static final int NEC=1, SAMSUNG=2, SONY=3, RC5=4, RC6=5, COOLIX=6, MIDEA=7, PANASONIC=8, FAN=9;
     private final ConsumerIrManager ir;
     private final List<Item> itens=new ArrayList<>();
     private int pos=0;
@@ -50,7 +50,7 @@ public class IrPerfilTeste {
     private void tx(int desejada,int[] padrao){ir.transmit(freq(desejada),padrao);}
 
     public String[] perfis(){
-        return new String[]{"LG / NEC","Samsung TV","Sony TV","Philips / RC5","Philips / RC6","Panasonic TV","AOC / NEC","TCL / NEC","Philco / NEC","Semp / NEC","Toshiba / JVC / NEC","AC Coolix","AC Midea"};
+        return new String[]{"LG / NEC","Samsung TV","Sony TV","Philips / RC5","Philips / RC6","Panasonic TV","AOC / NEC","TCL / NEC","Philco / NEC","Semp / NEC","Toshiba / JVC / NEC","AC Coolix" ,"AC Midea","Ventilador Universal"};
     }
 
     public void selecionar(String p){
@@ -90,6 +90,12 @@ public class IrPerfilTeste {
             itens.add(new Item("Midea • Cool 23°C",MIDEA,0xBF78));
             itens.add(new Item("Midea • Cool 24°C",MIDEA,0xBF80));
             itens.add(new Item("Midea • LED/Turbo candidato",MIDEA,0xA545));
+        } else if(p.equals("Ventilador Universal")){
+            itens.add(new Item("Ventilador • Ligar / Desligar",FAN,1));
+            itens.add(new Item("Ventilador • Oscilação",FAN,2));
+            itens.add(new Item("Ventilador • Velocidade",FAN,3));
+            itens.add(new Item("Ventilador • Timer",FAN,4));
+            itens.add(new Item("Ventilador • Noturno",FAN,5));
         }
     }
 
@@ -134,11 +140,20 @@ public class IrPerfilTeste {
             else if(perfilSalvo.equals("AOC / NEC") || perfilSalvo.equals("TCL / NEC") || perfilSalvo.equals("Philco / NEC") || perfilSalvo.equals("Semp / NEC") || perfilSalvo.equals("Toshiba / JVC / NEC")) tx(frequenciaOuPadrao(frequenciaSalva,38000),nec(codigo>255?addr:0x00,cmd));
             else if(perfilSalvo.equals("AC Coolix")) tx(frequenciaOuPadrao(frequenciaSalva,38000),coolix(codigo));
             else if(perfilSalvo.equals("AC Midea")) tx(frequenciaOuPadrao(frequenciaSalva,38000),midea(codigo));
+            else if(perfilSalvo.equals("Ventilador Universal")) tx(frequenciaOuPadrao(frequenciaSalva,38000),fanRaw(codigo));
             else return false;
             return true;
         }catch(Exception e){ return false; }
     }
 
+    public boolean transmitirVentilador(int funcao){ if(!hasEmitter() || funcao<1 || funcao>5) return false; try{ tx(38000,fanRaw(funcao)); return true; }catch(Exception e){ return false; } }
+    private int[] fanRaw(int f){ switch(f){
+        case 1: return new int[]{1210,368,1210,368,368,1210,1210,368,1210,368,368,1210,368,1210,368,1210,368,1210,368,1210,368,1210,1210,7074};
+        case 2: return new int[]{1210,368,1210,368,368,1210,1210,368,1210,368,368,1210,368,1210,1210,368,368,1210,368,1210,368,1210,368,7889};
+        case 3: return new int[]{1183,368,1183,368,368,1183,1183,368,1183,368,368,1183,368,1183,368,1183,368,1183,368,1183,1183,368,368,7889};
+        case 4: return new int[]{1183,368,1183,368,368,1183,1183,368,1183,368,368,1183,368,1183,368,1183,1183,368,368,1183,368,1183,368,7889};
+        case 5: return new int[]{1183,368,1183,368,368,1183,1183,368,1183,368,1183,368,368,1183,1183,368,1183,368,1183,368,1183,368,1183,368,7889};
+        default: return new int[]{1210,368}; } }
     private int frequenciaOuPadrao(int salva,int padrao){ return salva>0 ? salva : padrao; }
 
     public String next(){
@@ -154,6 +169,7 @@ public class IrPerfilTeste {
             else if(x.tipo==COOLIX)tx(38000,coolix(x.code));
             else if(x.tipo==MIDEA)tx(38000,midea(x.code));
             else if(x.tipo==PANASONIC)tx(37000,panasonic(x.code));
+            else if(x.tipo==FAN)tx(38000,fanRaw(x.code));
             return String.format(Locale.US,"%s • %d/%d",x.nome,pos,itens.size());
         }catch(Exception e){return String.format(Locale.US,"ERRO %s: %s",x.nome,e.getMessage());}
     }
