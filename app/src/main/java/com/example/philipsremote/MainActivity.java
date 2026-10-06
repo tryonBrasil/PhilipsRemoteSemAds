@@ -700,7 +700,8 @@ public class MainActivity extends Activity {
         int codigo=controleStorage.codigoComando(controleAtivo,funcao);
         String perfil=controleStorage.perfilComando(controleAtivo,funcao);
         if(codigo<0 || perfil.isEmpty()) return false;
-        return irPerfilTeste.transmitirSalvo(perfil,codigo);
+        int frequencia=controleStorage.frequenciaComando(controleAtivo,funcao);
+         return irPerfilTeste.transmitirSalvo(perfil,codigo,frequencia);
     }
 
     private void send(int command){
@@ -714,7 +715,7 @@ public class MainActivity extends Activity {
                 return;
             }
             if(command==POWER && controleAtivo!=null && controleAtivo.codigo>=0){
-                boolean ok=irPerfilTeste.transmitirSalvo(controleAtivo.perfil,controleAtivo.codigo);
+                boolean ok=irPerfilTeste.transmitirSalvo(controleAtivo.perfil,controleAtivo.codigo,controleAtivo.frequencia);
                 if(!ok) Toast.makeText(this,"Não foi possível enviar o código salvo",Toast.LENGTH_SHORT).show();
                 return;
             }
@@ -723,12 +724,12 @@ public class MainActivity extends Activity {
             if(controleAtivo!=null){
                 String perfil=controleAtivo.perfil==null?"":controleAtivo.perfil;
                 if("LG / NEC".equals(perfil)) {
-                    ir.transmit(LG_FREQ,lgNec(command));
+                    transmitirSeguro(LG_FREQ,lgNec(command));
                     return;
                 }
                 if("Philips / RC6".equals(perfil)) {
                     toggle=!toggle;
-                    ir.transmit(FREQ,rc6(0x00,command,toggle));
+                    transmitirSeguro(FREQ,rc6(0x00,command,toggle));
                     return;
                 }
                 Toast.makeText(this,"Este botão ainda não foi configurado. Toque em EDITAR para aprendê-lo.",Toast.LENGTH_SHORT).show();
@@ -740,6 +741,26 @@ public class MainActivity extends Activity {
             Toast.makeText(this,"Falha ao enviar IR: "+e.getMessage(),Toast.LENGTH_SHORT).show();
         }
     }
+
+    private int frequenciaIR(int desejada){
+        if(ir==null) return desejada;
+        try{
+            ConsumerIrManager.CarrierFrequencyRange[] ranges=ir.getCarrierFrequencies();
+            if(ranges==null || ranges.length==0) return desejada;
+            int melhor=desejada; long distancia=Long.MAX_VALUE;
+            for(ConsumerIrManager.CarrierFrequencyRange r:ranges){
+                int candidato=desejada;
+                if(desejada<r.getMinFrequency()) candidato=r.getMinFrequency();
+                else if(desejada>r.getMaxFrequency()) candidato=r.getMaxFrequency();
+                long d=Math.abs((long)candidato-desejada);
+                if(d<distancia){distancia=d;melhor=candidato;}
+                if(d==0) break;
+            }
+            return melhor;
+        }catch(Exception e){return desejada;}
+    }
+
+    private void transmitirSeguro(int frequencia,int[] padrao){ ir.transmit(frequenciaIR(frequencia),padrao); }
 
     private int lgCode(int c){
         switch(c){
