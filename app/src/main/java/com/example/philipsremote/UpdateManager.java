@@ -103,6 +103,12 @@ public class UpdateManager {
                     }
                 }
 
+                // Registra a verificação mesmo quando não existe atualização. Isso evita
+                // uma nova consulta a cada onResume e respeita o intervalo silencioso.
+                if (!manual) {
+                    prefs.edit().putLong("last_silent_check", System.currentTimeMillis()).apply();
+                }
+
                 final boolean update = compararVersoes(latest, current) > 0 && !apkUrl.isEmpty();
                 final String finalLatest = latest;
                 final String finalApkUrl = apkUrl;
