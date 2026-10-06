@@ -424,8 +424,8 @@ public class MainActivity extends Activity {
         modelRow.addView(change,new LinearLayout.LayoutParams(dp(112),dp(44)));
         root.addView(modelRow);
 
-        TextView selected=label(controleAtivo!=null ? "✓ "+controleAtivo.nome+"  •  "+controleAtivo.marca+" "+controleAtivo.modelo : (lgMode?"LG • 32LB620B":"PHILIPS • 50PUG6513/7"),13);
-        selected.setTextColor(controleAtivo!=null?Color.rgb(90,170,105):GRAY);
+        TextView selected=label(controleAtivo!=null ? "●  "+controleAtivo.nome+"  •  "+controleAtivo.marca+" "+controleAtivo.modelo : (lgMode?"●  LG • 32LB620B":"●  PHILIPS • 50PUG6513/7"),13);
+        selected.setTextColor(controleAtivo!=null?Color.rgb(90,170,105):Color.rgb(150,150,155));
         root.addView(selected,new LinearLayout.LayoutParams(-1,dp(26)));
 
         LinearLayout r=row();
