@@ -253,8 +253,7 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         status.setGravity(Gravity.CENTER);
         box.addView(status,new LinearLayout.LayoutParams(-1,dp(70)));
 
-        TextView detalhe=label("Perfil automático: "+perfilInicial+"
-Pressione TESTAR PRÓXIMO até a TV reagir.",13);
+        TextView detalhe=label("Perfil automático: "+perfilInicial+"\nPressione TESTAR PRÓXIMO até a TV reagir.",13);
         detalhe.setTextColor(GRAY);
         detalhe.setGravity(Gravity.CENTER);
         box.addView(detalhe,new LinearLayout.LayoutParams(-1,dp(64)));
@@ -316,9 +315,7 @@ Pressione TESTAR PRÓXIMO até a TV reagir.",13);
 
         new android.app.AlertDialog.Builder(this)
             .setTitle("APRENDER BOTÕES • "+controle.nome)
-            .setMessage(controleStorage.quantidadeComandos(controle)+" botão"+(controleStorage.quantidadeComandos(controle)==1?"":"ões")+" já configurado"+(controleStorage.quantidadeComandos(controle)==1?"":"s")+"
-
-Selecione uma função. O teste avança um código por vez; quando a TV reagir, salve o código.")
+            .setMessage(controleStorage.quantidadeComandos(controle)+" botão"+(controleStorage.quantidadeComandos(controle)==1?"":"ões")+" já configurado"+(controleStorage.quantidadeComandos(controle)==1?"":"s")+"\n\nSelecione uma função. O teste avança um código por vez; quando a TV reagir, salve o código.")
             .setSingleChoiceItems(funcoes,pos[0],(d,which)->{ pos[0]=which; aprenderFuncaoPos=which; irPerfilTeste.reset(); })
             .setNegativeButton("FECHAR",(d,w)->showMeusControles())
             .setNeutralButton("TESTAR CÓDIGO",(d,w)->{
@@ -406,8 +403,7 @@ render[0]=()->{
                 line.addView(badge,new LinearLayout.LayoutParams(-2,dp(26))); card.addView(line);
 
                 int qtd=controleStorage.quantidadeComandos(c);
-                TextView detail=label(c.marca+"  •  "+c.modelo+"
-"+c.perfil+"  •  "+qtd+" botão"+(qtd==1?"":"ões")+" configurado"+(qtd==1?"":"s"),12);
+                TextView detail=label(c.marca+"  •  "+c.modelo+"\n"+c.perfil+"  •  "+qtd+" botão"+(qtd==1?"":"ões")+" configurado"+(qtd==1?"":"s"),12);
                 detail.setTextColor(GRAY); detail.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL); card.addView(detail,new LinearLayout.LayoutParams(-1,dp(54)));
 
                 LinearLayout actions=row();
@@ -475,15 +471,7 @@ render[0]=()->{
         }catch(Exception ignored){}
         new android.app.AlertDialog.Builder(this)
             .setTitle("IR Remote BR")
-            .setMessage("Controle remoto por infravermelho
-
-Versão "+versao+"
-
-Controle TVs compatíveis usando o emissor infravermelho do celular.
-
-Seus controles e configurações são armazenados localmente no aparelho.
-
-Para transmitir IR, o celular precisa possuir emissor infravermelho compatível.")
+            .setMessage("Controle remoto por infravermelho\n\nVersão "+versao+"\n\nControle TVs compatíveis usando o emissor infravermelho do celular.\n\nSeus controles e configurações são armazenados localmente no aparelho.\n\nPara transmitir IR, o celular precisa possuir emissor infravermelho compatível.")
             .setPositiveButton("OK",null).show();
     }
 
@@ -494,9 +482,7 @@ Para transmitir IR, o celular precisa possuir emissor infravermelho compatível.
     }
 
     private void showAddControlWizard(){
-        wizardDialog("Adicionar controle","Você vai escolher a marca e o modelo e depois testar os códigos IR.
-
-Nada é salvo até você confirmar que a TV respondeu.")
+        wizardDialog("Adicionar controle","Você vai escolher a marca e o modelo e depois testar os códigos IR.\n\nNada é salvo até você confirmar que a TV respondeu.")
             .setPositiveButton("COMEÇAR",(d,w)->showBrandWizard())
             .setNegativeButton("CANCELAR",null).show();
     }
@@ -521,9 +507,7 @@ Nada é salvo até você confirmar que a TV respondeu.")
         else modelos=new String[]{"Smart TV","Outro modelo"};
         new android.app.AlertDialog.Builder(this)
             .setTitle("2 de 3 • Escolha o modelo")
-            .setMessage("Marca: "+marca+"
-
-Escolha um modelo ou informe o modelo manualmente.")
+            .setMessage("Marca: "+marca+"\n\nEscolha um modelo ou informe o modelo manualmente.")
             .setItems(modelos,(d,w)->{
                 if(w==modelos.length-1){
                     final EditText input=new EditText(this);
@@ -556,13 +540,7 @@ Escolha um modelo ou informe o modelo manualmente.")
     }
 
     private void showTvSetup(String marca,String modelo){
-        wizardDialog("3 de 3 • Teste IR","TV: "+marca+" "+modelo+"
-
-1. Aponte o celular para a TV.
-2. Toque em TESTAR PRÓXIMO.
-3. Quando a TV responder, toque em FUNCIONOU / SALVAR.
-
-O primeiro código confirmado será usado como base do controle.")
+        wizardDialog("3 de 3 • Teste IR","TV: "+marca+" "+modelo+"\n\n1. Aponte o celular para a TV.\n2. Toque em TESTAR PRÓXIMO.\n3. Quando a TV responder, toque em FUNCIONOU / SALVAR.\n\nO primeiro código confirmado será usado como base do controle.")
             .setNegativeButton("CANCELAR",(d,w)->showMeusControles())
             .setPositiveButton("INICIAR TESTE",(d,w)->showUniversalScanner(marca,modelo)).show();
     }
@@ -703,8 +681,7 @@ O primeiro código confirmado será usado como base do controle.")
             barBg.setColor(Color.rgb(24,30,26)); barBg.setCornerRadius(dp(14));
             deviceBar.setBackground(barBg);
 
-            TextView deviceInfo=label("✓  "+controleAtivo.nome+"
-"+controleStorage.quantidadeComandos(controleAtivo)+" botões configurados",12);
+            TextView deviceInfo=label("✓  "+controleAtivo.nome+"\n"+controleStorage.quantidadeComandos(controleAtivo)+" botões configurados",12);
             deviceInfo.setTextColor(Color.rgb(105,175,115));
             deviceInfo.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
             deviceBar.addView(deviceInfo,new LinearLayout.LayoutParams(0,dp(52),1));
