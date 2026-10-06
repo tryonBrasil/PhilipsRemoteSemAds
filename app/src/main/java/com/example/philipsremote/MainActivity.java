@@ -186,6 +186,11 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         Button continueBtn=new Button(this); continueBtn.setText("CONTINUAR"); continueBtn.setTextColor(WHITE); continueBtn.setTextSize(17); continueBtn.setAllCaps(false);
         GradientDrawable bg=new GradientDrawable(); bg.setColor(Color.rgb(190,24,32)); bg.setCornerRadius(dp(18)); continueBtn.setBackground(bg); continueBtn.setOnClickListener(v->{prefs.edit().putBoolean("lg_mode",lgMode).apply();showingSelector=false;build();});
         root.addView(continueBtn,new LinearLayout.LayoutParams(-1,dp(58)));
+        Button ventilador=new Button(this);
+        ventilador.setText("🌀  VENTILADOR • CONTROLE UNIVERSAL"); ventilador.setTextColor(WHITE); ventilador.setTextSize(14); ventilador.setAllCaps(false);
+        GradientDrawable ventiladorBg=new GradientDrawable(); ventiladorBg.setColor(Color.rgb(42,42,48)); ventiladorBg.setCornerRadius(dp(16)); ventiladorBg.setStroke(dp(1),BORDER); ventilador.setBackground(ventiladorBg); actionFeedback(ventilador);
+        ventilador.setOnClickListener(v->showFanRemote());
+        LinearLayout.LayoutParams ventiladorP=new LinearLayout.LayoutParams(-1,dp(54)); ventiladorP.setMargins(0,dp(8),0,0); root.addView(ventilador,ventiladorP);
         String versao=""; try{ versao=getPackageManager().getPackageInfo(getPackageName(),0).versionName; }catch(Exception ignored){} TextView info=label("Versão instalada: "+versao+"  •  atualizações automáticas ativas",12); info.setTextColor(GRAY); root.addView(info,new LinearLayout.LayoutParams(-1,dp(42)));
         Button meus=new Button(this); meus.setText("★  MEUS CONTROLES"); meus.setTextColor(WHITE); meus.setTextSize(14); meus.setAllCaps(false);
         GradientDrawable meusBg=new GradientDrawable(); meusBg.setColor(KEY_DARK); meusBg.setCornerRadius(dp(16)); meus.setBackground(meusBg); actionFeedback(meus); meus.setOnClickListener(v->showMeusControles());
@@ -230,6 +235,7 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         if(marca==null) marca="";
         String alvo="";
         if("LG".equalsIgnoreCase(marca)) alvo="LG / NEC";
+        else if("Ventilador".equalsIgnoreCase(marca)) alvo="Ventilador Universal";
         else if("Samsung".equalsIgnoreCase(marca)) alvo="Samsung TV";
         else if("Sony".equalsIgnoreCase(marca)) alvo="Sony TV";
         else if("Philips".equalsIgnoreCase(marca)) alvo="Philips / RC6";
@@ -248,6 +254,7 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         if(perfil.contains("Sony")) return 40000;
         if(perfil.contains("Philips")) return 36000;
         if(perfil.equals("Panasonic TV")) return 37000;
+        if(perfil.equals("Ventilador Universal")) return 38000;
         return 38000;
     }
 
@@ -256,17 +263,17 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         final String[] nomes={
             "Philips TV","LG TV","Samsung TV","Sony TV","Panasonic TV",
             "AOC TV","TCL TV","Philco TV","Semp TV","Toshiba / JVC TV",
-            "Ar-condicionado Coolix","Ar-condicionado Midea"
+            "Ar-condicionado Coolix","Ar-condicionado Midea","Ventilador Universal"
         };
         final String[] marcas={
             "Philips","LG","Samsung","Sony","Panasonic",
             "AOC","TCL","Philco","Semp","Toshiba",
-            "Coolix","Midea"
+            "Coolix","Midea","Ventilador"
         };
         final String[] perfisMapa={
             "Philips / RC6","LG / NEC","Samsung TV","Sony TV","Panasonic TV",
             "AOC / NEC","TCL / NEC","Philco / NEC","Semp / NEC","Toshiba / JVC / NEC",
-            "AC Coolix","AC Midea"
+            "AC Coolix","AC Midea","Ventilador Universal"
         };
         final String[] marcaSelecionada={marca};
         final String[] perfilSelecionado={perfis[perfilInicialPara(marca,modelo,perfis)]};
@@ -389,7 +396,7 @@ private static final int CARD_2 = Color.rgb(31,31,36);
                 }
                 int freq=frequenciaPerfil(perfil);
                 String nome=nomeSelecionado[0]; String descricao=irPerfilTeste.lastDescription();
-                String categoria=perfil.startsWith("AC ")?"AR-CONDICIONADO":"TV";
+                String categoria=perfil.startsWith("AC ")?"AR-CONDICIONADO":(perfil.equals("Ventilador Universal")?"VENTILADOR":"TV");
                 controleStorage.salvar(nome,categoria,marcaSelecionada[0],modelo,perfil,descricao,codigo,freq);
                 dialog.dismiss();
                 List<ControleStorage.Controle> salvos=controleStorage.listar();
@@ -406,8 +413,9 @@ private static final int CARD_2 = Color.rgb(31,31,36);
     private void showAprenderComandos(ControleStorage.Controle controle){
         if(controle==null){ showMeusControles(); return; }
 
-        final String[] funcoes={"Ligar/desligar","Mute","Volume +","Volume -","Canal +","Canal -","Cima","Baixo","Esquerda","Direita","OK","Voltar","Menu","Home","Source","Info","Guide","Netflix","Configurações","Vermelho","Verde","Amarelo","Azul","Play","Pause","Stop","Retroceder","Avançar","Subtitle","Exit"};
-        final String[] chaves={"POWER","MUTE","VOL_UP","VOL_DOWN","CH_UP","CH_DOWN","UP","DOWN","LEFT","RIGHT","OK","BACK","MENU","HOME","SOURCE","INFO","GUIDE","NETFLIX","SETTINGS","RED","GREEN","YELLOW","BLUE","PLAY","PAUSE","STOP","REWIND","FAST_FORWARD","SUBTITLE","EXIT"};
+        final boolean isFan="Ventilador Universal".equals(controle.perfil);
+        final String[] funcoes=isFan?new String[]{"Ligar / desligar","Oscilação","Velocidade","Timer","Noturno"}:new String[]{"Ligar/desligar","Mute","Volume +","Volume -","Canal +","Canal -","Cima","Baixo","Esquerda","Direita","OK","Voltar","Menu","Home","Source","Info","Guide","Netflix","Configurações","Vermelho","Verde","Amarelo","Azul","Play","Pause","Stop","Retroceder","Avançar","Subtitle","Exit"};
+        final String[] chaves=isFan?new String[]{"POWER","SWING","SPEED","TIMER","NIGHT"}:new String[]{"POWER","MUTE","VOL_UP","VOL_DOWN","CH_UP","CH_DOWN","UP","DOWN","LEFT","RIGHT","OK","BACK","MENU","HOME","SOURCE","INFO","GUIDE","NETFLIX","SETTINGS","RED","GREEN","YELLOW","BLUE","PLAY","PAUSE","STOP","REWIND","FAST_FORWARD","SUBTITLE","EXIT"};
         final int[] pos={Math.max(0,Math.min(aprenderFuncaoPos,funcoes.length-1))};
         final String[] perfis=irPerfilTeste.perfis();
         final int configuradosInicial=controleStorage.quantidadeComandos(controle);
@@ -678,6 +686,31 @@ render[0]=()->{
         GradientDrawable g=new GradientDrawable(); g.setColor(color); g.setCornerRadius(dp(11)); g.setStroke(dp(1),Color.rgb(70,70,75)); b.setBackground(g); actionFeedback(b); return b;
     }
 
+    private void showFanRemote(){
+        ScrollView sv=new ScrollView(this); sv.setFillViewport(true); sv.setBackgroundColor(BG);
+        LinearLayout root=new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL); root.setPadding(dp(14),dp(14),dp(14),dp(24));
+        TextView title=label("VENTILADOR UNIVERSAL",22); title.setTypeface(Typeface.DEFAULT,Typeface.BOLD); title.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
+        root.addView(title,new LinearLayout.LayoutParams(-1,dp(42)));
+        TextView sub=label("Controle IR • 38 kHz • funções básicas",12); sub.setTextColor(GRAY); sub.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
+        root.addView(sub,new LinearLayout.LayoutParams(-1,dp(28)));
+        LinearLayout imageCard=new LinearLayout(this); imageCard.setGravity(Gravity.CENTER); imageCard.setPadding(dp(18),dp(12),dp(18),dp(12));
+        GradientDrawable imageBg=new GradientDrawable(); imageBg.setColor(CARD); imageBg.setCornerRadius(dp(18)); imageBg.setStroke(dp(1),BORDER); imageCard.setBackground(imageBg);
+        ImageView image=new ImageView(this); image.setImageResource(R.drawable.fan_remote); image.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
+        imageCard.addView(image,new LinearLayout.LayoutParams(-1,dp(210))); root.addView(imageCard,new LinearLayout.LayoutParams(-1,dp(238)));
+        TextView aviso=label("A imagem representa o controle universal. Os códigos são testados por função.",11); aviso.setTextColor(GRAY); aviso.setGravity(Gravity.CENTER);
+        root.addView(aviso,new LinearLayout.LayoutParams(-1,dp(38)));
+        LinearLayout r=row(); add(r,key("⏻\nLIGA / DESLIGA",1,64,Color.rgb(125,35,40),13)); add(r,key("🌀\nOSCILAÇÃO",2,64,KEY,13)); root.addView(r);
+        r=row(); add(r,key("＋\nVELOCIDADE",3,64,KEY,13)); add(r,key("⏱\nTIMER",4,64,KEY,13)); root.addView(r);
+        r=row(); add(r,key("🌙\nNOTURNO",5,64,KEY,13)); root.addView(r);
+        TextView info=label("⚠️ Compatibilidade varia conforme o modelo do ventilador. Se não responder, use TESTAR DISPOSITIVOS para experimentar outros códigos.",11); info.setTextColor(Color.rgb(190,170,110)); info.setGravity(Gravity.CENTER); root.addView(info,new LinearLayout.LayoutParams(-1,dp(62)));
+        Button testar=new Button(this); testar.setText("🔎  TESTAR / SALVAR CONTROLE"); testar.setTextColor(WHITE); testar.setTextSize(13); testar.setAllCaps(false);
+        GradientDrawable tb=new GradientDrawable(); tb.setColor(ACCENT); tb.setCornerRadius(dp(15)); testar.setBackground(tb); actionFeedback(testar);
+        testar.setOnClickListener(v->showUniversalScanner("Ventilador","Universal")); root.addView(testar,new LinearLayout.LayoutParams(-1,dp(52)));
+        Button voltar=new Button(this); voltar.setText("VOLTAR"); voltar.setTextColor(WHITE); voltar.setAllCaps(false); voltar.setTextSize(13);
+        GradientDrawable vb=new GradientDrawable(); vb.setColor(CARD_2); vb.setCornerRadius(dp(15)); voltar.setBackground(vb); actionFeedback(voltar); voltar.setOnClickListener(v->showSelector());
+        root.addView(voltar,new LinearLayout.LayoutParams(-1,dp(48)));
+        sv.addView(root); setContentView(sv);
+    }
     private void showSobre(){
         String versao="1.3.0";
         try{
