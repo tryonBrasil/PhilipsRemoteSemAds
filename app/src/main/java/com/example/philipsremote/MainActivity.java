@@ -207,6 +207,11 @@ public class MainActivity extends Activity {
         else if("Samsung".equalsIgnoreCase(marca)) alvo="Samsung TV";
         else if("Sony".equalsIgnoreCase(marca)) alvo="Sony TV";
         else if("Philips".equalsIgnoreCase(marca)) alvo="Philips / RC6";
+        else if("Panasonic".equalsIgnoreCase(marca)) alvo="Panasonic TV";
+        else if("AOC".equalsIgnoreCase(marca)) alvo="AOC / NEC";
+        else if("TCL".equalsIgnoreCase(marca)) alvo="TCL / NEC";
+        else if("Philco".equalsIgnoreCase(marca)) alvo="Philco / NEC";
+        else if("Semp".equalsIgnoreCase(marca)) alvo="Semp / NEC";
         for(int i=0;i<perfis.length;i++) if(perfis[i].equals(alvo)) return i;
         return 0;
     }
@@ -448,8 +453,8 @@ public class MainActivity extends Activity {
     }
 
     private void showBrandWizard(){
-        final String[] marcas={"Philips","LG","Samsung","Sony"};
-        wizardDialog("1 de 3 • Escolha a marca","Escolha a marca da sua TV. O aplicativo selecionará automaticamente o perfil IR mais provável.")
+        final String[] marcas={"Philips","LG","Samsung","Sony","Panasonic","AOC","TCL","Philco","Semp"};
+        wizardDialog("1 de 3 • Escolha a marca","Escolha a marca. O aplicativo selecionará automaticamente o banco de códigos mais provável.")
             .setItems(marcas,(d,w)->showModelWizard(marcas[w]))
             .setNegativeButton("CANCELAR",(x,y)->showMeusControles()).show();
     }
@@ -458,15 +463,45 @@ public class MainActivity extends Activity {
         final String[] modelos;
         if("Philips".equals(marca)) modelos=new String[]{"50PUG6513/7","Outro modelo"};
         else if("LG".equals(marca)) modelos=new String[]{"32LB620B","Outro modelo"};
-        else modelos=new String[]{"Modelo não informado","Outro modelo"};
-        wizardDialog("2 de 3 • Escolha o modelo","Marca selecionada: "+marca+"\n\nSe o modelo não estiver listado, escolha \"Outro modelo\". O scanner continuará procurando códigos compatíveis.")
+        else if("Samsung".equals(marca)) modelos=new String[]{"Smart TV","Outro modelo"};
+        else if("Sony".equals(marca)) modelos=new String[]{"Bravia","Outro modelo"};
+        else if("Panasonic".equals(marca)) modelos=new String[]{"Smart TV","Outro modelo"};
+        else if("AOC".equals(marca)) modelos=new String[]{"Smart TV","Outro modelo"};
+        else if("TCL".equals(marca)) modelos=new String[]{"Smart TV","Outro modelo"};
+        else if("Philco".equals(marca)) modelos=new String[]{"Smart TV","Outro modelo"};
+        else modelos=new String[]{"Smart TV","Outro modelo"};
+        new android.app.AlertDialog.Builder(this)
+            .setTitle("2 de 3 • Escolha o modelo")
+            .setMessage("Marca: "+marca+"\n\nEscolha um modelo ou informe o modelo manualmente.")
             .setItems(modelos,(d,w)->{
-                lgMode="LG".equals(marca);
-                controleAtivo=null;
-                prefs.edit().remove("active_control_id").putBoolean("lg_mode",lgMode).apply();
-                setupBrand=marca; setupModel=modelos[w];
-                showTvSetup(marca,modelos[w]);
+                if(w==modelos.length-1){
+                    final EditText input=new EditText(this);
+                    input.setSingleLine(true);
+                    input.setHint("Ex.: 50PUG6513/7");
+                    input.setTextColor(WHITE);
+                    input.setHintTextColor(GRAY);
+                    android.widget.FrameLayout box=new android.widget.FrameLayout(this);
+                    box.setPadding(dp(24),dp(4),dp(24),0);
+                    box.addView(input,new android.widget.FrameLayout.LayoutParams(-1,dp(52)));
+                    new android.app.AlertDialog.Builder(this).setTitle("Modelo da "+marca).setMessage("Digite o modelo do aparelho.").setView(box)
+                        .setNegativeButton("VOLTAR",(x,y)->showModelWizard(marca))
+                        .setPositiveButton("CONTINUAR",(x,y)->{
+                            String modelo=input.getText().toString().trim();
+                            if(modelo.isEmpty()) modelo="Modelo não informado";
+                            prepararNovoControle(marca,modelo);
+                        }).show();
+                } else {
+                    prepararNovoControle(marca,modelos[w]);
+                }
             }).setNegativeButton("VOLTAR",(x,y)->showBrandWizard()).show();
+    }
+
+    private void prepararNovoControle(String marca,String modelo){
+        lgMode="LG".equals(marca);
+        controleAtivo=null;
+        prefs.edit().remove("active_control_id").putBoolean("lg_mode",lgMode).apply();
+        setupBrand=marca; setupModel=modelo;
+        showTvSetup(marca,modelo);
     }
 
     private void showTvSetup(String marca,String modelo){
