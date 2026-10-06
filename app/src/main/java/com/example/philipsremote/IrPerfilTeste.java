@@ -26,6 +26,29 @@ public class IrPerfilTeste {
 
     public boolean hasEmitter(){return ir!=null&&ir.hasIrEmitter();}
 
+    /** Usa a frequência pedida quando o emissor do aparelho suporta essa faixa.
+     *  Caso contrário, aproxima para a frequência suportada mais próxima. */
+    private int freq(int desejada){
+        if(ir==null) return desejada;
+        try{
+            ConsumerIrManager.CarrierFrequencyRange[] ranges=ir.getCarrierFrequencies();
+            if(ranges==null || ranges.length==0) return desejada;
+            int melhor=desejada;
+            long distancia=Long.MAX_VALUE;
+            for(ConsumerIrManager.CarrierFrequencyRange r:ranges){
+                int candidato=desejada;
+                if(desejada<r.getMinFrequency()) candidato=r.getMinFrequency();
+                else if(desejada>r.getMaxFrequency()) candidato=r.getMaxFrequency();
+                long d=Math.abs((long)candidato-desejada);
+                if(d<distancia){distancia=d;melhor=candidato;}
+                if(d==0) break;
+            }
+            return melhor;
+        }catch(Exception e){return desejada;}
+    }
+
+    private void tx(int desejada,int[] padrao){ir.transmit(freq(desejada),padrao);}
+
     public String[] perfis(){
         return new String[]{"LG / NEC","Samsung TV","Sony TV","Philips / RC5","Philips / RC6","Panasonic TV","AOC / NEC","TCL / NEC","Philco / NEC","Semp / NEC","Toshiba / JVC / NEC","AC Coolix","AC Midea"};
     }
@@ -99,15 +122,15 @@ public class IrPerfilTeste {
         try{
             int addr=(codigo >> 8) & 0xFF;
             int cmd=codigo & 0xFF;
-            if(perfilSalvo.equals("LG / NEC")) ir.transmit(38000,nec(codigo>255?addr:0x04,cmd));
-            else if(perfilSalvo.equals("Samsung TV")) ir.transmit(38000,samsung(codigo>255?addr:0x07,cmd));
-            else if(perfilSalvo.equals("Sony TV")) ir.transmit(40000,sony(codigo>255?addr:0x01,cmd));
-            else if(perfilSalvo.equals("Philips / RC5")) ir.transmit(36000,rc5(codigo>255?addr:0x00,cmd,false));
-            else if(perfilSalvo.equals("Philips / RC6")) { rc6Toggle=!rc6Toggle; ir.transmit(36000,rc6(codigo>255?addr:0x00,cmd,rc6Toggle)); }
-            else if(perfilSalvo.equals("Panasonic TV")) ir.transmit(37000,panasonic(codigo & 0xFF));
-            else if(perfilSalvo.equals("AOC / NEC") || perfilSalvo.equals("TCL / NEC") || perfilSalvo.equals("Philco / NEC") || perfilSalvo.equals("Semp / NEC") || perfilSalvo.equals("Toshiba / JVC / NEC")) ir.transmit(38000,nec(codigo>255?addr:0x00,cmd));
-            else if(perfilSalvo.equals("AC Coolix")) ir.transmit(38000,coolix(codigo));
-            else if(perfilSalvo.equals("AC Midea")) ir.transmit(38000,midea(codigo));
+            if(perfilSalvo.equals("LG / NEC")) tx(38000,nec(codigo>255?addr:0x04,cmd));
+            else if(perfilSalvo.equals("Samsung TV")) tx(38000,samsung(codigo>255?addr:0x07,cmd));
+            else if(perfilSalvo.equals("Sony TV")) tx(40000,sony(codigo>255?addr:0x01,cmd));
+            else if(perfilSalvo.equals("Philips / RC5")) tx(36000,rc5(codigo>255?addr:0x00,cmd,false));
+            else if(perfilSalvo.equals("Philips / RC6")) { rc6Toggle=!rc6Toggle; tx(36000,rc6(codigo>255?addr:0x00,cmd,rc6Toggle)); }
+            else if(perfilSalvo.equals("Panasonic TV")) tx(37000,panasonic(codigo & 0xFF));
+            else if(perfilSalvo.equals("AOC / NEC") || perfilSalvo.equals("TCL / NEC") || perfilSalvo.equals("Philco / NEC") || perfilSalvo.equals("Semp / NEC") || perfilSalvo.equals("Toshiba / JVC / NEC")) tx(38000,nec(codigo>255?addr:0x00,cmd));
+            else if(perfilSalvo.equals("AC Coolix")) tx(38000,coolix(codigo));
+            else if(perfilSalvo.equals("AC Midea")) tx(38000,midea(codigo));
             else return false;
             return true;
         }catch(Exception e){ return false; }
@@ -118,14 +141,14 @@ public class IrPerfilTeste {
         if(pos>=itens.size())return "Fim: "+perfil;
         Item x=itens.get(pos++);
         try{
-            if(x.tipo==NEC)ir.transmit(38000,nec(x.addr,x.cmd));
-            else if(x.tipo==SAMSUNG)ir.transmit(38000,samsung(x.addr,x.cmd));
-            else if(x.tipo==SONY)ir.transmit(40000,sony(x.addr,x.cmd));
-            else if(x.tipo==RC5)ir.transmit(36000,rc5(x.addr,x.cmd,false));
-            else if(x.tipo==RC6)ir.transmit(36000,rc6(x.addr,x.cmd,false));
-            else if(x.tipo==COOLIX)ir.transmit(38000,coolix(x.code));
-            else if(x.tipo==MIDEA)ir.transmit(38000,midea(x.code));
-            else if(x.tipo==PANASONIC)ir.transmit(37000,panasonic(x.code));
+            if(x.tipo==NEC)tx(38000,nec(x.addr,x.cmd));
+            else if(x.tipo==SAMSUNG)tx(38000,samsung(x.addr,x.cmd));
+            else if(x.tipo==SONY)tx(40000,sony(x.addr,x.cmd));
+            else if(x.tipo==RC5)tx(36000,rc5(x.addr,x.cmd,false));
+            else if(x.tipo==RC6)tx(36000,rc6(x.addr,x.cmd,false));
+            else if(x.tipo==COOLIX)tx(38000,coolix(x.code));
+            else if(x.tipo==MIDEA)tx(38000,midea(x.code));
+            else if(x.tipo==PANASONIC)tx(37000,panasonic(x.code));
             return String.format(Locale.US,"%s • %d/%d",x.nome,pos,itens.size());
         }catch(Exception e){return String.format(Locale.US,"ERRO %s: %s",x.nome,e.getMessage());}
     }
