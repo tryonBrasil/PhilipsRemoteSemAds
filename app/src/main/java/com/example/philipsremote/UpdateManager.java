@@ -55,18 +55,11 @@ public class UpdateManager {
         }
     }
 
-    public void verificarSilenciosamente() {
-        verificar(false);
-    }
-
-    public void verificarManualmente() {
-        verificar(true);
-    }
+    public void verificarSilenciosamente() { verificar(false); }
+    public void verificarManualmente() { verificar(true); }
 
     /** Verifica atualizações ao retornar para o aplicativo. */
-    public void verificarAoAbrir() {
-        verificar(false);
-    }
+    public void verificarAoAbrir() { verificar(false); }
 
     private void verificar(boolean manual) {
         if (!manual && !podeVerificarSilenciosamente()) return;
@@ -116,7 +109,11 @@ public class UpdateManager {
 
                 activity.runOnUiThread(() -> {
                     if (update) {
-                        if (!manual) marcarPrompt(finalLatest);
+                        if (!manual) {
+                            String ultimoPrompt = prefs.getString("last_prompt_version", "");
+                            if (finalLatest.equals(ultimoPrompt)) return;
+                            marcarPrompt(finalLatest);
+                        }
                         mostrarAtualizacao(finalLatest, finalApkUrl);
                     } else if (manual) {
                         Toast.makeText(activity, "Você já está usando a versão mais recente.", Toast.LENGTH_SHORT).show();
