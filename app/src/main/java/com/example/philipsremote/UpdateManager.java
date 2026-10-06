@@ -325,6 +325,8 @@ public class UpdateManager {
                 return;
             }
 
+            // Limpa o estado antes de abrir o instalador para evitar reinstalação em loop após o update.
+            limparDownload();
             Intent install = new Intent(Intent.ACTION_INSTALL_PACKAGE);
             install.setData(uri);
             install.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
