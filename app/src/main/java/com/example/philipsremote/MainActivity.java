@@ -1006,6 +1006,7 @@ render[0]=()->{
     }
 
     private void send(int command){
+        if(controleAtivo!=null && "Ventilador Universal".equals(controleAtivo.perfil) && command>=1 && command<=5){ irPerfilTeste.transmitirVentilador(command); return; }
         if(ir==null||!ir.hasIrEmitter()){
             Toast.makeText(this,"Este telemóvel não possui emissor IR.",Toast.LENGTH_SHORT).show(); return;
         }
