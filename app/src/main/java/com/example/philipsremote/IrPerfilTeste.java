@@ -96,7 +96,7 @@ public class IrPerfilTeste {
     public String getPerfil(){return perfil;}
     public int position(){return pos;}
     public int total(){return itens.size();}
-    public void reset(){pos=0; ultimoFuncionou=null;}
+    public void reset(){pos=0; ultimoFuncionou=null; rc6Toggle=false;}
     public String lastDescription(){
         return ultimoFuncionou==null ? "" : ultimoFuncionou.nome;
     }
@@ -117,24 +117,29 @@ public class IrPerfilTeste {
     }
 
     /** Transmite um código já confirmado e salvo pelo usuário. */
-    public boolean transmitirSalvo(String perfilSalvo,int codigo){
+    public boolean transmitirSalvo(String perfilSalvo,int codigo){ return transmitirSalvo(perfilSalvo,codigo,0); }
+
+    /** Transmite usando a frequência salva quando ela é válida; 0 usa a frequência padrão do perfil. */
+    public boolean transmitirSalvo(String perfilSalvo,int codigo,int frequenciaSalva){
         if(!hasEmitter() || codigo<0) return false;
         try{
             int addr=(codigo >> 8) & 0xFF;
             int cmd=codigo & 0xFF;
-            if(perfilSalvo.equals("LG / NEC")) tx(38000,nec(codigo>255?addr:0x04,cmd));
-            else if(perfilSalvo.equals("Samsung TV")) tx(38000,samsung(codigo>255?addr:0x07,cmd));
-            else if(perfilSalvo.equals("Sony TV")) tx(40000,sony(codigo>255?addr:0x01,cmd));
-            else if(perfilSalvo.equals("Philips / RC5")) tx(36000,rc5(codigo>255?addr:0x00,cmd,false));
-            else if(perfilSalvo.equals("Philips / RC6")) { rc6Toggle=!rc6Toggle; tx(36000,rc6(codigo>255?addr:0x00,cmd,rc6Toggle)); }
-            else if(perfilSalvo.equals("Panasonic TV")) tx(37000,panasonic(codigo & 0xFF));
-            else if(perfilSalvo.equals("AOC / NEC") || perfilSalvo.equals("TCL / NEC") || perfilSalvo.equals("Philco / NEC") || perfilSalvo.equals("Semp / NEC") || perfilSalvo.equals("Toshiba / JVC / NEC")) tx(38000,nec(codigo>255?addr:0x00,cmd));
-            else if(perfilSalvo.equals("AC Coolix")) tx(38000,coolix(codigo));
-            else if(perfilSalvo.equals("AC Midea")) tx(38000,midea(codigo));
+            if(perfilSalvo.equals("LG / NEC")) tx(frequenciaOuPadrao(frequenciaSalva,38000),nec(codigo>255?addr:0x04,cmd));
+            else if(perfilSalvo.equals("Samsung TV")) tx(frequenciaOuPadrao(frequenciaSalva,38000),samsung(codigo>255?addr:0x07,cmd));
+            else if(perfilSalvo.equals("Sony TV")) tx(frequenciaOuPadrao(frequenciaSalva,40000),sony(codigo>255?addr:0x01,cmd));
+            else if(perfilSalvo.equals("Philips / RC5")) tx(frequenciaOuPadrao(frequenciaSalva,36000),rc5(codigo>255?addr:0x00,cmd,false));
+            else if(perfilSalvo.equals("Philips / RC6")) { rc6Toggle=!rc6Toggle; tx(frequenciaOuPadrao(frequenciaSalva,36000),rc6(codigo>255?addr:0x00,cmd,rc6Toggle)); }
+            else if(perfilSalvo.equals("Panasonic TV")) tx(frequenciaOuPadrao(frequenciaSalva,37000),panasonic(codigo & 0xFF));
+            else if(perfilSalvo.equals("AOC / NEC") || perfilSalvo.equals("TCL / NEC") || perfilSalvo.equals("Philco / NEC") || perfilSalvo.equals("Semp / NEC") || perfilSalvo.equals("Toshiba / JVC / NEC")) tx(frequenciaOuPadrao(frequenciaSalva,38000),nec(codigo>255?addr:0x00,cmd));
+            else if(perfilSalvo.equals("AC Coolix")) tx(frequenciaOuPadrao(frequenciaSalva,38000),coolix(codigo));
+            else if(perfilSalvo.equals("AC Midea")) tx(frequenciaOuPadrao(frequenciaSalva,38000),midea(codigo));
             else return false;
             return true;
         }catch(Exception e){ return false; }
     }
+
+    private int frequenciaOuPadrao(int salva,int padrao){ return salva>0 ? salva : padrao; }
 
     public String next(){
         if(!hasEmitter())return "Emissor IR não detectado";
