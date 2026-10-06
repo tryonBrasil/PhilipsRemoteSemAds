@@ -116,10 +116,10 @@ public class MainActivity extends Activity {
         root.setGravity(Gravity.CENTER_HORIZONTAL); root.setPadding(dp(18),dp(28),dp(18),dp(30));
         TextView title=label("ESCOLHA O CONTROLE",28); title.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
         root.addView(title,new LinearLayout.LayoutParams(-1,dp(52)));
-        TextView sub=label("Seu controle remoto por infravermelho",15); sub.setTextColor(GRAY);
+        TextView sub=label("Controle remoto por infravermelho • rápido e sem anúncios",14); sub.setTextColor(GRAY);
         root.addView(sub,new LinearLayout.LayoutParams(-1,dp(30)));
         List<ControleStorage.Controle> salvosHome=controleStorage.listar();
-        TextView resumo=label(salvosHome.isEmpty()?"Nenhum controle salvo":"✓ "+salvosHome.size()+" controle"+(salvosHome.size()>1?"s":"")+" salvo"+(salvosHome.size()>1?"s":""),13);
+        TextView resumo=label(salvosHome.isEmpty()?"Nenhum dispositivo salvo":"● "+salvosHome.size()+" dispositivo"+(salvosHome.size()>1?"s":"")+" salvo"+(salvosHome.size()>1?"s":""),13);
         resumo.setTextColor(salvosHome.isEmpty()?GRAY:Color.rgb(75,145,95));
         root.addView(resumo,new LinearLayout.LayoutParams(-1,dp(30)));
         if(controleAtivo!=null){
@@ -134,7 +134,7 @@ public class MainActivity extends Activity {
         LinearLayout lg=tvCard("LG","32LB620B",lgMode,v->{lgMode=true;});
         LinearLayout.LayoutParams cl=new LinearLayout.LayoutParams(-1,dp(125)); cl.setMargins(0,dp(10),0,dp(24)); root.addView(lg,cl);
         TextView chosen=label(lgMode?"✓ LG 32LB620B":"✓ Philips 50PUG6513/7",15); chosen.setTextColor(Color.rgb(75,145,95));
-        root.addView(chosen,new LinearLayout.LayoutParams(-1,dp(34)));
+        root.addView(chosen,new LinearLayout.LayoutParams(-1,dp(38)));
         Button continueBtn=new Button(this); continueBtn.setText("CONTINUAR"); continueBtn.setTextColor(WHITE); continueBtn.setTextSize(17); continueBtn.setAllCaps(false);
         GradientDrawable bg=new GradientDrawable(); bg.setColor(Color.rgb(190,24,32)); bg.setCornerRadius(dp(18)); continueBtn.setBackground(bg); continueBtn.setOnClickListener(v->{prefs.edit().putBoolean("lg_mode",lgMode).apply();showingSelector=false;build();});
         root.addView(continueBtn,new LinearLayout.LayoutParams(-1,dp(58)));
@@ -421,7 +421,7 @@ public class MainActivity extends Activity {
         root.setPadding(dp(10),dp(8),dp(10),dp(28)); root.setBackgroundColor(BG);
 
         LinearLayout modelRow=row();
-        TextView title=label("CONTROLE REMOTO",21);
+        TextView title=label("CONTROLE REMOTO",22);
         title.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
         modelRow.addView(title,new LinearLayout.LayoutParams(0,dp(48),1));
 
@@ -434,7 +434,7 @@ public class MainActivity extends Activity {
 
         TextView selected=label(controleAtivo!=null ? "●  "+controleAtivo.nome+"  •  "+controleAtivo.marca+" "+controleAtivo.modelo : (lgMode?"●  LG • 32LB620B":"●  PHILIPS • 50PUG6513/7"),13);
         selected.setTextColor(controleAtivo!=null?Color.rgb(90,170,105):Color.rgb(150,150,155));
-        root.addView(selected,new LinearLayout.LayoutParams(-1,dp(26)));
+        LinearLayout.LayoutParams selectedParams=new LinearLayout.LayoutParams(-1,dp(32)); selectedParams.setMargins(0,0,0,dp(2)); root.addView(selected,selectedParams);
 
         LinearLayout r=row();
         Button powerButton=new Button(this); powerButton.setText("");
