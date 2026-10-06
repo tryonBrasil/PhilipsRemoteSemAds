@@ -63,6 +63,14 @@ public class MainActivity extends Activity {
 
     private int dp(float v){ return (int)(v*getResources().getDisplayMetrics().density+0.5f); }
 
+    private void actionFeedback(View v){
+        v.setHapticFeedbackEnabled(true);
+        v.setOnTouchListener((view,event)->{
+            if(event.getAction()==android.view.MotionEvent.ACTION_DOWN) view.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP);
+            return false;
+        });
+    }
+
     private Button key(String text,int cmd,int h){ return key(text,cmd,h,KEY,16); }
 
     private Button key(String text,int cmd,int h,int color,int size){
@@ -132,10 +140,10 @@ public class MainActivity extends Activity {
         root.addView(continueBtn,new LinearLayout.LayoutParams(-1,dp(58)));
         TextView info=label("A escolha ficará salva para a próxima vez.",12); info.setTextColor(GRAY); root.addView(info,new LinearLayout.LayoutParams(-1,dp(42)));
         Button meus=new Button(this); meus.setText("★  MEUS CONTROLES"); meus.setTextColor(WHITE); meus.setTextSize(14); meus.setAllCaps(false);
-        GradientDrawable meusBg=new GradientDrawable(); meusBg.setColor(KEY_DARK); meusBg.setCornerRadius(dp(16)); meus.setBackground(meusBg); meus.setOnClickListener(v->showMeusControles());
+        GradientDrawable meusBg=new GradientDrawable(); meusBg.setColor(KEY_DARK); meusBg.setCornerRadius(dp(16)); meus.setBackground(meusBg); actionFeedback(meus); meus.setOnClickListener(v->showMeusControles());
         root.addView(meus,new LinearLayout.LayoutParams(-1,dp(52)));
         Button atualizar=new Button(this); atualizar.setText("↻  VERIFICAR ATUALIZAÇÃO"); atualizar.setTextColor(WHITE); atualizar.setTextSize(13); atualizar.setAllCaps(false);
-        GradientDrawable atualizarBg=new GradientDrawable(); atualizarBg.setColor(KEY_DARK); atualizarBg.setCornerRadius(dp(16)); atualizar.setBackground(atualizarBg); atualizar.setOnClickListener(v->updateManager.verificarManualmente());
+        GradientDrawable atualizarBg=new GradientDrawable(); atualizarBg.setColor(KEY_DARK); atualizarBg.setCornerRadius(dp(16)); atualizar.setBackground(atualizarBg); actionFeedback(atualizar); atualizar.setOnClickListener(v->updateManager.verificarManualmente());
         LinearLayout.LayoutParams atualizarParams=new LinearLayout.LayoutParams(-1,dp(50)); atualizarParams.setMargins(0,dp(8),0,0); root.addView(atualizar,atualizarParams);
         sv.addView(root); setContentView(sv);
     }
@@ -420,7 +428,7 @@ public class MainActivity extends Activity {
         Button change= new Button(this);
         change.setText("TROCAR TV"); change.setTextColor(WHITE); change.setTextSize(12); change.setAllCaps(false);
         GradientDrawable changeBg=new GradientDrawable(); changeBg.setColor(KEY_DARK); changeBg.setCornerRadius(dp(14));
-        change.setBackground(changeBg); change.setOnClickListener(v->showSelector());
+        change.setBackground(changeBg); actionFeedback(change); change.setOnClickListener(v->showSelector());
         modelRow.addView(change,new LinearLayout.LayoutParams(dp(112),dp(44)));
         root.addView(modelRow);
 
