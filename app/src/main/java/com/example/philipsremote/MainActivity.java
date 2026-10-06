@@ -368,7 +368,7 @@ public class MainActivity extends Activity {
         root.addView(resumo,new LinearLayout.LayoutParams(-1,dp(30)));
         final LinearLayout listaBox=new LinearLayout(this); listaBox.setOrientation(LinearLayout.VERTICAL); root.addView(listaBox,new LinearLayout.LayoutParams(-1,-2));
 
-        Runnable render=()->{
+        final Runnable[] render=new Runnable[1];\n        render[0]=()->{
             listaBox.removeAllViews();
             String filtro=busca.getText().toString().trim().toLowerCase(java.util.Locale.ROOT);
             List<ControleStorage.Controle> todos=controleStorage.listar();
@@ -415,7 +415,7 @@ public class MainActivity extends Activity {
                 copiar.setOnClickListener(v->{
                     ControleStorage.Controle novo=controleStorage.duplicar(c,c.nome+" (cópia)");
                     if(novo!=null) Toast.makeText(this,"✓ Controle duplicado",Toast.LENGTH_SHORT).show();
-                    render.run();
+                    render[0].run();
                 });
 
                 LinearLayout editRow=row();
@@ -429,7 +429,7 @@ public class MainActivity extends Activity {
                     new android.app.AlertDialog.Builder(this).setTitle("Renomear controle").setView(campo)
                         .setNegativeButton("CANCELAR",null).setPositiveButton("SALVAR",(d,w)->{
                             String novoNome=campo.getText().toString().trim();
-                            if(!novoNome.isEmpty()){controleStorage.renomear(c,novoNome);render.run();}
+                            if(!novoNome.isEmpty()){controleStorage.renomear(c,novoNome);render[0].run();}
                         }).show();
                 });
                 excluir.setOnClickListener(v->new android.app.AlertDialog.Builder(this).setTitle("Excluir controle?")
@@ -444,7 +444,7 @@ public class MainActivity extends Activity {
             public void onTextChanged(CharSequence s,int st,int before,int count){render.run();}
             public void afterTextChanged(android.text.Editable e){}
         });
-        render.run();
+        render[0].run();
 
         Button add=new Button(this); add.setText("+  ADICIONAR OUTRO CONTROLE"); add.setTextColor(WHITE); add.setTextSize(13); add.setAllCaps(false);
         GradientDrawable addBg=new GradientDrawable(); addBg.setColor(ACCENT); addBg.setCornerRadius(dp(16)); add.setBackground(addBg); actionFeedback(add); add.setOnClickListener(v->showAddControlWizard());
