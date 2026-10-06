@@ -283,8 +283,8 @@ public class MainActivity extends Activity {
 
     private void showAprenderComandos(ControleStorage.Controle controle){
         if(controle==null){ showMeusControles(); return; }
-        final String[] funcoes={"Ligar/desligar","Mute","Volume +","Volume -","Canal +","Canal -","Cima","Baixo","Esquerda","Direita","OK","Voltar","Menu","Home","Source","Info","Guide","Netflix","Configurações","Play","Pause","Stop","Retroceder","Avançar","Subtitle","Exit"};
-        final String[] chaves={"POWER","MUTE","VOL_UP","VOL_DOWN","CH_UP","CH_DOWN","UP","DOWN","LEFT","RIGHT","OK","BACK","MENU","HOME","SOURCE","INFO","GUIDE","NETFLIX","SETTINGS","PLAY","PAUSE","STOP","REWIND","FAST_FORWARD","SUBTITLE","EXIT"};
+        final String[] funcoes={"Ligar/desligar","Mute","Volume +","Volume -","Canal +","Canal -","Cima","Baixo","Esquerda","Direita","OK","Voltar","Menu","Home","Source","Info","Guide","Netflix","Configurações","Vermelho","Verde","Amarelo","Azul","Play","Pause","Stop","Retroceder","Avançar","Subtitle","Exit"};
+        final String[] chaves={"POWER","MUTE","VOL_UP","VOL_DOWN","CH_UP","CH_DOWN","UP","DOWN","LEFT","RIGHT","OK","BACK","MENU","HOME","SOURCE","INFO","GUIDE","NETFLIX","SETTINGS","RED","GREEN","YELLOW","BLUE","PLAY","PAUSE","STOP","REWIND","FAST_FORWARD","SUBTITLE","EXIT"};
         final int[] pos={Math.max(0,Math.min(aprenderFuncaoPos,funcoes.length-1))};
         final String[] perfis=irPerfilTeste.perfis();
 
@@ -578,7 +578,7 @@ public class MainActivity extends Activity {
 
         section(root,"TECLADO");
         String[][] nums={{"1","2 ABC","3 DEF"},{"4 GHI","5 JKL","6 MNO"},{"7 PQRS","8 TUV","9 WXYZ"},{"CC","0","SUBTITLE"}};
-        int[][] cmds={{1,2,3},{4,5,6},{7,8,9},{0,0x3C,SUBTITLE}};
+        int[][] cmds={{1,2,3},{4,5,6},{7,8,9},{0x3C,0,SUBTITLE}};
         for(int i=0;i<nums.length;i++){ r=row(); for(int j=0;j<3;j++){
             int fs=(i==0&&j==0)?20:14; add(r,key(nums[i][j],cmds[i][j],50,KEY_DARK,fs));
         } root.addView(r); }
@@ -647,7 +647,7 @@ public class MainActivity extends Activity {
             case CH_UP:return "CH_UP"; case CH_DOWN:return "CH_DOWN";
             case UP:return "UP"; case DOWN:return "DOWN"; case LEFT:return "LEFT"; case RIGHT:return "RIGHT"; case OK:return "OK";
             case BACK:return "BACK"; case MENU:return "MENU"; case HOME:return "HOME"; case SOURCE:return "SOURCE"; case INFO:return "INFO"; case GUIDE:return "GUIDE";
-            case NETFLIX:return "NETFLIX"; case SETTINGS:return "SETTINGS"; case PLAY:return "PLAY"; case PAUSE:return "PAUSE"; case STOP:return "STOP";
+            case NETFLIX:return "NETFLIX"; case SETTINGS:return "SETTINGS"; case RED:return "RED"; case GREEN:return "GREEN"; case YELLOW:return "YELLOW"; case BLUE:return "BLUE"; case PLAY:return "PLAY"; case PAUSE:return "PAUSE"; case STOP:return "STOP";
             case REWIND:return "REWIND"; case FAST_FORWARD:return "FAST_FORWARD"; case SUBTITLE:return "SUBTITLE"; case EXIT:return "EXIT";
             default:return "";
         }
