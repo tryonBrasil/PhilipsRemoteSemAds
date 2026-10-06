@@ -38,6 +38,7 @@ public class UpdateManager {
     private final SharedPreferences prefs;
     private BroadcastReceiver receiver;
     private boolean checking = false;
+    private boolean esperandoPermissaoInstalacao = false;
 
     public UpdateManager(Activity activity) {
         this.activity = activity;
@@ -316,11 +317,12 @@ public class UpdateManager {
             }
 
             if (Build.VERSION.SDK_INT >= 26 && !activity.getPackageManager().canRequestPackageInstalls()) {
+                esperandoPermissaoInstalacao = true;
                 new android.app.AlertDialog.Builder(activity)
-                    .setTitle("Permitir atualização")
-                    .setMessage("Ative a permissão para instalar aplicativos desta fonte. Depois volte ao IR Remote BR para continuar a instalação.")
-                    .setNegativeButton("CANCELAR", null)
-                    .setPositiveButton("ABRIR CONFIGURAÇÕES", (d, w) -> {
+                    .setTitle("Pronto para instalar")
+                    .setMessage("A atualização já foi baixada. Só falta permitir que o IR Remote BR instale atualizações. Toque em CONFIGURAÇÕES e ative \"Permitir desta fonte\". Ao voltar, a instalação continuará automaticamente.")
+                    .setNegativeButton("CANCELAR", (d, w) -> esperandoPermissaoInstalacao = false)
+                    .setPositiveButton("CONFIGURAÇÕES", (d, w) -> {
                         Intent settings = new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES);
                         settings.setData(Uri.parse("package:" + activity.getPackageName()));
                         activity.startActivity(settings);
@@ -328,7 +330,14 @@ public class UpdateManager {
                 return;
             }
 
-            // Limpa o estado antes de abrir o instalador para evitar reinstalação em loop após o update.
+            abrirInstalador(uri);
+        } catch (Exception e) {
+            Toast.makeText(activity, "Não foi possível abrir o instalador.", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void abrirInstalador(Uri uri) {
+        try {
             limparDownload();
             Intent install = new Intent(Intent.ACTION_INSTALL_PACKAGE);
             install.setData(uri);
@@ -336,6 +345,13 @@ public class UpdateManager {
             activity.startActivity(install);
         } catch (Exception e) {
             Toast.makeText(activity, "Não foi possível abrir o instalador.", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    public void aoRetornarDoSistema() {
+        if (esperandoPermissaoInstalacao) {
+            esperandoPermissaoInstalacao = false;
+            activity.runOnUiThread(() -> verificarDownloadPendente(false));
         }
     }
 
