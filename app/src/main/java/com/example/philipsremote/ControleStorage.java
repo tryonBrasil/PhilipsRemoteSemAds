@@ -95,6 +95,16 @@ public class ControleStorage {
         }catch(Exception e){return "";}
     }
 
+    public int quantidadeComandos(Controle controle){
+        if(controle==null || controle.comandos==null) return 0;
+        return controle.comandos.length();
+    }
+
+    public boolean possuiComando(Controle controle,String funcao){
+        if(controle==null || funcao==null || funcao.isEmpty()) return false;
+        return controle.comandos!=null && controle.comandos.has(funcao);
+    }
+
     public int frequenciaComando(Controle controle,String funcao){
         if(controle==null || funcao==null) return 0;
         try{
