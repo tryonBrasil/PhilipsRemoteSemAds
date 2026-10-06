@@ -185,7 +185,10 @@ public class MainActivity extends Activity {
 
     @Override protected void onResume(){
         super.onResume();
-        if(updateManager!=null) updateManager.verificarAoAbrir();
+        if(updateManager!=null){
+            updateManager.aoRetornarDoSistema();
+            updateManager.verificarAoAbrir();
+        }
     }
 
     @Override protected void onDestroy(){
