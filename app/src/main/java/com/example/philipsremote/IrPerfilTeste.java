@@ -26,7 +26,7 @@ public class IrPerfilTeste {
     public boolean hasEmitter(){return ir!=null&&ir.hasIrEmitter();}
 
     public String[] perfis(){
-        return new String[]{"LG / NEC","Samsung TV","Sony TV","Philips / RC5","Philips / RC6","Toshiba / JVC / NEC","AC Coolix","AC Midea"};
+        return new String[]{"LG / NEC","Samsung TV","Sony TV","Philips / RC5","Philips / RC6","Panasonic TV","AOC / NEC","TCL / NEC","Philco / NEC","Semp / NEC","Toshiba / JVC / NEC","AC Coolix","AC Midea"};
     }
 
     public void selecionar(String p){
@@ -46,7 +46,7 @@ public class IrPerfilTeste {
         } else if(p.equals("Philips / RC6")){
             int[] cs={0x0C,0x10,0x11,0x12,0x13,0x14,0x20,0x21,0x22,0x23,0x24,0x25,0x38,0x3D};
             for(int c:cs)itens.add(new Item(String.format(Locale.US,"RC6 addr 0x00 • 0x%02X",c),RC6,0x00,c));
-        } else if(p.equals("Toshiba / JVC / NEC")){
+        } else if(p.equals("Panasonic TV")){\n            int[] addrs={0x00,0x40,0x20,0x10};\n            int[] cs={0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0A,0x0B,0x10,0x11,0x12,0x13,0x14,0x15,0x16,0x17,0x18,0x19,0x1A};\n            for(int a:addrs)for(int c:cs)itens.add(new Item(String.format(Locale.US,"Panasonic/NEC addr 0x%02X • 0x%02X",a,c),NEC,a,c));\n        } else if(p.equals("AOC / NEC") || p.equals("TCL / NEC") || p.equals("Philco / NEC") || p.equals("Semp / NEC")){\n            int[] addrs={0x00,0x01,0x04,0x08,0x10,0x20,0x40,0x80};\n            int[] cs={0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0A,0x0B,0x10,0x11,0x12,0x13,0x14,0x15,0x16,0x18,0x19,0x1A,0x1B,0x20,0x21,0x22,0x40,0x41,0x43,0x44};\n            for(int a:addrs)for(int c:cs)itens.add(new Item(String.format(Locale.US,"%s addr 0x%02X • 0x%02X",p.replace(" / NEC",""),a,c),NEC,a,c));\n        } else if(p.equals("Toshiba / JVC / NEC")){
             int[] addrs={0x00,0x01,0x02,0x04,0x10,0x40};
             int[] cs={0x08,0x02,0x03,0x09,0x00,0x01,0x40,0x41,0x06,0x07,0x44,0x43,0x0B};
             for(int a:addrs)for(int c:cs)itens.add(new Item(String.format(Locale.US,"NEC addr 0x%02X • 0x%02X",a,c),NEC,a,c));
@@ -87,7 +87,7 @@ public class IrPerfilTeste {
             else if(perfilSalvo.equals("Sony TV")) ir.transmit(40000,sony(0x01,codigo));
             else if(perfilSalvo.equals("Philips / RC5")) ir.transmit(36000,rc5(0x00,codigo,false));
             else if(perfilSalvo.equals("Philips / RC6")) ir.transmit(36000,rc6(0x00,codigo,false));
-            else if(perfilSalvo.equals("Toshiba / JVC / NEC")) ir.transmit(38000,nec(0x00,codigo));
+            else if(perfilSalvo.equals("Panasonic TV") || perfilSalvo.equals("AOC / NEC") || perfilSalvo.equals("TCL / NEC") || perfilSalvo.equals("Philco / NEC") || perfilSalvo.equals("Semp / NEC") || perfilSalvo.equals("Toshiba / JVC / NEC")) ir.transmit(38000,nec(0x00,codigo));
             else if(perfilSalvo.equals("AC Coolix")) ir.transmit(38000,coolix(codigo));
             else if(perfilSalvo.equals("AC Midea")) ir.transmit(38000,midea(codigo));
             else return false;
