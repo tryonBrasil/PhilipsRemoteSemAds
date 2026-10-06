@@ -256,19 +256,41 @@ private static final int CARD_2 = Color.rgb(31,31,36);
 
         LinearLayout box=new LinearLayout(this);
         box.setOrientation(LinearLayout.VERTICAL);
-        box.setPadding(dp(18),dp(8),dp(18),dp(4));
-        TextView status=label("Candidato 0 • "+perfilInicial,15);
-        status.setTextColor(GRAY);
-        status.setGravity(Gravity.CENTER);
-        box.addView(status,new LinearLayout.LayoutParams(-1,dp(70)));
+        box.setPadding(dp(18),dp(8),dp(18),dp(8));
 
-        TextView detalhe=label("Perfil automático: "+perfilInicial+"\nPressione TESTAR PRÓXIMO até a TV reagir.",13);
+        TextView etapa=label("PASSO 3 DE 3  •  TESTE IR",12);
+        etapa.setTextColor(ACCENT);
+        etapa.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
+        box.addView(etapa,new LinearLayout.LayoutParams(-1,dp(28)));
+
+        TextView aparelho=label(marca+" "+modelo,18);
+        aparelho.setTextColor(WHITE);
+        aparelho.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
+        box.addView(aparelho,new LinearLayout.LayoutParams(-1,dp(34)));
+
+        TextView status=label("●  Pronto para testar",15);
+        status.setTextColor(GRAY);
+        status.setGravity(Gravity.CENTER_VERTICAL);
+        GradientDrawable statusBg=new GradientDrawable();
+        statusBg.setColor(CARD);
+        statusBg.setCornerRadius(dp(14));
+        statusBg.setStroke(dp(1),BORDER);
+        status.setPadding(dp(14),0,dp(14),0);
+        status.setBackground(statusBg);
+        box.addView(status,new LinearLayout.LayoutParams(-1,dp(58)));
+
+        TextView detalhe=label("Perfil automático: "+perfilInicial+"\nAponte o celular para a TV e toque em TESTAR PRÓXIMO.",13);
         detalhe.setTextColor(GRAY);
-        detalhe.setGravity(Gravity.CENTER);
-        box.addView(detalhe,new LinearLayout.LayoutParams(-1,dp(64)));
+        detalhe.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
+        box.addView(detalhe,new LinearLayout.LayoutParams(-1,dp(70)));
+
+        TextView progresso=label("Candidato 0",12);
+        progresso.setTextColor(GRAY);
+        progresso.setGravity(Gravity.CENTER);
+        box.addView(progresso,new LinearLayout.LayoutParams(-1,dp(28)));
 
         android.app.AlertDialog dialog=new android.app.AlertDialog.Builder(this)
-            .setTitle("TESTE UNIVERSAL • "+marca+" "+modelo)
+            .setTitle("TESTE UNIVERSAL")
             .setView(box)
             .setNegativeButton("CANCELAR",(d,w)->showMeusControles())
             .setNeutralButton("TESTAR PRÓXIMO",null)
@@ -280,13 +302,15 @@ private static final int CARD_2 = Color.rgb(31,31,36);
             Button salvar=dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE);
             testar.setOnClickListener(v->{
                 String resultado=irPerfilTeste.next();
-                status.setText(resultado);
+                status.setText("●  "+resultado);
+                status.setTextColor(SUCCESS);
                 int atual=irPerfilTeste.position();
                 int total=irPerfilTeste.total();
+                progresso.setText("Candidato "+atual+" de "+total);
                 if(atual>=total){
-                    detalhe.setText("Fim dos candidatos deste perfil. Se a TV não respondeu, cancele e tente outro perfil.");
+                    detalhe.setText("Fim dos candidatos deste perfil. Se a TV não respondeu, cancele e tente novamente.");
                 }else{
-                    detalhe.setText("Candidato "+atual+" de "+total+" • Se a TV respondeu, toque em FUNCIONOU / SALVAR.");
+                    detalhe.setText("Código enviado. Observe a TV.\nSe ela respondeu, toque em FUNCIONOU / SALVAR.");
                 }
             });
             salvar.setOnClickListener(v->{
