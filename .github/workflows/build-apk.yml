@@ -24,17 +24,32 @@ jobs:
       - name: Dar permissao ao Gradle Wrapper
         run: chmod +x gradlew
 
-      - name: Gerar APK
-        run: ./gradlew --no-daemon clean assembleDebug
+      - name: Preparar keystore
+        env:
+          KEYSTORE_B64: ${{ secrets.KEYSTORE_B64 }}
+        run: |
+          test -n "$KEYSTORE_B64"
+          echo "$KEYSTORE_B64" | base64 --decode > ir-remote-release.jks
+          test -s ir-remote-release.jks
 
-      - name: Verificar APK
-        run: test -f app/build/outputs/apk/debug/app-debug.apk
+      - name: Gerar APK Release assinado
+        env:
+          KEYSTORE_FILE: ${{ github.workspace }}/ir-remote-release.jks
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: ./gradlew --no-daemon clean assembleRelease
+
+      - name: Verificar APK assinado
+        run: |
+          test -f app/build/outputs/apk/release/app-release.apk
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose app/build/outputs/apk/release/app-release.apk
 
       - name: Disponibilizar APK
         uses: actions/upload-artifact@v4
         with:
-          name: PhilipsRemoteSemAds-debug
-          path: app/build/outputs/apk/debug/app-debug.apk
+          name: PhilipsRemoteSemAds-release
+          path: app/build/outputs/apk/release/app-release.apk
 
       - name: Publicar atualização
         env:
@@ -43,8 +58,12 @@ jobs:
           VERSION=$(sed -n "s/.*versionName '\([^']*\)'.*/\1/p" app/build.gradle)
           TAG="v$VERSION"
           if ! gh release view "$TAG" >/dev/null 2>&1; then
-            gh release create "$TAG" app/build/outputs/apk/debug/app-debug.apk --title "IR Remote BR $VERSION" --generate-notes
+            gh release create "$TAG" app/build/outputs/apk/release/app-release.apk --title "IR Remote BR $VERSION" --generate-notes
           else
-            gh release upload "$TAG" app/build/outputs/apk/debug/app-debug.apk --clobber
+            gh release upload "$TAG" app/build/outputs/apk/release/app-release.apk --clobber
             echo "Release $TAG atualizada."
           fi
+
+      - name: Limpar keystore
+        if: always()
+        run: rm -f ir-remote-release.jks
