@@ -6,7 +6,7 @@ import android.database.sqlite.SQLiteOpenHelper;
 
 public class ControleDatabase extends SQLiteOpenHelper {
     private static final String NAME = "ir_remote.db";
-    private static final int VERSION = 1;
+    private static final int VERSION = 2;
 
     public ControleDatabase(Context context) {
         super(context.getApplicationContext(), NAME, null, VERSION);
@@ -23,7 +23,8 @@ public class ControleDatabase extends SQLiteOpenHelper {
                 "descricao TEXT," +
                 "codigo INTEGER NOT NULL DEFAULT -1," +
                 "frequencia INTEGER NOT NULL DEFAULT 38000," +
-                "created INTEGER NOT NULL)");
+                "created INTEGER NOT NULL," +
+                "updated INTEGER NOT NULL DEFAULT 0)");
         db.execSQL("CREATE TABLE commands (" +
                 "control_id INTEGER NOT NULL," +
                 "funcao TEXT NOT NULL," +
@@ -36,6 +37,14 @@ public class ControleDatabase extends SQLiteOpenHelper {
     }
 
     @Override public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-        // Reservado para futuras migrações do banco.
+        if(oldVersion < 2){
+            db.execSQL("ALTER TABLE controls ADD COLUMN updated INTEGER NOT NULL DEFAULT 0");
+            db.execSQL("UPDATE controls SET updated=created WHERE updated=0");
+        }
+    }
+
+    @Override public void onConfigure(SQLiteDatabase db) {
+        super.onConfigure(db);
+        db.setForeignKeyConstraintsEnabled(true);
     }
 }
