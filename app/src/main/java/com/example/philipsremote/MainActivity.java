@@ -153,6 +153,7 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         sub.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
         root.addView(sub,new LinearLayout.LayoutParams(-1,dp(30)));
         List<ControleStorage.Controle> salvosHome=controleStorage.listar();
+        boolean temControlesSalvos=!salvosHome.isEmpty();
         LinearLayout bancoCard=new LinearLayout(this); bancoCard.setOrientation(LinearLayout.HORIZONTAL); bancoCard.setGravity(Gravity.CENTER_VERTICAL);
         bancoCard.setPadding(dp(14),0,dp(14),0);
         GradientDrawable bancoBg=new GradientDrawable(); bancoBg.setColor(CARD); bancoBg.setCornerRadius(dp(15)); bancoBg.setStroke(dp(1),Color.rgb(55,55,60)); bancoCard.setBackground(bancoBg);
@@ -168,12 +169,18 @@ private static final int CARD_2 = Color.rgb(31,31,36);
             ativo.setPadding(dp(14),0,dp(14),0);
             root.addView(ativo,new LinearLayout.LayoutParams(-1,dp(42)));
         }
-        LinearLayout philips=tvCard("PHILIPS","50PUG6513/7",!lgMode,v->{lgMode=false;});
-        LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(-1,dp(125)); cp.setMargins(0,dp(28),0,dp(10)); root.addView(philips,cp);
-        LinearLayout lg=tvCard("LG","32LB620B",lgMode,v->{lgMode=true;});
-        LinearLayout.LayoutParams cl=new LinearLayout.LayoutParams(-1,dp(125)); cl.setMargins(0,dp(10),0,dp(24)); root.addView(lg,cl);
-        TextView chosen=label(lgMode?"✓ LG 32LB620B":"✓ Philips 50PUG6513/7",15); chosen.setTextColor(Color.rgb(75,145,95));
-        root.addView(chosen,new LinearLayout.LayoutParams(-1,dp(38)));
+        if(!temControlesSalvos){
+            LinearLayout philips=tvCard("PHILIPS","50PUG6513/7",!lgMode,v->{lgMode=false;});
+            LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(-1,dp(125)); cp.setMargins(0,dp(28),0,dp(10)); root.addView(philips,cp);
+            LinearLayout lg=tvCard("LG","32LB620B",lgMode,v->{lgMode=true;});
+            LinearLayout.LayoutParams cl=new LinearLayout.LayoutParams(-1,dp(125)); cl.setMargins(0,dp(10),0,dp(24)); root.addView(lg,cl);
+            TextView chosen=label(lgMode?"✓ LG 32LB620B":"✓ Philips 50PUG6513/7",15); chosen.setTextColor(Color.rgb(75,145,95));
+            root.addView(chosen,new LinearLayout.LayoutParams(-1,dp(38)));
+        } else {
+            TextView acesso=label("Seu controle salvo está disponível em MEUS CONTROLES.",14);
+            acesso.setTextColor(GRAY); acesso.setGravity(Gravity.CENTER);
+            LinearLayout.LayoutParams ap=new LinearLayout.LayoutParams(-1,dp(70)); ap.setMargins(0,dp(18),0,dp(4)); root.addView(acesso,ap);
+        }
         Button continueBtn=new Button(this); continueBtn.setText("CONTINUAR"); continueBtn.setTextColor(WHITE); continueBtn.setTextSize(17); continueBtn.setAllCaps(false);
         GradientDrawable bg=new GradientDrawable(); bg.setColor(Color.rgb(190,24,32)); bg.setCornerRadius(dp(18)); continueBtn.setBackground(bg); continueBtn.setOnClickListener(v->{prefs.edit().putBoolean("lg_mode",lgMode).apply();showingSelector=false;build();});
         root.addView(continueBtn,new LinearLayout.LayoutParams(-1,dp(58)));
@@ -773,8 +780,8 @@ render[0]=()->{
                 Toast.makeText(this,"Este botão ainda não foi configurado. Toque em EDITAR para aprendê-lo.",Toast.LENGTH_SHORT).show();
                 return;
             }
-            if(lgMode) ir.transmit(LG_FREQ,lgNec(command));
-            else { toggle=!toggle; ir.transmit(FREQ,rc6(0x00,command,toggle)); }
+            if(lgMode) transmitirSeguro(LG_FREQ,lgNec(command));
+            else { toggle=!toggle; transmitirSeguro(FREQ,rc6(0x00,command,toggle)); }
         }catch(Exception e){
             Toast.makeText(this,"Falha ao enviar IR: "+e.getMessage(),Toast.LENGTH_SHORT).show();
         }
