@@ -56,7 +56,10 @@ public class UpdateManager {
     }
 
     public void verificarSilenciosamente() { verificar(false); }
-    public void verificarManualmente() { verificar(true); }
+    public void verificarManualmente() {
+        // A verificação manual sempre consulta o GitHub, sem cooldown.
+        verificar(true);
+    }
 
     /** Verifica atualizações ao retornar para o aplicativo. */
     public void verificarAoAbrir() { verificar(false); }
@@ -93,12 +96,28 @@ public class UpdateManager {
                 JSONArray assets = release.optJSONArray("assets");
                 String apkUrl = "";
                 if (assets != null) {
+                    // Prioriza sempre o APK RELEASE. O APK DEBUG não deve ser usado
+                    // pelo atualizador, mesmo que esteja anexado à mesma Release.
                     for (int i = 0; i < assets.length(); i++) {
                         JSONObject asset = assets.getJSONObject(i);
                         String name = asset.optString("name", "");
-                        if (name.toLowerCase().endsWith(".apk")) {
+                        if ("app-release.apk".equalsIgnoreCase(name)) {
                             apkUrl = asset.optString("browser_download_url", "");
                             break;
+                        }
+                    }
+
+                    // Compatibilidade com futuras mudanças de nome: aceita apenas
+                    // APK que não seja debug.
+                    if (apkUrl.isEmpty()) {
+                        for (int i = 0; i < assets.length(); i++) {
+                            JSONObject asset = assets.getJSONObject(i);
+                            String name = asset.optString("name", "");
+                            String lower = name.toLowerCase();
+                            if (lower.endsWith(".apk") && !lower.contains("debug")) {
+                                apkUrl = asset.optString("browser_download_url", "");
+                                break;
+                            }
                         }
                     }
                 }
@@ -118,7 +137,6 @@ public class UpdateManager {
                         if (!manual) {
                             String ultimoPrompt = prefs.getString("last_prompt_version", "");
                             if (finalLatest.equals(ultimoPrompt)) return;
-                            marcarPrompt(finalLatest);
                         }
                         mostrarAtualizacao(finalLatest, finalApkUrl);
                     } else if (manual) {
@@ -180,6 +198,12 @@ public class UpdateManager {
     }
 
     private void baixar(String apkUrl, String versao) {
+        // Só registra a versão como avisada quando o usuário realmente inicia
+        // o download. Cancelar o diálogo não bloqueia o próximo aviso.
+        prefs.edit()
+            .putString("last_prompt_version", versao)
+            .putLong("last_silent_check", System.currentTimeMillis())
+            .apply();
         try {
             DownloadManager manager = (DownloadManager) activity.getSystemService(Context.DOWNLOAD_SERVICE);
             DownloadManager.Request request = new DownloadManager.Request(Uri.parse(apkUrl));
