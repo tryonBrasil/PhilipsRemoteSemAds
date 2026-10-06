@@ -535,6 +535,7 @@ public class MainActivity extends Activity {
         meusBg.setColor(KEY_DARK);
         meusBg.setCornerRadius(dp(16));
         meusControles.setBackground(meusBg);
+        actionFeedback(meusControles);
         meusControles.setOnClickListener(v->showMeusControles());
         LinearLayout.LayoutParams meusParams=new LinearLayout.LayoutParams(-1,dp(50));
         meusParams.setMargins(dp(2),dp(6),dp(2),0);
