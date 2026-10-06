@@ -12,6 +12,7 @@ import android.os.Build;
 import android.os.Environment;
 import android.provider.Settings;
 import android.widget.Toast;
+import android.content.SharedPreferences;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -32,9 +33,12 @@ public class UpdateManager {
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
     private long downloadId = -1;
     private BroadcastReceiver receiver;
+    private final SharedPreferences prefs;
+    private static final long SILENT_COOLDOWN_MS = 6L * 60L * 60L * 1000L;
 
     public UpdateManager(Activity activity) {
         this.activity = activity;
+        prefs = activity.getSharedPreferences("update_prefs", Context.MODE_PRIVATE);
         receiver = new BroadcastReceiver() {
             @Override public void onReceive(Context context, Intent intent) {
                 if (DownloadManager.ACTION_DOWNLOAD_COMPLETE.equals(intent.getAction())) {
@@ -65,6 +69,7 @@ public class UpdateManager {
     }
 
     private void verificar(boolean manual) {
+        if (!manual && !podeVerificarSilenciosamente()) return;
         executor.execute(() -> {
             HttpURLConnection connection = null;
             try {
@@ -111,6 +116,7 @@ public class UpdateManager {
 
                 activity.runOnUiThread(() -> {
                     if (update) {
+                        if (!manual) marcarPrompt(finalLatest);
                         mostrarAtualizacao(finalLatest, finalApkUrl);
                     } else if (manual) {
                         Toast.makeText(activity, "Você já está usando a versão mais recente.", Toast.LENGTH_SHORT).show();
@@ -126,6 +132,16 @@ public class UpdateManager {
                 if (connection != null) connection.disconnect();
             }
         });
+    }
+
+    private boolean podeVerificarSilenciosamente() {
+        long ultima = prefs.getLong("last_silent_check", 0L);
+        return System.currentTimeMillis() - ultima >= SILENT_COOLDOWN_MS;
+    }
+
+    private void marcarPrompt(String versao) {
+        prefs.edit().putLong("last_silent_check", System.currentTimeMillis())
+            .putString("last_prompt_version", versao).apply();
     }
 
     private String versaoAtual() {
@@ -168,7 +184,7 @@ public class UpdateManager {
             request.setDescription("Baixando atualização...");
             request.setMimeType("application/vnd.android.package-archive");
             request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
-            request.setDestinationInExternalFilesDir(activity, Environment.DIRECTORY_DOWNLOADS, "IRRemoteBR-update.apk");
+            request.setDestinationInExternalFilesDir(activity, Environment.DIRECTORY_DOWNLOADS, "IRRemoteBR-update-" + versao + ".apk");
             downloadId = manager.enqueue(request);
             Toast.makeText(activity, "Atualização iniciada. Aguarde o download.", Toast.LENGTH_LONG).show();
         } catch (Exception e) {
