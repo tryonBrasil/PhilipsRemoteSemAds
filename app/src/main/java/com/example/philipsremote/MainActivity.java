@@ -55,6 +55,12 @@ public class MainActivity extends Activity {
         irPerfilTeste=new IrPerfilTeste(this);
         prefs=getSharedPreferences("remote_prefs",MODE_PRIVATE);
         controleStorage=new ControleStorage(this);
+        long activeId=prefs.getLong("active_control_id",-1L);
+        if(activeId>0){
+            for(ControleStorage.Controle item:controleStorage.listar()){
+                if(item.id==activeId){ controleAtivo=item; break; }
+            }
+        }
         updateManager=new UpdateManager(this);
         updateManager.verificarSilenciosamente();
         lgMode=prefs.getBoolean("lg_mode",false);
@@ -239,7 +245,10 @@ public class MainActivity extends Activity {
                 controleStorage.salvar(nome,"TV",marca,modelo,perfil,descricao,codigo,freq);
                 dialog.dismiss();
                 List<ControleStorage.Controle> salvos=controleStorage.listar();
-                if(!salvos.isEmpty()) controleAtivo=salvos.get(salvos.size()-1);
+                if(!salvos.isEmpty()){
+                    controleAtivo=salvos.get(salvos.size()-1);
+                    prefs.edit().putLong("active_control_id",controleAtivo.id).apply();
+                }
                 lgMode="LG".equalsIgnoreCase(marca);
                 prefs.edit().putBoolean("lg_mode",lgMode).apply();
                 Toast.makeText(this,"✓ Controle salvo em Meus Controles.",Toast.LENGTH_SHORT).show();
@@ -318,6 +327,7 @@ public class MainActivity extends Activity {
                 GradientDrawable ab=new GradientDrawable(); ab.setColor(Color.rgb(55,80,55)); ab.setCornerRadius(dp(12)); abrir.setBackground(ab);
                 abrir.setOnClickListener(v->{
                     controleAtivo=c;
+                    prefs.edit().putLong("active_control_id",c.id).apply();
                     lgMode="LG".equals(c.marca); build();
                     Toast.makeText(this,"Controle "+c.nome+" carregado",Toast.LENGTH_SHORT).show();
                 });
@@ -349,7 +359,11 @@ public class MainActivity extends Activity {
                     new android.app.AlertDialog.Builder(this).setTitle("Excluir dispositivo?")
                         .setMessage("O controle " + c.nome + " será removido deste aparelho.")
                         .setNegativeButton("CANCELAR",null)
-                        .setPositiveButton("EXCLUIR",(d,w)->{ controleStorage.excluir(c); if(controleAtivo==c) controleAtivo=null; showMeusControles(); })
+                        .setPositiveButton("EXCLUIR",(d,w)->{ controleStorage.excluir(c);
+                            if(controleAtivo==c){
+                                controleAtivo=null;
+                                prefs.edit().remove("active_control_id").apply();
+                            } showMeusControles(); })
                         .show();
                 });
                 LinearLayout.LayoutParams exp=new LinearLayout.LayoutParams(-1,dp(42)); exp.setMargins(0,dp(5),0,dp(0)); card.addView(excluir,exp);
@@ -399,8 +413,9 @@ public class MainActivity extends Activity {
         else modelos=new String[]{"Modelo não informado","Outro modelo"};
         new android.app.AlertDialog.Builder(this).setTitle("2 de 3 • Modelo")
             .setItems(modelos,(d,w)->{
-                lgMode="LG".equals(marca); controleAtivo=null;
-                prefs.edit().putBoolean("lg_mode",lgMode).apply();
+                lgMode="LG".equals(marca);
+                controleAtivo=null;
+                prefs.edit().remove("active_control_id").putBoolean("lg_mode",lgMode).apply();
                 setupBrand=marca; setupModel=modelos[w];
                 showTvSetup(marca,modelos[w]);
             }).setNegativeButton("VOLTAR",(x,y)->showBrandWizard()).show();
