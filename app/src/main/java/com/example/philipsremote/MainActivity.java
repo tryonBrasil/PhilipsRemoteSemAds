@@ -755,6 +755,17 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         if(!showingSelector){ showSelector(); } else { super.onBackPressed(); }
     }
 
+    private boolean ehMarcaArCondicionado(String marca){
+        if(marca==null) return false;
+        String m=marca.trim().toLowerCase(java.util.Locale.ROOT);
+        return m.equals("midea") || m.equals("comfee") || m.equals("kaysun") || m.equals("mrcool")
+            || m.equals("pioneer") || m.equals("lennox") || m.equals("keystone") || m.equals("beko")
+            || m.equals("airwell") || m.equals("bosch") || m.equals("fisher") || m.equals("carrier")
+            || m.equals("springer") || m.equals("consul") || m.equals("elgin") || m.equals("electrolux")
+            || m.equals("philco") || m.equals("agratto") || m.equals("eos") || m.equals("gree")
+            || m.equals("daikin") || m.equals("fujitsu") || m.equals("mitsubishi") || m.equals("whirlpool");
+    }
+
     private int perfilInicialPara(String marca,String modelo,String[] perfis){
         if(marca==null) marca="";
         String alvo="";
@@ -849,7 +860,8 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         // Começa na categoria do aparelho de entrada; TV, AR e ventilador ficam separados.
         final String categoriaInicial =
                 "Ventilador".equalsIgnoreCase(marca) ? "FAN" :
-                ("Universal".equalsIgnoreCase(marca) ? "" : "TV");
+                ("Universal".equalsIgnoreCase(marca) ? "" :
+                (ehMarcaArCondicionado(marca) ? "AC" : "TV"));
         final String[] categoriaFiltro={categoriaInicial};
         LinearLayout filtros=row();
         Button filtroTodos=botaoAcao("TODOS",KEY_DARK,11);
