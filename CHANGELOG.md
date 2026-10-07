@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.3.5
+## 1.3.6
 - Correções nos encoders Sony SIRC, RC5, Samsung e AC.
 - Códigos salvos com separação correta.
 - Aprendizado ampliado para TV, CC e teclas numéricas.
