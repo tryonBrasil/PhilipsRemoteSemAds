@@ -41,6 +41,13 @@ jobs:
           printf '%s' "$KEYSTORE_B64" | base64 --decode > "$RUNNER_TEMP/release.jks"
           test -s "$RUNNER_TEMP/release.jks"
 
+      - name: Validate tag version
+        shell: bash
+        run: |
+          VERSION_NAME=$(sed -n "s/.*versionName '\([^']*\)'.*/\1/p" app/build.gradle)
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          test "$VERSION_NAME" = "$TAG_VERSION"
+
       - name: Build signed release
         env:
           KEYSTORE_FILE: ${{ runner.temp }}/release.jks
