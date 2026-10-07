@@ -44,7 +44,6 @@ public class MonetizationManager {
     public void addBanner(LinearLayout root) {
         if (isPremium()) return;
         FrameLayout box = new FrameLayout(activity);
-        box.setGravity(Gravity.CENTER);
         box.setPadding(0, 6, 0, 6);
         AdView ad = new AdView(activity);
         ad.setAdUnitId(BANNER_TEST_ID);
