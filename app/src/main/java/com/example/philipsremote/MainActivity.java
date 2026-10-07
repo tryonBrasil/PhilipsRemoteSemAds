@@ -843,13 +843,14 @@ render[0]=()->{
                 LinearLayout actions=row();
                 Button abrir=smallAction("ABRIR",Color.rgb(55,110,65));
                 Button config=smallAction("CONFIGURAR",Color.rgb(65,65,72));
-                Button copiar=smallAction("DUPLICAR",Color.rgb(55,65,80));
+                Button testar=smallAction("TESTAR",Color.rgb(55,65,80));
                 actions.addView(abrir,new LinearLayout.LayoutParams(0,dp(42),1));
                 actions.addView(config,new LinearLayout.LayoutParams(0,dp(42),1));
-                actions.addView(copiar,new LinearLayout.LayoutParams(0,dp(42),1));
+                actions.addView(testar,new LinearLayout.LayoutParams(0,dp(42),1));
                 card.addView(actions);
                 abrir.setOnClickListener(v->{controleAtivo=c;lgMode="LG".equalsIgnoreCase(c.marca);prefs.edit().putLong("active_control_id",c.id).putBoolean("lg_mode",lgMode).apply();showingSelector=false;build();Toast.makeText(this,"✓ "+c.nome+" está ativo",Toast.LENGTH_SHORT).show();});
                 config.setOnClickListener(v->{controleAtivo=c;lgMode="LG".equalsIgnoreCase(c.marca);prefs.edit().putLong("active_control_id",c.id).putBoolean("lg_mode",lgMode).apply();showAprenderComandos(c);});
+                testar.setOnClickListener(v->showComandosConfigurados(c));
                 copiar.setOnClickListener(v->{
                     int totalAtual=controleStorage.listar().size();
                     if(!monetizacao.podeSalvarControle(totalAtual)){
@@ -897,6 +898,36 @@ render[0]=()->{
         Button sobre=new Button(this); sobre.setText("ⓘ  SOBRE O APLICATIVO"); sobre.setTextColor(WHITE); sobre.setTextSize(13); sobre.setAllCaps(false);
         GradientDrawable sobreBg=new GradientDrawable(); sobreBg.setColor(CARD_2); sobreBg.setCornerRadius(dp(16)); sobre.setBackground(sobreBg); actionFeedback(sobre); sobre.setOnClickListener(v->showSobre()); root.addView(sobre,new LinearLayout.LayoutParams(-1,dp(48)));
         sv.addView(root); mostrar(sv);
+    }
+
+    private void showComandosConfigurados(ControleStorage.Controle controle){
+        if(controle==null || controle.comandos==null || controle.comandos.length()==0){
+            Toast.makeText(this,"Nenhum botão foi configurado ainda.",Toast.LENGTH_SHORT).show();
+            return;
+        }
+        JSONArray nomes=controle.comandos.names();
+        if(nomes==null || nomes.length()==0){
+            Toast.makeText(this,"Nenhum botão foi configurado ainda.",Toast.LENGTH_SHORT).show();
+            return;
+        }
+        final String[] funcoes=new String[nomes.length()];
+        for(int i=0;i<nomes.length();i++) funcoes[i]=nomes.optString(i,"");
+        escolher("TESTAR BOTÕES • "+controle.nome,
+            "Selecione um botão configurado para enviar o código salvo.",
+            funcoes,w->{
+                String funcao=funcoes[w];
+                int codigo=controleStorage.codigoComando(controle,funcao);
+                String perfil=controleStorage.perfilComando(controle,funcao);
+                int freq=controleStorage.frequenciaComando(controle,funcao);
+                if(codigo<0 || perfil.isEmpty()){
+                    Toast.makeText(this,"Código salvo inválido para "+funcao+".",Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                irPerfilTeste.selecionar(perfil);
+                irPerfilTeste.setFrequencia(freq);
+                boolean ok=irPerfilTeste.transmitManual("0x"+Integer.toHexString(codigo));
+                Toast.makeText(this,ok?"✓ "+funcao+" enviado":"✕ Falha ao enviar "+funcao,Toast.LENGTH_SHORT).show();
+            },null);
     }
 
     private Button smallAction(String text,int color){
