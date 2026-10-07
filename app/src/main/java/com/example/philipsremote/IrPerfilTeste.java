@@ -298,19 +298,15 @@ public class IrPerfilTeste {
 
     public String savedCodes() {
         String s = prefs.getString(BANK_KEY, null);
-        if (s == null) {                                   // migra o formato antigo (separador gravado como "
-" literal)
+        if (s == null) {                                   // migra o formato antigo
             String old = prefs.getString(OLD_BANK_KEY, "");
-            s = old.replace("\
-", "
-");
+            s = old.replace("\\n", "\n");
             if (!old.isEmpty()) prefs.edit().putString(BANK_KEY, s).remove(OLD_BANK_KEY).apply();
         }
         return s;
     }
 
-    public int savedCount() { String s = savedCodes(); return s.isEmpty() ? 0 : s.split("
-").length; }
+    public int savedCount() { String s = savedCodes(); return s.isEmpty() ? 0 : s.split("\\n").length; }
     public void clearSavedCodes() { prefs.edit().remove(BANK_KEY).remove(OLD_BANK_KEY).apply(); }
 
     /** Código de uma linha do banco, ou -1 se a linha estiver malformada (nunca lança exceção). */
