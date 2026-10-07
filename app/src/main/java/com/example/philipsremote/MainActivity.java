@@ -12,6 +12,8 @@ import android.view.Gravity;
 import android.view.View;
 import android.widget.*;
 import android.content.SharedPreferences;
+import android.content.Intent;
+import android.net.Uri;
 import java.util.ArrayList;
 import java.util.List;
 
