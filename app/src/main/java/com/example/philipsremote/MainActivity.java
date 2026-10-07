@@ -545,6 +545,7 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         showingSelector=false; fanMode=false;
         final String[] mode={climate.modes.isEmpty()?"cool":climate.modes.get(0)};
         final String[] fan={climate.fans.isEmpty()?"auto":climate.fans.get(0)};
+        final String[] swing={climate.swings.isEmpty()?null:climate.swings.get(0)};
         final int[] temp={climate.minTemp};
         final ControleStorage.Controle[] saved={existing};
 
@@ -565,13 +566,24 @@ private static final int CARD_2 = Color.rgb(31,31,36);
 
         section(root,"MODO");
         LinearLayout mr=row();
-        for(String m:climate.modes){ Button b=botaoAcao(modoTexto(m),KEY,10); b.setOnClickListener(v->{mode[0]=m; atualizarEstadoAc(state,mode[0],fan[0],temp[0]); enviarEstadoAc(climate,mode[0],fan[0],temp[0],state);}); mr.addView(b,lpPeso()); }
+        for(String m:climate.modes){ Button b=botaoAcao(modoTexto(m),KEY,10); b.setOnClickListener(v->{mode[0]=m; atualizarEstadoAc(state,mode[0],fan[0],swing[0],temp[0]); enviarEstadoAc(climate,mode[0],fan[0],swing[0],temp[0],state);}); mr.addView(b,lpPeso()); }
         root.addView(mr);
 
         section(root,"VENTILAÇÃO");
         LinearLayout fr=row();
-        for(String f:climate.fans){ Button b=botaoAcao(fanTexto(f),KEY,10); b.setOnClickListener(v->{fan[0]=f; atualizarEstadoAc(state,mode[0],fan[0],temp[0]); enviarEstadoAc(climate,mode[0],fan[0],temp[0],state);}); fr.addView(b,lpPeso()); }
+        for(String f:climate.fans){ Button b=botaoAcao(fanTexto(f),KEY,10); b.setOnClickListener(v->{fan[0]=f; atualizarEstadoAc(state,mode[0],fan[0],swing[0],temp[0]); enviarEstadoAc(climate,mode[0],fan[0],swing[0],temp[0],state);}); fr.addView(b,lpPeso()); }
         root.addView(fr);
+
+        if(!climate.swings.isEmpty()){
+            section(root,"OSCILAÇÃO");
+            LinearLayout sr=row();
+            for(String s:climate.swings){
+                Button b=botaoAcao(modoTexto(s),KEY,10);
+                b.setOnClickListener(v->{swing[0]=s; atualizarEstadoAc(state,mode[0],fan[0],swing[0],temp[0]); enviarEstadoAc(climate,mode[0],fan[0],swing[0],temp[0],state);});
+                sr.addView(b,lpPeso());
+            }
+            root.addView(sr);
+        }
 
         LinearLayout ar=row();
         Button power=botaoAcao("⏻ DESLIGAR",Color.rgb(90,40,40),12);
@@ -601,7 +613,7 @@ private static final int CARD_2 = Color.rgb(31,31,36);
     }
 
     private void enviarEstadoAc(SmartIrDatabase.Climate c,String mode,String fan,int temp,TextView status){
-        String b64=c.command(mode,fan,temp);
+        String b64=c.command(mode,fan,swing,temp);
         if(b64.isEmpty()){Toast.makeText(this,"Estado não disponível para este modelo.",Toast.LENGTH_SHORT).show();return;}
         enviarBase64Smart(b64,status,modoTexto(mode)+" • "+temp+" °C");
     }
@@ -610,7 +622,7 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         catch(Exception e){status.setText("✕ Código inválido");}
     }
     private int[] smartRaw(String b64){try{return SmartIrDatabase.decodeBase64(b64);}catch(Exception e){return new int[0];}}
-    private void atualizarEstadoAc(TextView v,String mode,String fan,int temp){v.setText("Pronto • "+modoTexto(mode)+" • "+temp+" °C • "+fanTexto(fan));}
+    private void atualizarEstadoAc(TextView v,String mode,String fan,String swing,int temp){v.setText("Pronto • "+modoTexto(mode)+" • "+temp+" °C • "+fanTexto(fan)+(swing==null?"":" • SWING "+modoTexto(swing)));}
     private String modoTexto(String s){return s==null?"":s.replace("_"," ").toUpperCase(Locale.ROOT);}
     private String fanTexto(String s){return s==null?"":s.replace("_"," ").toUpperCase(Locale.ROOT);}
 
