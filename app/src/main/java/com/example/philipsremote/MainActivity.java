@@ -1746,7 +1746,8 @@ render[0]=()->{
 
     private void build(){
         fanMode=false;
-        if(controleAtivo!=null && "Ventilador Universal".equals(controleAtivo.perfil)){ showFanRemote(); return; }\n        if(controleAtivo!=null && "AC SmartIR".equals(controleAtivo.perfil)){ abrirSmartIrSalvo(controleAtivo); return; }
+        if(controleAtivo!=null && "Ventilador Universal".equals(controleAtivo.perfil)){ showFanRemote(); return; }
+        if(controleAtivo!=null && "AC SmartIR".equals(controleAtivo.perfil)){ abrirSmartIrSalvo(controleAtivo); return; }
         ScrollView sv=new ScrollView(this); sv.setFillViewport(true);
         sv.setBackgroundColor(BG); sv.setClipToPadding(false);
 
