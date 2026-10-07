@@ -421,7 +421,7 @@ public class ControleStorage {
                 if(comandos!=null) for(int j=0;j<comandos.length();j++){
                     JSONObject cmd=comandos.optJSONObject(j); if(cmd==null) continue;
                     String funcao=s(cmd.optString("funcao","")).trim(); int codigo=cmd.optInt("codigo",-1);
-                    if(funcao.isEmpty()||codigo<0) continue;
+                    if(funcao.isEmpty() || (codigo < 0 && !cmd.has("raw_data"))) continue;
                     if(funcao.length()>80) funcao=funcao.substring(0,80);
                     ContentValues cv=new ContentValues(); cv.put("control_id",id); cv.put("funcao",funcao);
                     cv.put("codigo",codigo); cv.put("perfil",s(cmd.optString("perfil","")));
