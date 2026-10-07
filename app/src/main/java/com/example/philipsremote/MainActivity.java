@@ -632,8 +632,12 @@ private static final int CARD_2 = Color.rgb(31,31,36);
 
         Runnable atualizarLista=()->{
             int qtd=controleStorage.quantidadeComandos(controle);
-            progress.setText(qtd+" de "+funcoes.length+" botões configurados");
-            selectedTitle.setText("Configurando: "+funcoes[pos[0]]);
+            int percentual=funcoes.length<=0?0:Math.min(100,(qtd*100)/funcoes.length);
+            progress.setText(qtd+" de "+funcoes.length+" botões • "+percentual+"%");
+            proximoNaoConfigurado.setText(qtd>=funcoes.length?"✓ CONCLUÍDO":"PRÓXIMO PENDENTE");
+            selectedTitle.setText(qtd>=funcoes.length
+                ?"✓ Controle totalmente configurado"
+                :"Configurando: "+funcoes[pos[0]]);
             for(int i=0;i<botoes.length;i++){
                 if(botoes[i]==null) continue;
                 boolean selecionado=i==pos[0];
@@ -739,6 +743,20 @@ private static final int CARD_2 = Color.rgb(31,31,36);
                 status.setTextColor(Color.rgb(105,190,125));
                 atualizarLista.run();
                 Toast.makeText(this,"✓ "+funcoes[pos[0]]+" configurado",Toast.LENGTH_SHORT).show();
+
+                // Avança automaticamente para o próximo botão ainda pendente.
+                for(int passo=1;passo<=funcoes.length;passo++){
+                    int candidato=(pos[0]+passo)%funcoes.length;
+                    if(!controleStorage.possuiComando(controle,chaves[candidato])){
+                        pos[0]=candidato;
+                        aprenderFuncaoPos=candidato;
+                        irPerfilTeste.reset();
+                        status.setText("Próximo: "+funcoes[candidato]+" • pronto para testar");
+                        status.setTextColor(GRAY);
+                        atualizarLista.run();
+                        break;
+                    }
+                }
             });
         });
 
