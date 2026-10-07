@@ -50,7 +50,6 @@ public class MonetizationManager {
         return isPremium() ? quantidadeAtual + " controles • ilimitado" : quantidadeAtual + "/" + FREE_SAVED_LIMIT + " controles salvos";
     }
 
-    public int limiteGratuito() { return 3; }
 
     public void addBanner(LinearLayout root) {
         if (root == null || isPremium()) return;
