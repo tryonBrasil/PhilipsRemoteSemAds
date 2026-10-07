@@ -88,7 +88,7 @@ public class IrPerfilTeste {
             int[] cs={0x08,0x02,0x03,0x09,0x00,0x01,0x40,0x41,0x06,0x07,0x44,0x43,0x0B};
             for(int a:addrs)for(int c:cs)itens.add(new Item(String.format(Locale.US,"NEC addr 0x%02X • 0x%02X",a,c),NEC,a,c));
         } else if(p.equals("AC Coolix")){
-            int[] cs={0xB27BE0,0xB27B00,0xB27B20,0xB27B40,0xB27B60,0xB27B80,0xB27BA0,0xB27BC0};
+            int[] cs={0xB24D7B,0xB27B00,0xB27B20,0xB27B40,0xB27B60,0xB27B80,0xB27BA0,0xB27BC0};
             for(int c:cs)itens.add(new Item(String.format(Locale.US,"Coolix 24-bit • 0x%06X",c),COOLIX,c));
         } else if(p.equals("AC Midea")){
             itens.add(new Item("Midea • Power OFF",MIDEA,0x7BE0));
