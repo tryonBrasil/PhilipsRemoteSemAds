@@ -1,12 +1,23 @@
-PHILIPS REMOTE SEM ADS
+IR REMOTE BR
 
-GERAR PELO GITHUB:
+GERAR APK DE TESTE PELO GITHUB:
 1. Abra a aba Actions.
-2. Selecione "Gerar APK".
-3. Clique em "Run workflow".
-4. Aguarde o build terminar.
-5. Abra a execucao concluida.
-6. Em Artifacts, baixe "PhilipsRemoteSemAds-debug".
-7. Extraia o ZIP e instale o app-debug.apk no Redmi Note 12.
+2. Execute o workflow "CI" (push/PR também executam automaticamente).
+3. Aguarde Lint, testes e assembleDebug.
+4. Abra a execução concluída.
+5. Em Artifacts, baixe "PhilipsRemoteSemAds-debug".
+6. Extraia e instale o APK de debug no Redmi Note 12.
 
-O APK e uma versao de teste (debug), sem anuncios.
+GERAR RELEASE ASSINADO:
+1. Atualize versionName/versionCode em app/build.gradle.
+2. Crie uma tag vX.Y.Z exatamente igual ao versionName.
+3. O workflow "Release" valida a versão antes de compilar.
+4. O release publica o APK assinado e o arquivo .sha256.
+
+SECRETS DO RELEASE:
+KEYSTORE_B64
+KEYSTORE_PASSWORD
+KEY_ALIAS
+KEY_PASSWORD
+
+A keystore é criada somente em RUNNER_TEMP durante o build. Nunca commite *.jks, *.keystore ou senhas.
