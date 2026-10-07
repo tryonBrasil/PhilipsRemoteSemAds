@@ -12,32 +12,24 @@ import android.view.Gravity;
 import android.view.View;
 import android.widget.*;
 import android.content.SharedPreferences;
-import android.content.Intent;
-import android.net.Uri;
+import android.os.Build;
+import android.view.WindowInsets;
 import java.util.ArrayList;
 import java.util.List;
+import static com.example.philipsremote.RemoteKeys.*;
 
 public class MainActivity extends Activity {
     private ConsumerIrManager ir;
     private IrPerfilTeste irPerfilTeste;
-    private boolean toggle = false;
     private boolean lgMode = false;
     private boolean showingSelector = true;
     private boolean fanMode = false;
     private SharedPreferences prefs;
     private ControleStorage controleStorage;
     private ControleStorage.Controle controleAtivo;
-    private String setupBrand="Philips";
-    private String setupModel="50PUG6513/7";
     private UpdateManager updateManager;
     private int aprenderFuncaoPos = 0;
-    private static final int REQ_EXPORT_BACKUP = 4101;
-    private static final int REQ_IMPORT_BACKUP = 4102;
 
-    private static final int FREQ = 36000;
-    private static final int LG_FREQ = 38000;
-    private static final int UNIT = 444;
-    private static final int LG_UNIT = 560;
 
     private static final int BG = Color.rgb(12,12,12);
     private static final int KEY = Color.rgb(48,48,48);
@@ -51,14 +43,6 @@ private static final int CARD_2 = Color.rgb(31,31,36);
     private static final int SUCCESS = Color.rgb(82,170,102);
 
 
-    private static final int POWER=0x0C, MUTE=0x0D, VOL_DOWN=0x11, VOL_UP=0x10;
-    private static final int CH_DOWN=0x21, CH_UP=0x20;
-    private static final int UP=0x58, DOWN=0x59, LEFT=0x5A, RIGHT=0x5B, OK=0x5C;
-    private static final int BACK=0x0A, MENU=0x57, HOME=0x54, SOURCE=0x38;
-    private static final int INFO=0x0F, GUIDE=0xCC, NETFLIX=0x76, SETTINGS=0xBF, TV_INPUT=0x100, CC=0x101, DIGIT_0=0x110, DIGIT_1=0x111, DIGIT_2=0x112, DIGIT_3=0x113, DIGIT_4=0x114, DIGIT_5=0x115, DIGIT_6=0x116, DIGIT_7=0x117, DIGIT_8=0x118, DIGIT_9=0x119;
-    private static final int RED=0x6D, GREEN=0x6E, YELLOW=0x6F, BLUE=0x70;
-    private static final int PLAY=0x2C, STOP=0x31, PAUSE=0x30, REWIND=0x2B;
-    private static final int FAST_FORWARD=0x28, RECORD=0x37, SUBTITLE=0x4B, EXIT=0x9F;
 
     @Override protected void onCreate(Bundle b) {
         super.onCreate(b);
@@ -81,28 +65,68 @@ private static final int CARD_2 = Color.rgb(31,31,36);
             prefs.edit().putBoolean("lg_mode",lgMode).apply();
         }
         updateManager=new UpdateManager(this);
-        updateManager.verificarAoAbrir();
         showSelector();
     }
 
     private int dp(float v){ return (int)(v*getResources().getDisplayMetrics().density+0.5f); }
 
-    private void aplicarInsets(View root){
-        final int baseTop=root.getPaddingTop(), baseBottom=root.getPaddingBottom();
-        root.setOnApplyWindowInsetsListener((v,insets)->{
-            int top, bottom;
-            if(android.os.Build.VERSION.SDK_INT>=30){
-                android.graphics.Insets i=insets.getInsets(android.view.WindowInsets.Type.systemBars());
-                top=i.top; bottom=i.bottom;
-            }else{
-                top=insets.getSystemWindowInsetTop(); bottom=insets.getSystemWindowInsetBottom();
-            }
-            v.setPadding(v.getPaddingLeft(),baseTop+top,v.getPaddingRight(),baseBottom+bottom);
-            return insets;
-        });
-        root.requestApplyInsets();
+    /** Exibe a tela; no Android 15+ (edge-to-edge forçado com targetSdk 35) respeita as barras do sistema. */
+    private void mostrar(View v){
+        if(Build.VERSION.SDK_INT>=35){
+            v.setOnApplyWindowInsetsListener((view,insets)->{
+                android.graphics.Insets b=insets.getInsets(WindowInsets.Type.systemBars()|WindowInsets.Type.displayCutout());
+                view.setPadding(b.left,b.top,b.right,b.bottom);
+                return WindowInsets.CONSUMED;
+            });
+            v.requestApplyInsets();
+        }
+        setContentView(v);
     }
 
+    private ScrollView wrapScroll(View v){ ScrollView sv=new ScrollView(this); sv.addView(v); return sv; }
+
+    /** Permite que uma lista com altura fixa role dentro de um diálogo que também rola. */
+    private void permitirRolagemInterna(ScrollView lista){
+        lista.setOnTouchListener((view,ev)->{ view.getParent().requestDisallowInterceptTouchEvent(true); return false; });
+    }
+
+    private Button botaoAcao(String text,int color,int sp){
+        Button b=new Button(this); b.setText(text); b.setTextColor(WHITE); b.setTextSize(sp); b.setAllCaps(false);
+        b.setMinHeight(0); b.setMinWidth(0); b.setPadding(0,0,0,0);
+        GradientDrawable g=new GradientDrawable(); g.setColor(color); g.setCornerRadius(dp(14)); g.setStroke(dp(1),BORDER);
+        b.setBackground(g); actionFeedback(b); return b;
+    }
+    private LinearLayout.LayoutParams lpPeso(){ LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,dp(44),1); p.setMargins(dp(3),dp(3),dp(3),dp(3)); return p; }
+    private LinearLayout.LayoutParams lpFixa(int wDp){ LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(dp(wDp),dp(44)); p.setMargins(dp(3),dp(3),dp(3),dp(3)); return p; }
+
+    /** Releitura do controle ativo no banco (os objetos de listar() são cópias; compare sempre por id). */
+    private void recarregarAtivo(){
+        long id=prefs.getLong("active_control_id",-1L);
+        controleAtivo=id>0?controleStorage.buscar(id):null;
+    }
+
+    private interface OnPick { void on(int i); }
+
+    /** Lista de opções em botões. (AlertDialog.setMessage + setItems não exibe a lista no AOSP.) */
+    private void escolher(String titulo,String mensagem,String[] itens,OnPick ok,Runnable voltar){
+        LinearLayout box=new LinearLayout(this); box.setOrientation(LinearLayout.VERTICAL); box.setPadding(dp(18),dp(6),dp(18),dp(6));
+        if(mensagem!=null && !mensagem.isEmpty()){
+            TextView m=label(mensagem,13); m.setTextColor(GRAY); m.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL); m.setPadding(0,0,0,dp(8));
+            box.addView(m,new LinearLayout.LayoutParams(-1,-2));
+        }
+        final android.app.AlertDialog[] dlg=new android.app.AlertDialog[1];
+        for(int i=0;i<itens.length;i++){
+            final int idx=i;
+            Button b=new Button(this); b.setText(itens[i]); b.setTextColor(WHITE); b.setTextSize(15); b.setAllCaps(false);
+            b.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL); b.setPadding(dp(14),0,dp(10),0);
+            GradientDrawable g=new GradientDrawable(); g.setColor(CARD_2); g.setCornerRadius(dp(12)); g.setStroke(dp(1),BORDER); b.setBackground(g);
+            b.setOnClickListener(v->{ if(dlg[0]!=null) dlg[0].dismiss(); ok.on(idx); });
+            LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,dp(46)); lp.setMargins(0,dp(3),0,dp(3)); box.addView(b,lp);
+        }
+        android.app.AlertDialog.Builder bd=new android.app.AlertDialog.Builder(this).setTitle(titulo).setView(wrapScroll(box));
+        if(voltar!=null) bd.setNegativeButton("VOLTAR",(d,w)->voltar.run()); else bd.setNegativeButton("CANCELAR",null);
+        dlg[0]=bd.create(); dlg[0].show();
+    }
 
     private void actionFeedback(View v){
         v.setHapticFeedbackEnabled(true);
@@ -193,7 +217,7 @@ private static final int CARD_2 = Color.rgb(31,31,36);
             ativo.setPadding(dp(14),0,dp(14),0);
             root.addView(ativo,new LinearLayout.LayoutParams(-1,dp(42)));
         }
-        if(!temControlesSalvos){
+        if(controleAtivo==null){
             LinearLayout philips=tvCard("PHILIPS","50PUG6513/7",!lgMode,v->{lgMode=false;});
             LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(-1,dp(125)); cp.setMargins(0,dp(28),0,dp(10)); root.addView(philips,cp);
             LinearLayout lg=tvCard("LG","32LB620B",lgMode,v->{lgMode=true;});
@@ -201,7 +225,7 @@ private static final int CARD_2 = Color.rgb(31,31,36);
             TextView chosen=label(lgMode?"✓ LG 32LB620B":"✓ Philips 50PUG6513/7",15); chosen.setTextColor(Color.rgb(75,145,95));
             root.addView(chosen,new LinearLayout.LayoutParams(-1,dp(38)));
         } else {
-            TextView acesso=label("Seu controle salvo está disponível em MEUS CONTROLES.",14);
+            TextView acesso=label("Há um controle ativo. Toque em CONTINUAR para abri-lo ou em MEUS CONTROLES para trocar.",14);
             acesso.setTextColor(GRAY); acesso.setGravity(Gravity.CENTER);
             LinearLayout.LayoutParams ap=new LinearLayout.LayoutParams(-1,dp(70)); ap.setMargins(0,dp(18),0,dp(4)); root.addView(acesso,ap);
         }
@@ -224,7 +248,7 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         Button atualizar=new Button(this); atualizar.setText("↻  VERIFICAR ATUALIZAÇÃO"); atualizar.setTextColor(WHITE); atualizar.setTextSize(13); atualizar.setAllCaps(false);
         GradientDrawable atualizarBg=new GradientDrawable(); atualizarBg.setColor(KEY_DARK); atualizarBg.setCornerRadius(dp(16)); atualizar.setBackground(atualizarBg); actionFeedback(atualizar); atualizar.setOnClickListener(v->updateManager.verificarManualmente());
         LinearLayout.LayoutParams atualizarParams=new LinearLayout.LayoutParams(-1,dp(50)); atualizarParams.setMargins(0,dp(8),0,0); root.addView(atualizar,atualizarParams);
-        sv.addView(root); aplicarInsets(sv); setContentView(sv);
+        sv.addView(root); mostrar(sv);
     }
     private LinearLayout tvCard(String brand,String model,boolean selected,View.OnClickListener click){
         LinearLayout card=new LinearLayout(this); card.setOrientation(LinearLayout.VERTICAL); card.setGravity(Gravity.CENTER_VERTICAL); card.setPadding(dp(20),dp(10),dp(20),dp(10));
@@ -325,7 +349,7 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         ScrollView listaScroll=new ScrollView(this);
         listaScroll.setFillViewport(false);
         listaScroll.setBackgroundColor(Color.TRANSPARENT);
-        listaScroll.addView(lista);
+        listaScroll.addView(lista); permitirRolagemInterna(listaScroll);
         box.addView(listaScroll,new LinearLayout.LayoutParams(-1,dp(210)));
 
         TextView perfilInfo=label("Perfil: "+perfilSelecionado[0],12);
@@ -338,10 +362,10 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         box.addView(status,new LinearLayout.LayoutParams(-1,dp(56)));
 
         LinearLayout navegacao=row();
-        Button anterior=key("◀ ANTERIOR",0,44,KEY_DARK,13);
-        Button proximo=key("PRÓXIMO ▶",0,44,KEY_DARK,13);
-        navegacao.addView(anterior,new LinearLayout.LayoutParams(0,dp(44),1));
-        navegacao.addView(proximo,new LinearLayout.LayoutParams(0,dp(44),1));
+        Button anterior=botaoAcao("◀ ANTERIOR",KEY_DARK,13);
+        Button proximo=botaoAcao("PRÓXIMO ▶",KEY_DARK,13);
+        navegacao.addView(anterior,lpPeso());
+        navegacao.addView(proximo,lpPeso());
         box.addView(navegacao,new LinearLayout.LayoutParams(-1,dp(50)));
 
         LinearLayout manual=row();
@@ -350,15 +374,15 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         codigoManual.setHintTextColor(Color.rgb(120,120,125)); codigoManual.setTextColor(WHITE);
         codigoManual.setSingleLine(true); codigoManual.setInputType(android.text.InputType.TYPE_CLASS_TEXT);
         manual.addView(codigoManual,new LinearLayout.LayoutParams(0,dp(48),1));
-        Button testarManual=key("TESTAR",0,44,KEY_DARK,12);
-        manual.addView(testarManual,new LinearLayout.LayoutParams(dp(92),dp(44)));
+        Button testarManual=botaoAcao("TESTAR",KEY_DARK,12);
+        manual.addView(testarManual,lpFixa(92));
         box.addView(manual,new LinearLayout.LayoutParams(-1,dp(54)));
 
         LinearLayout acoesCodigo=row();
-        Button salvarCodigo=key("💾 SALVAR CÓDIGO",0,44,Color.rgb(45,75,52),12);
-        Button listaCodigos=key("📋 SALVOS",0,44,KEY_DARK,12);
-        acoesCodigo.addView(salvarCodigo,new LinearLayout.LayoutParams(0,dp(44),1));
-        acoesCodigo.addView(listaCodigos,new LinearLayout.LayoutParams(dp(105),dp(44)));
+        Button salvarCodigo=botaoAcao("💾 SALVAR CÓDIGO",Color.rgb(45,75,52),12);
+        Button listaCodigos=botaoAcao("📋 SALVOS",KEY_DARK,12);
+        acoesCodigo.addView(salvarCodigo,lpPeso());
+        acoesCodigo.addView(listaCodigos,lpFixa(105));
         box.addView(acoesCodigo,new LinearLayout.LayoutParams(-1,dp(50)));
 
         TextView detalhe=label("Aponte o celular para o aparelho e toque em TESTAR PRÓXIMO.",13);
@@ -396,7 +420,7 @@ private static final int CARD_2 = Color.rgb(31,31,36);
                 aparelho.setText(nomeSelecionado[0]);
                 perfilInfo.setText("Perfil: "+perfilSelecionado[0]);
                 irPerfilTeste.selecionar(perfilSelecionado[0]);
-                irPerfilTeste.limparResultado();
+                
                 status.setText("●  Pronto para testar");
                 status.setTextColor(GRAY);
                 progresso.setText("Candidato 0");
@@ -417,14 +441,14 @@ private static final int CARD_2 = Color.rgb(31,31,36);
 
         android.app.AlertDialog dialog=new android.app.AlertDialog.Builder(this)
             .setTitle("TESTE UNIVERSAL")
-            .setView(box)
+            .setView(wrapScroll(box))
             .setNegativeButton("CANCELAR",(d,w)->showMeusControles())
             .setNeutralButton("TESTAR PRÓXIMO",null)
             .setPositiveButton("FUNCIONOU / SALVAR",null)
             .create();
 
         dialog.setOnShowListener(x->{
-            irPerfilTeste.selecionar(perfilSelecionado[0]); irPerfilTeste.limparResultado();
+            irPerfilTeste.selecionar(perfilSelecionado[0]); 
             Button testar=dialog.getButton(android.app.AlertDialog.BUTTON_NEUTRAL);
             Button salvar=dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE);
             proximo.setOnClickListener(v->testar.performClick());
@@ -452,12 +476,17 @@ private static final int CARD_2 = Color.rgb(31,31,36);
             listaCodigos.setOnClickListener(v->{
                 String dados=irPerfilTeste.savedCodes();
                 if(dados.isEmpty()){ Toast.makeText(this,"Nenhum código salvo ainda.",Toast.LENGTH_SHORT).show(); return; }
-                String[] linhas=dados.split("\n");
-                new android.app.AlertDialog.Builder(this).setTitle("CÓDIGOS SALVOS ("+linhas.length+")")
-                    .setItems(linhas,(d,w)->{
-                        String[] partes=linhas[w].split("\\|");
-                        if(partes.length>=3){ codigoManual.setText("0x"+Integer.toHexString(Integer.parseInt(partes[2]))); codigoManual.setSelection(codigoManual.length()); }
-                    }).setNegativeButton("FECHAR",null).show();
+                final String[] linhas=dados.split("\n");
+                final String[] rotulos=new String[linhas.length];
+                for(int i=0;i<linhas.length;i++) rotulos[i]=IrPerfilTeste.rotuloDaLinha(linhas[i]);
+                escolher("CÓDIGOS SALVOS ("+linhas.length+")",null,rotulos,w->{
+                    int cod=IrPerfilTeste.codigoDaLinha(linhas[w]);
+                    if(cod<0){ Toast.makeText(this,"Registro inválido.",Toast.LENGTH_SHORT).show(); return; }
+                    codigoManual.setText("0x"+Integer.toHexString(cod).toUpperCase(java.util.Locale.ROOT)); codigoManual.setSelection(codigoManual.length());
+                    String pf=IrPerfilTeste.perfilDaLinha(linhas[w]);
+                    status.setText(pf.equals(perfilSelecionado[0])?"●  Código carregado. Toque em TESTAR.":"●  Atenção: este código foi salvo no perfil "+pf);
+                    status.setTextColor(GRAY);
+                },null);
             });
             testar.setOnClickListener(v->{
                 String resultado=irPerfilTeste.next();
@@ -473,8 +502,7 @@ private static final int CARD_2 = Color.rgb(31,31,36);
                     Toast.makeText(this,"Teste pelo menos um código antes de salvar.",Toast.LENGTH_SHORT).show(); return;
                 }
                 int freq=frequenciaPerfil(perfil);
-                irPerfilTeste.marcarFuncionou();
-                 String nome=nomeSelecionado[0]; String descricao=irPerfilTeste.lastDescription();
+                String nome=nomeSelecionado[0]; String descricao=irPerfilTeste.descricaoAtual();
                 String categoria=perfil.startsWith("AC ")?"AR-CONDICIONADO":(perfil.equals("Ventilador Universal")?"VENTILADOR":"TV");
                 controleStorage.salvar(nome,categoria,marcaSelecionada[0],modelo,perfil,descricao,codigo,freq);
                 dialog.dismiss();
@@ -492,9 +520,9 @@ private static final int CARD_2 = Color.rgb(31,31,36);
     private void showAprenderComandos(ControleStorage.Controle controle){
         if(controle==null){ showMeusControles(); return; }
 
-        final boolean isFan="Ventilador Universal".equals(controle.perfil);
-        final String[] funcoes=isFan?new String[]{"Ligar / desligar","Oscilação","Velocidade","Timer","Noturno"}:new String[]{"Ligar/desligar","Mute","Volume +","Volume -","Canal +","Canal -","Cima","Baixo","Esquerda","Direita","OK","Voltar","Menu","Home","Source","TV","Info","Guide","Netflix","Configurações","Vermelho","Verde","Amarelo","Azul","Play","Pause","Stop","Retroceder","Avançar","Subtitle","Exit","CC","0","1","2","3","4","5","6","7","8","9"};
-        final String[] chaves=isFan?new String[]{"POWER","SWING","SPEED","TIMER","NIGHT"}:new String[]{"POWER","MUTE","VOL_UP","VOL_DOWN","CH_UP","CH_DOWN","UP","DOWN","LEFT","RIGHT","OK","BACK","MENU","HOME","SOURCE","TV","INFO","GUIDE","NETFLIX","SETTINGS","RED","GREEN","YELLOW","BLUE","PLAY","PAUSE","STOP","REWIND","FAST_FORWARD","SUBTITLE","EXIT","CC","DIGIT_0","DIGIT_1","DIGIT_2","DIGIT_3","DIGIT_4","DIGIT_5","DIGIT_6","DIGIT_7","DIGIT_8","DIGIT_9"};
+        final boolean isFan=IrPerfilTeste.PERFIL_VENTILADOR.equals(controle.perfil);
+        final String[] funcoes=isFan?RemoteKeys.FAN_FUNCOES:RemoteKeys.FUNCOES;
+        final String[] chaves=isFan?RemoteKeys.FAN_CHAVES:RemoteKeys.CHAVES;
         final int[] pos={Math.max(0,Math.min(aprenderFuncaoPos,funcoes.length-1))};
         final String[] perfis=irPerfilTeste.perfis();
         final int configuradosInicial=controleStorage.quantidadeComandos(controle);
@@ -551,10 +579,19 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         listaScroll.setFillViewport(false);
         LinearLayout lista=new LinearLayout(this);
         lista.setOrientation(LinearLayout.VERTICAL);
-        listaScroll.addView(lista);
+        listaScroll.addView(lista); permitirRolagemInterna(listaScroll);
         LinearLayout.LayoutParams lsp=new LinearLayout.LayoutParams(-1,dp(260));
         lsp.setMargins(0,dp(2),0,dp(2));
         box.addView(listaScroll,lsp);
+
+        LinearLayout hexRow=row();
+        final EditText hex=new EditText(this);
+        hex.setHint("Ir direto a um código (hex, ex.: 0x5C)"); hex.setHintTextColor(Color.rgb(120,120,125));
+        hex.setTextColor(WHITE); hex.setTextSize(13); hex.setSingleLine(true);
+        hexRow.addView(hex,new LinearLayout.LayoutParams(0,dp(46),1));
+        final Button hexBtn=botaoAcao("TESTAR HEX",KEY_DARK,11);
+        hexRow.addView(hexBtn,lpFixa(96));
+        box.addView(hexRow,new LinearLayout.LayoutParams(-1,dp(50)));
 
         final Button[] botoes=new Button[funcoes.length];
 
@@ -603,7 +640,7 @@ private static final int CARD_2 = Color.rgb(31,31,36);
 
         android.app.AlertDialog dialog=new android.app.AlertDialog.Builder(this)
             .setTitle("Configurar botões")
-            .setView(box)
+            .setView(wrapScroll(box))
             .setNegativeButton("FECHAR",(d,w)->showMeusControles())
             .setNeutralButton("TESTAR CÓDIGO",null)
             .setPositiveButton("FUNCIONOU / SALVAR",null)
@@ -613,18 +650,27 @@ private static final int CARD_2 = Color.rgb(31,31,36);
             Button testar=dialog.getButton(android.app.AlertDialog.BUTTON_NEUTRAL);
             Button salvar=dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE);
 
-            testar.setOnClickListener(v->{
+            final String[] preparado={""};
+            final Runnable preparar=()->{
                 String perfil=controle.perfil;
-                if(perfil==null || perfil.isEmpty()){
-                    perfil=perfis[perfilInicialPara(controle.marca,controle.modelo,perfis)];
+                if(perfil==null || perfil.isEmpty()) perfil=perfis[perfilInicialPara(controle.marca,controle.modelo,perfis)];
+                if(!perfil.equals(preparado[0]) || !perfil.equals(irPerfilTeste.getPerfil())){
+                    // varredura completa de comandos usando o endereço do controle já salvo
+                    irPerfilTeste.selecionarVarredura(perfil,controle.codigo>255?(controle.codigo>>8)&0xFF:-1);
+                    preparado[0]=perfil;
                 }
-                if(!perfil.equals(irPerfilTeste.getPerfil())){
-                    irPerfilTeste.selecionar(perfil);
-                }
+            };
+            testar.setOnClickListener(v->{
+                preparar.run();
                 String resultado=irPerfilTeste.next();
                 status.setText("●  "+resultado+"  •  "+funcoes[pos[0]]);
                 status.setTextColor(Color.rgb(205,180,90));
-                salvar.setEnabled(true);
+            });
+            hexBtn.setOnClickListener(v->{
+                preparar.run();
+                boolean ok=irPerfilTeste.transmitManual(hex.getText().toString());
+                status.setText(ok?"●  Código enviado • "+funcoes[pos[0]]+"  (se respondeu, toque em FUNCIONOU / SALVAR)":"●  Código inválido ou falha no emissor IR");
+                status.setTextColor(ok?Color.rgb(205,180,90):ACCENT);
             });
 
             salvar.setOnClickListener(v->{
@@ -645,51 +691,6 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         });
 
         dialog.show();
-    }
-
-    private void exportarBackup(){
-        try{
-            android.content.Intent i=new android.content.Intent(android.content.Intent.ACTION_CREATE_DOCUMENT);
-            i.setType("application/json");
-            i.putExtra(android.content.Intent.EXTRA_TITLE,"IRRemoteBR-backup.json");
-            startActivityForResult(i,REQ_EXPORT_BACKUP);
-        }catch(Exception e){ Toast.makeText(this,"Não foi possível abrir o exportador.",Toast.LENGTH_SHORT).show(); }
-    }
-
-    private void importarBackup(){
-        try{
-            android.content.Intent i=new android.content.Intent(android.content.Intent.ACTION_OPEN_DOCUMENT);
-            i.setType("application/json");
-            i.addCategory(android.content.Intent.CATEGORY_OPENABLE);
-            startActivityForResult(i,REQ_IMPORT_BACKUP);
-        }catch(Exception e){ Toast.makeText(this,"Não foi possível abrir o importador.",Toast.LENGTH_SHORT).show(); }
-    }
-
-    @Override protected void onActivityResult(int requestCode,int resultCode,android.content.Intent data){
-        super.onActivityResult(requestCode,resultCode,data);
-        if(resultCode!=RESULT_OK || data==null || data.getData()==null) return;
-        try{
-            android.net.Uri uri=data.getData();
-            if(requestCode==REQ_EXPORT_BACKUP){
-                java.io.OutputStream out=getContentResolver().openOutputStream(uri);
-                if(out==null) throw new java.io.IOException("stream nulo");
-                out.write(controleStorage.exportarJson().getBytes(java.nio.charset.StandardCharsets.UTF_8));
-                out.close();
-                Toast.makeText(this,"Backup exportado com sucesso.",Toast.LENGTH_LONG).show();
-            }else if(requestCode==REQ_IMPORT_BACKUP){
-                java.io.InputStream in=getContentResolver().openInputStream(uri);
-                if(in==null) throw new java.io.IOException("stream nulo");
-                java.io.ByteArrayOutputStream buffer=new java.io.ByteArrayOutputStream();
-                byte[] chunk=new byte[8192]; int n;
-                while((n=in.read(chunk))!=-1) buffer.write(chunk,0,n);
-                in.close();
-                int qtd=controleStorage.importarJson(new String(buffer.toByteArray(),java.nio.charset.StandardCharsets.UTF_8));
-                Toast.makeText(this,qtd+" controle(s) importado(s).",Toast.LENGTH_LONG).show();
-                showMeusControles();
-            }
-        }catch(Exception e){
-            Toast.makeText(this,"Falha no backup: "+e.getMessage(),Toast.LENGTH_LONG).show();
-        }
     }
 
     private void showMeusControles(){
@@ -717,14 +718,6 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         final TextView resumo=label("",12); resumo.setTextColor(GRAY); resumo.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
         root.addView(resumo,new LinearLayout.LayoutParams(-1,dp(30)));
         final LinearLayout listaBox=new LinearLayout(this); listaBox.setOrientation(LinearLayout.VERTICAL); root.addView(listaBox,new LinearLayout.LayoutParams(-1,-2));
-         LinearLayout backupRow=row();
-         Button exportar=new Button(this); exportar.setText("EXPORTAR"); exportar.setTextColor(WHITE); exportar.setTextSize(12); exportar.setAllCaps(false);
-         GradientDrawable exportBg=new GradientDrawable(); exportBg.setColor(CARD_2); exportBg.setCornerRadius(dp(13)); exportBg.setStroke(dp(1),BORDER); exportar.setBackground(exportBg); actionFeedback(exportar); exportar.setOnClickListener(v->exportarBackup());
-         Button importar=new Button(this); importar.setText("IMPORTAR"); importar.setTextColor(WHITE); importar.setTextSize(12); importar.setAllCaps(false);
-         GradientDrawable importBg=new GradientDrawable(); importBg.setColor(CARD_2); importBg.setCornerRadius(dp(13)); importBg.setStroke(dp(1),BORDER); importar.setBackground(importBg); actionFeedback(importar); importar.setOnClickListener(v->importarBackup());
-         backupRow.addView(exportar,new LinearLayout.LayoutParams(0,dp(44),1)); backupRow.addView(importar,new LinearLayout.LayoutParams(0,dp(44),1));
-         LinearLayout.LayoutParams backupP=new LinearLayout.LayoutParams(-1,dp(48)); backupP.setMargins(0,dp(2),0,dp(4)); root.addView(backupRow,backupP);
-         
 
         final Runnable[] render=new Runnable[1];
 render[0]=()->{
@@ -788,7 +781,7 @@ render[0]=()->{
                     new android.app.AlertDialog.Builder(this).setTitle("Renomear controle").setView(campo)
                         .setNegativeButton("CANCELAR",null).setPositiveButton("SALVAR",(d,w)->{
                             String novoNome=campo.getText().toString().trim();
-                            if(!novoNome.isEmpty()){controleStorage.renomear(c,novoNome);render[0].run();}
+                            if(!novoNome.isEmpty()){controleStorage.renomear(c,novoNome);if(controleAtivo!=null&&controleAtivo.id==c.id) controleAtivo.nome=c.nome;render[0].run();}
                         }).show();
                 });
                 excluir.setOnClickListener(v->new android.app.AlertDialog.Builder(this).setTitle("Excluir controle?")
@@ -810,7 +803,7 @@ render[0]=()->{
         LinearLayout.LayoutParams addP=new LinearLayout.LayoutParams(-1,dp(52)); addP.setMargins(0,dp(12),0,dp(6)); root.addView(add,addP);
         Button sobre=new Button(this); sobre.setText("ⓘ  SOBRE O APLICATIVO"); sobre.setTextColor(WHITE); sobre.setTextSize(13); sobre.setAllCaps(false);
         GradientDrawable sobreBg=new GradientDrawable(); sobreBg.setColor(CARD_2); sobreBg.setCornerRadius(dp(16)); sobre.setBackground(sobreBg); actionFeedback(sobre); sobre.setOnClickListener(v->showSobre()); root.addView(sobre,new LinearLayout.LayoutParams(-1,dp(48)));
-        sv.addView(root); setContentView(sv);
+        sv.addView(root); mostrar(sv);
     }
 
     private Button smallAction(String text,int color){
@@ -835,21 +828,6 @@ render[0]=()->{
         LinearLayout r=row(); add(r,key("⏻\nLIGA / DESLIGA",1,64,Color.rgb(125,35,40),13)); add(r,key("🌀\nOSCILAÇÃO",2,64,KEY,13)); root.addView(r);
         r=row(); add(r,key("＋\nVELOCIDADE",3,64,KEY,13)); add(r,key("⏱\nTIMER",4,64,KEY,13)); root.addView(r);
         r=row(); add(r,key("🌙\nNOTURNO",5,64,KEY,13)); root.addView(r);
-        EditText codigoFan=new EditText(this);
-        codigoFan.setSingleLine(true); codigoFan.setHint("Código HEX do ventilador (ex.: 0x20DF10EF)");
-        codigoFan.setHintTextColor(GRAY); codigoFan.setTextColor(WHITE); codigoFan.setTextSize(14);
-        GradientDrawable fanInputBg=new GradientDrawable(); fanInputBg.setColor(CARD); fanInputBg.setCornerRadius(dp(14)); fanInputBg.setStroke(dp(1),BORDER);
-        codigoFan.setBackground(fanInputBg); codigoFan.setPadding(dp(14),0,dp(14),0);
-        LinearLayout.LayoutParams fanInputP=new LinearLayout.LayoutParams(-1,dp(48)); fanInputP.setMargins(0,dp(4),0,dp(6)); root.addView(codigoFan,fanInputP);
-        Button enviarFan=new Button(this); enviarFan.setText("ENVIAR CÓDIGO HEX"); enviarFan.setTextColor(WHITE); enviarFan.setTextSize(13); enviarFan.setAllCaps(false);
-        GradientDrawable enviarFanBg=new GradientDrawable(); enviarFanBg.setColor(KEY_DARK); enviarFanBg.setCornerRadius(dp(14)); enviarFanBg.setStroke(dp(1),BORDER); enviarFan.setBackground(enviarFanBg);
-        actionFeedback(enviarFan); enviarFan.setOnClickListener(v->{
-            String valor=codigoFan.getText().toString().trim();
-            if(valor.isEmpty()){codigoFan.setError("Digite o código HEX");return;}
-            boolean ok=irPerfilTeste.transmitManual(valor);
-            Toast.makeText(this,ok?"Código enviado":"Código inválido ou falha no emissor IR",Toast.LENGTH_SHORT).show();
-        });
-        root.addView(enviarFan,new LinearLayout.LayoutParams(-1,dp(48)));
         TextView info=label("⚠️ Compatibilidade varia conforme o modelo do ventilador. Se não responder, use TESTAR DISPOSITIVOS para experimentar outros códigos.",11); info.setTextColor(Color.rgb(190,170,110)); info.setGravity(Gravity.CENTER); root.addView(info,new LinearLayout.LayoutParams(-1,dp(62)));
         Button testar=new Button(this); testar.setText("🔎  TESTAR / SALVAR CONTROLE"); testar.setTextColor(WHITE); testar.setTextSize(13); testar.setAllCaps(false);
         GradientDrawable tb=new GradientDrawable(); tb.setColor(ACCENT); tb.setCornerRadius(dp(15)); testar.setBackground(tb); actionFeedback(testar);
@@ -857,10 +835,10 @@ render[0]=()->{
         Button voltar=new Button(this); voltar.setText("VOLTAR"); voltar.setTextColor(WHITE); voltar.setAllCaps(false); voltar.setTextSize(13);
         GradientDrawable vb=new GradientDrawable(); vb.setColor(CARD_2); vb.setCornerRadius(dp(15)); voltar.setBackground(vb); actionFeedback(voltar); voltar.setOnClickListener(v->showSelector());
         root.addView(voltar,new LinearLayout.LayoutParams(-1,dp(48)));
-        sv.addView(root); setContentView(sv);
+        sv.addView(root); mostrar(sv);
     }
     private void showSobre(){
-        String versao="1.3.6";
+        String versao="?";
         try{
             android.content.pm.PackageInfo info=getPackageManager().getPackageInfo(getPackageName(),0);
             if(info.versionName!=null) versao=info.versionName;
@@ -885,66 +863,45 @@ render[0]=()->{
 
     private void showBrandWizard(){
         final String[] marcas={"Philips","LG","Samsung","Sony","Panasonic","AOC","TCL","Philco","Semp"};
-        wizardDialog("PASSO 1 DE 3 • MARCA","Escolha a marca da TV. O aplicativo usará automaticamente o perfil IR mais provável.")
-            .setItems(marcas,(d,w)->showModelWizard(marcas[w]))
-            .setNegativeButton("CANCELAR",(x,y)->showMeusControles()).show();
+        escolher("PASSO 1 DE 3 • MARCA","Escolha a marca da TV. O aplicativo usará automaticamente o perfil IR mais provável.",
+            marcas,i->showModelWizard(marcas[i]),()->showMeusControles());
     }
 
     private void showModelWizard(String marca){
         final String[] modelos;
         if("Philips".equals(marca)) modelos=new String[]{"50PUG6513/7","Outro modelo"};
         else if("LG".equals(marca)) modelos=new String[]{"32LB620B","Outro modelo"};
-        else if("Samsung".equals(marca)) modelos=new String[]{"Smart TV","Outro modelo"};
-        else if("Sony".equals(marca)) modelos=new String[]{"Smart TV","Outro modelo"};
-        else if("Panasonic".equals(marca)) modelos=new String[]{"Smart TV","Outro modelo"};
-        else if("AOC".equals(marca)) modelos=new String[]{"Smart TV","Outro modelo"};
-        else if("TCL".equals(marca)) modelos=new String[]{"Smart TV","Outro modelo"};
-        else if("Philco".equals(marca)) modelos=new String[]{"Smart TV","Outro modelo"};
         else modelos=new String[]{"Smart TV","Outro modelo"};
-
-        new android.app.AlertDialog.Builder(this)
-            .setTitle("PASSO 2 DE 3 • MODELO")
-            .setItems(modelos,(d,w)->{
-                if(w==modelos.length-1){
-                    final EditText input=new EditText(this);
-                    input.setSingleLine(true);
-                    input.setHint("Ex.: 50PUG6513/7");
-                    input.setTextColor(WHITE);
-                    input.setHintTextColor(GRAY);
-                    input.setTextSize(16);
-                    input.setPadding(dp(12),0,dp(12),0);
-                    GradientDrawable inputBg=new GradientDrawable();
-                    inputBg.setColor(CARD);
-                    inputBg.setCornerRadius(dp(12));
-                    inputBg.setStroke(dp(1),BORDER);
-                    input.setBackground(inputBg);
-
-                    android.widget.FrameLayout box=new android.widget.FrameLayout(this);
-                    box.setPadding(dp(22),dp(4),dp(22),0);
-                    box.addView(input,new android.widget.FrameLayout.LayoutParams(-1,dp(52)));
-
-                    new android.app.AlertDialog.Builder(this)
-                        .setTitle("MODELO • "+marca)
-                        .setMessage("Digite o modelo da TV para identificar melhor os códigos.")
-                        .setView(box)
-                        .setNegativeButton("VOLTAR",(x,y)->showModelWizard(marca))
-                        .setPositiveButton("CONTINUAR",(x,y)->{
-                            String modelo=input.getText().toString().trim();
-                            if(modelo.isEmpty()) modelo="Modelo não informado";
-                            prepararNovoControle(marca,modelo);
-                        }).show();
-                } else {
-                    prepararNovoControle(marca,modelos[w]);
-                }
-            })
-            .setNegativeButton("VOLTAR",(x,y)->showBrandWizard()).show();
+        escolher("PASSO 2 DE 3 • MODELO","Marca selecionada: "+marca+"\n\nEscolha um modelo conhecido ou informe o modelo manualmente.",modelos,w->{
+            if(w==modelos.length-1){
+                final EditText input=new EditText(this);
+                input.setSingleLine(true); input.setHint("Ex.: 50PUG6513/7");
+                input.setTextColor(WHITE); input.setHintTextColor(GRAY); input.setTextSize(16); input.setPadding(dp(12),0,dp(12),0);
+                GradientDrawable inputBg=new GradientDrawable(); inputBg.setColor(CARD); inputBg.setCornerRadius(dp(12)); inputBg.setStroke(dp(1),BORDER);
+                input.setBackground(inputBg);
+                android.widget.FrameLayout box=new android.widget.FrameLayout(this);
+                box.setPadding(dp(22),dp(4),dp(22),0);
+                box.addView(input,new android.widget.FrameLayout.LayoutParams(-1,dp(52)));
+                new android.app.AlertDialog.Builder(this)
+                    .setTitle("MODELO • "+marca)
+                    .setMessage("Digite o modelo da TV para identificar melhor os códigos.")
+                    .setView(box)
+                    .setNegativeButton("VOLTAR",(x,y)->showModelWizard(marca))
+                    .setPositiveButton("CONTINUAR",(x,y)->{
+                        String modelo=input.getText().toString().trim();
+                        if(modelo.isEmpty()) modelo="Modelo não informado";
+                        prepararNovoControle(marca,modelo);
+                    }).show();
+            } else {
+                prepararNovoControle(marca,modelos[w]);
+            }
+        },()->showBrandWizard());
     }
 
     private void prepararNovoControle(String marca,String modelo){
         lgMode="LG".equals(marca);
         controleAtivo=null;
         prefs.edit().remove("active_control_id").putBoolean("lg_mode",lgMode).apply();
-        setupBrand=marca; setupModel=modelo;
         showTvSetup(marca,modelo);
     }
 
@@ -955,6 +912,7 @@ render[0]=()->{
     }
 
     private void build(){
+        fanMode=false;
         if(controleAtivo!=null && "Ventilador Universal".equals(controleAtivo.perfil)){ showFanRemote(); return; }
         ScrollView sv=new ScrollView(this); sv.setFillViewport(true);
         sv.setBackgroundColor(BG); sv.setClipToPadding(false);
@@ -1057,7 +1015,7 @@ render[0]=()->{
         section(root,"VOLUME E CANAIS");
         r=row(); add(r,key("📡 VOL +",VOL_UP,50,KEY,16)); add(r,key("🔇",MUTE,50,KEY,20));
         add(r,key("CH +  +",CH_UP,50,KEY,16)); root.addView(r);
-        r=row(); add(r,key("📡 VOL −",VOL_DOWN,50,KEY,16)); add(r,key("TV",TV_INPUT,50,KEY,16));
+        r=row(); add(r,key("📡 VOL −",VOL_DOWN,50,KEY,16)); add(r,key("TV",SOURCE,50,KEY,16));
         add(r,key("CH −  −",CH_DOWN,50,KEY,16)); root.addView(r);
 
         section(root,"SMART TV");
@@ -1068,7 +1026,7 @@ render[0]=()->{
 
         section(root,"TECLADO");
         String[][] nums={{"1","2 ABC","3 DEF"},{"4 GHI","5 JKL","6 MNO"},{"7 PQRS","8 TUV","9 WXYZ"},{"CC","0","SUBTITLE"}};
-        int[][] cmds={{DIGIT_1,DIGIT_2,DIGIT_3},{DIGIT_4,DIGIT_5,DIGIT_6},{DIGIT_7,DIGIT_8,DIGIT_9},{CC,DIGIT_0,SUBTITLE}};
+        int[][] cmds={{1,2,3},{4,5,6},{7,8,9},{0x3C,0,SUBTITLE}};
         for(int i=0;i<nums.length;i++){ r=row(); for(int j=0;j<3;j++){
             int fs=(i==0&&j==0)?20:14; add(r,key(nums[i][j],cmds[i][j],50,KEY_DARK,fs));
         } root.addView(r); }
@@ -1127,20 +1085,7 @@ render[0]=()->{
         LinearLayout.LayoutParams meusParams=new LinearLayout.LayoutParams(-1,dp(50));
         meusParams.setMargins(dp(2),dp(6),dp(2),0);
         root.addView(meusControles,meusParams);
-        sv.addView(root); setContentView(sv);
-    }
-
-    private String funcaoDoComando(int command){
-        switch(command){
-            case POWER:return "POWER"; case MUTE:return "MUTE";
-            case VOL_UP:return "VOL_UP"; case VOL_DOWN:return "VOL_DOWN";
-            case CH_UP:return "CH_UP"; case CH_DOWN:return "CH_DOWN";
-            case UP:return "UP"; case DOWN:return "DOWN"; case LEFT:return "LEFT"; case RIGHT:return "RIGHT"; case OK:return "OK";
-            case BACK:return "BACK"; case MENU:return "MENU"; case HOME:return "HOME"; case SOURCE:return "SOURCE"; case INFO:return "INFO"; case GUIDE:return "GUIDE";
-            case NETFLIX:return "NETFLIX"; case SETTINGS:return "SETTINGS"; case TV_INPUT:return "TV"; case CC:return "CC"; case DIGIT_0:return "DIGIT_0"; case DIGIT_1:return "DIGIT_1"; case DIGIT_2:return "DIGIT_2"; case DIGIT_3:return "DIGIT_3"; case DIGIT_4:return "DIGIT_4"; case DIGIT_5:return "DIGIT_5"; case DIGIT_6:return "DIGIT_6"; case DIGIT_7:return "DIGIT_7"; case DIGIT_8:return "DIGIT_8"; case DIGIT_9:return "DIGIT_9"; case RED:return "RED"; case GREEN:return "GREEN"; case YELLOW:return "YELLOW"; case BLUE:return "BLUE"; case PLAY:return "PLAY"; case PAUSE:return "PAUSE"; case STOP:return "STOP";
-            case REWIND:return "REWIND"; case FAST_FORWARD:return "FAST_FORWARD"; case SUBTITLE:return "SUBTITLE"; case EXIT:return "EXIT";
-            default:return "";
-        }
+        sv.addView(root); mostrar(sv);
     }
 
     private boolean enviarComandoSalvo(String funcao){
@@ -1148,120 +1093,40 @@ render[0]=()->{
         int codigo=controleStorage.codigoComando(controleAtivo,funcao);
         String perfil=controleStorage.perfilComando(controleAtivo,funcao);
         if(codigo<0 || perfil.isEmpty()) return false;
-        int frequencia=controleStorage.frequenciaComando(controleAtivo,funcao);
-         return irPerfilTeste.transmitirSalvo(perfil,codigo,frequencia);
+        return irPerfilTeste.transmitirSalvo(perfil,codigo,controleStorage.frequenciaComando(controleAtivo,funcao));
+    }
+
+    /** Tecla n (1..5) do ventilador: usa o código aprendido para a função, ou o código padrão n. */
+    private void enviarVentilador(int n){
+        if(!irPerfilTeste.hasEmitter()){
+            Toast.makeText(this,"Este celular não possui emissor IR.",Toast.LENGTH_SHORT).show(); return;
+        }
+        int codigo=n;
+        if(controleAtivo!=null && IrPerfilTeste.PERFIL_VENTILADOR.equals(controleAtivo.perfil)){
+            int salvo=controleStorage.codigoComando(controleAtivo,RemoteKeys.FAN_CHAVES[n-1]);
+            if(salvo>=1 && salvo<=5) codigo=salvo;
+        }
+        if(!irPerfilTeste.transmitirVentilador(codigo))
+            Toast.makeText(this,"Falha ao enviar IR.",Toast.LENGTH_SHORT).show();
     }
 
     private void send(int command){
-        if(fanMode && command>=1 && command<=5){ irPerfilTeste.transmitirVentilador(command); return; }
-        if(ir==null||!ir.hasIrEmitter()){
+        if(fanMode && command>=1 && command<=5){ enviarVentilador(command); return; }
+        if(!irPerfilTeste.hasEmitter()){
             Toast.makeText(this,"Este celular não possui emissor IR.",Toast.LENGTH_SHORT).show(); return;
         }
-        try{
-            String funcao=funcaoDoComando(command);
-            if(enviarComandoSalvo(funcao)){
-                return;
-            }
-            if(command==POWER && controleAtivo!=null && controleAtivo.codigo>=0){
-                boolean ok=irPerfilTeste.transmitirSalvo(controleAtivo.perfil,controleAtivo.codigo,controleAtivo.frequencia);
-                if(!ok) Toast.makeText(this,"Não foi possível enviar o código salvo",Toast.LENGTH_SHORT).show();
-                return;
-            }
-            // Para controles universais, não envie um código genérico de outro protocolo.
-            // Se o botão não foi aprendido, peça ao usuário para configurá-lo.
-            if(controleAtivo!=null){
-                String perfil=controleAtivo.perfil==null?"":controleAtivo.perfil;
-                if("LG / NEC".equals(perfil)) {
-                    transmitirSeguro(LG_FREQ,lgNec(command));
-                    return;
-                }
-                if("Philips / RC6".equals(perfil)) {
-                    toggle=!toggle;
-                    transmitirSeguro(FREQ,rc6(0x00,command,toggle));
-                    return;
-                }
-                Toast.makeText(this,"Este botão ainda não foi configurado. Toque em EDITAR para aprendê-lo.",Toast.LENGTH_SHORT).show();
-                return;
-            }
-            if(lgMode) transmitirSeguro(LG_FREQ,lgNec(command));
-            else { toggle=!toggle; transmitirSeguro(FREQ,rc6(0x00,command,toggle)); }
-        }catch(Exception e){
-            Toast.makeText(this,"Falha ao enviar IR: "+e.getMessage(),Toast.LENGTH_SHORT).show();
+        if(enviarComandoSalvo(funcao(command))) return;
+        if(command==POWER && controleAtivo!=null && controleAtivo.codigo>=0){
+            if(!irPerfilTeste.transmitirSalvo(controleAtivo.perfil,controleAtivo.codigo,controleAtivo.frequencia))
+                Toast.makeText(this,"Não foi possível enviar o código salvo",Toast.LENGTH_SHORT).show();
+            return;
         }
-    }
-
-    private int frequenciaIR(int desejada){
-        if(ir==null) return desejada;
-        try{
-            ConsumerIrManager.CarrierFrequencyRange[] ranges=ir.getCarrierFrequencies();
-            if(ranges==null || ranges.length==0) return desejada;
-            int melhor=desejada; long distancia=Long.MAX_VALUE;
-            for(ConsumerIrManager.CarrierFrequencyRange r:ranges){
-                int candidato=desejada;
-                if(desejada<r.getMinFrequency()) candidato=r.getMinFrequency();
-                else if(desejada>r.getMaxFrequency()) candidato=r.getMaxFrequency();
-                long d=Math.abs((long)candidato-desejada);
-                if(d<distancia){distancia=d;melhor=candidato;}
-                if(d==0) break;
-            }
-            return melhor;
-        }catch(Exception e){return desejada;}
-    }
-
-    private void transmitirSeguro(int frequencia,int[] padrao){ ir.transmit(frequenciaIR(frequencia),padrao); }
-
-    private int lgCode(int c){
-        switch(c){
-            case POWER:return 0x08; case MUTE:return 0x09; case VOL_UP:return 0x02; case VOL_DOWN:return 0x03;
-            case CH_UP:return 0x00; case CH_DOWN:return 0x01; case UP:return 0x40; case DOWN:return 0x41;
-            case LEFT:return 0x07; case RIGHT:return 0x06; case OK:return 0x44; case BACK:return 0x28;
-            case MENU:return 0x43; case HOME:return 0x7C; case SOURCE:return 0x0B; case TV_INPUT:return 0xD6; case INFO:return 0xAA;
-            case GUIDE:return 0xAB; case SETTINGS:return 0x43; case RED:return 0x72; case GREEN:return 0x71;
-            case YELLOW:return 0x63; case BLUE:return 0x61; case PLAY:return 0xB0; case STOP:return 0xB1;
-            case PAUSE:return 0xBA; case REWIND:return 0x8F; case FAST_FORWARD:return 0x8E;
-            case SUBTITLE:return 0x39; case EXIT:return 0x5B; case NETFLIX:return 0xB5;
-            case 0x3C:return 0x10; case 0:return 0x10;
-            case 1:return 0x11; case 2:return 0x12; case 3:return 0x13; case 4:return 0x14;
-            case 5:return 0x15; case 6:return 0x16; case 7:return 0x17; case 8:return 0x18; case 9:return 0x19;
-            default:return c & 0xFF;
-        }
-    }
-
-    private int[] lgNec(int command){
-        int data=lgCode(command)&0xFF;
-        int[] bytes={0x04,0xFB,data,(~data)&0xFF};
-        ArrayList<Integer> p=new ArrayList<>();
-        append(p,true,9000); append(p,false,4500);
-        for(int b:bytes) for(int m=1;m<=0x80;m<<=1){
-            append(p,true,LG_UNIT);
-            append(p,false,(b&m)!=0?1690:560);
-        }
-        append(p,true,LG_UNIT); append(p,false,20000);
-        int[] out=new int[p.size()]; for(int i=0;i<p.size();i++) out[i]=p.get(i);
-        return out;
-    }
-
-    private int[] rc6(int address,int command,boolean tog){
-        ArrayList<Integer> p=new ArrayList<>();
-        append(p,true,2666); append(p,false,889);
-        appendBit(p,1,UNIT); appendBit(p,0,UNIT); appendBit(p,0,UNIT); appendBit(p,0,UNIT);
-        appendBit(p,tog?1:0,UNIT*2);
-        for(int m=0x80;m!=0;m>>=1) appendBit(p,(address&m)!=0?1:0,UNIT);
-        for(int m=0x80;m!=0;m>>=1) appendBit(p,(command&m)!=0?1:0,UNIT);
-        append(p,false,2666);
-        int[] out=new int[p.size()]; for(int i=0;i<p.size();i++)out[i]=p.get(i); return out;
-    }
-
-    private void appendBit(ArrayList<Integer> p,int bit,int half){
-        if(bit==1){append(p,true,half);append(p,false,half);}
-        else{append(p,false,half);append(p,true,half);}
-    }
-
-    private void append(ArrayList<Integer> p,boolean mark,int duration){
-        if(duration<=0)return;
-        if(p.isEmpty()){if(!mark)p.add(0);p.add(duration);return;}
-        boolean expectedMark=(p.size()%2==1);
-        if(expectedMark==mark){int i=p.size()-1;p.set(i,p.get(i)+duration);}
-        else p.add(duration);
+        // Tabelas embutidas só valem para LG/NEC e Philips/RC6; em outros perfis o botão precisa ser aprendido.
+        String perfil=controleAtivo!=null?(controleAtivo.perfil==null?"":controleAtivo.perfil):(lgMode?"LG / NEC":"Philips / RC6");
+        boolean ok;
+        if("LG / NEC".equals(perfil)) ok=irPerfilTeste.transmitirSalvo(perfil,(0x04<<8)|lgCode(command),0);
+        else if("Philips / RC6".equals(perfil)) ok=irPerfilTeste.transmitirSalvo(perfil,command&0xFF,0);
+        else { Toast.makeText(this,"Este botão ainda não foi configurado. Toque em EDITAR para aprendê-lo.",Toast.LENGTH_SHORT).show(); return; }
+        if(!ok) Toast.makeText(this,"Falha ao enviar IR.",Toast.LENGTH_SHORT).show();
     }
 }
