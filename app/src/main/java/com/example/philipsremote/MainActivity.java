@@ -51,7 +51,7 @@ private static final int CARD_2 = Color.rgb(31,31,36);
     private static final int CH_DOWN=0x21, CH_UP=0x20;
     private static final int UP=0x58, DOWN=0x59, LEFT=0x5A, RIGHT=0x5B, OK=0x5C;
     private static final int BACK=0x0A, MENU=0x57, HOME=0x54, SOURCE=0x38;
-    private static final int INFO=0x0F, GUIDE=0xCC, NETFLIX=0x76, SETTINGS=0xBF;
+    private static final int INFO=0x0F, GUIDE=0xCC, NETFLIX=0x76, SETTINGS=0xBF, TV_INPUT=0x100, CC=0x101, DIGIT_0=0x110, DIGIT_1=0x111, DIGIT_2=0x112, DIGIT_3=0x113, DIGIT_4=0x114, DIGIT_5=0x115, DIGIT_6=0x116, DIGIT_7=0x117, DIGIT_8=0x118, DIGIT_9=0x119;
     private static final int RED=0x6D, GREEN=0x6E, YELLOW=0x6F, BLUE=0x70;
     private static final int PLAY=0x2C, STOP=0x31, PAUSE=0x30, REWIND=0x2B;
     private static final int FAST_FORWARD=0x28, RECORD=0x37, SUBTITLE=0x4B, EXIT=0x9F;
@@ -452,7 +452,8 @@ private static final int CARD_2 = Color.rgb(31,31,36);
                     Toast.makeText(this,"Teste pelo menos um código antes de salvar.",Toast.LENGTH_SHORT).show(); return;
                 }
                 int freq=frequenciaPerfil(perfil);
-                String nome=nomeSelecionado[0]; String descricao=irPerfilTeste.lastDescription();
+                irPerfilTeste.marcarFuncionou();
+                 String nome=nomeSelecionado[0]; String descricao=irPerfilTeste.lastDescription();
                 String categoria=perfil.startsWith("AC ")?"AR-CONDICIONADO":(perfil.equals("Ventilador Universal")?"VENTILADOR":"TV");
                 controleStorage.salvar(nome,categoria,marcaSelecionada[0],modelo,perfil,descricao,codigo,freq);
                 dialog.dismiss();
@@ -471,8 +472,8 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         if(controle==null){ showMeusControles(); return; }
 
         final boolean isFan="Ventilador Universal".equals(controle.perfil);
-        final String[] funcoes=isFan?new String[]{"Ligar / desligar","Oscilação","Velocidade","Timer","Noturno"}:new String[]{"Ligar/desligar","Mute","Volume +","Volume -","Canal +","Canal -","Cima","Baixo","Esquerda","Direita","OK","Voltar","Menu","Home","Source","Info","Guide","Netflix","Configurações","Vermelho","Verde","Amarelo","Azul","Play","Pause","Stop","Retroceder","Avançar","Subtitle","Exit"};
-        final String[] chaves=isFan?new String[]{"POWER","SWING","SPEED","TIMER","NIGHT"}:new String[]{"POWER","MUTE","VOL_UP","VOL_DOWN","CH_UP","CH_DOWN","UP","DOWN","LEFT","RIGHT","OK","BACK","MENU","HOME","SOURCE","INFO","GUIDE","NETFLIX","SETTINGS","RED","GREEN","YELLOW","BLUE","PLAY","PAUSE","STOP","REWIND","FAST_FORWARD","SUBTITLE","EXIT"};
+        final String[] funcoes=isFan?new String[]{"Ligar / desligar","Oscilação","Velocidade","Timer","Noturno"}:new String[]{"Ligar/desligar","Mute","Volume +","Volume -","Canal +","Canal -","Cima","Baixo","Esquerda","Direita","OK","Voltar","Menu","Home","Source","TV","Info","Guide","Netflix","Configurações","Vermelho","Verde","Amarelo","Azul","Play","Pause","Stop","Retroceder","Avançar","Subtitle","Exit","CC","0","1","2","3","4","5","6","7","8","9"};
+        final String[] chaves=isFan?new String[]{"POWER","SWING","SPEED","TIMER","NIGHT"}:new String[]{"POWER","MUTE","VOL_UP","VOL_DOWN","CH_UP","CH_DOWN","UP","DOWN","LEFT","RIGHT","OK","BACK","MENU","HOME","SOURCE","TV","INFO","GUIDE","NETFLIX","SETTINGS","RED","GREEN","YELLOW","BLUE","PLAY","PAUSE","STOP","REWIND","FAST_FORWARD","SUBTITLE","EXIT","CC","DIGIT_0","DIGIT_1","DIGIT_2","DIGIT_3","DIGIT_4","DIGIT_5","DIGIT_6","DIGIT_7","DIGIT_8","DIGIT_9"};
         final int[] pos={Math.max(0,Math.min(aprenderFuncaoPos,funcoes.length-1))};
         final String[] perfis=irPerfilTeste.perfis();
         final int configuradosInicial=controleStorage.quantidadeComandos(controle);
@@ -760,6 +761,21 @@ render[0]=()->{
         LinearLayout r=row(); add(r,key("⏻\nLIGA / DESLIGA",1,64,Color.rgb(125,35,40),13)); add(r,key("🌀\nOSCILAÇÃO",2,64,KEY,13)); root.addView(r);
         r=row(); add(r,key("＋\nVELOCIDADE",3,64,KEY,13)); add(r,key("⏱\nTIMER",4,64,KEY,13)); root.addView(r);
         r=row(); add(r,key("🌙\nNOTURNO",5,64,KEY,13)); root.addView(r);
+        EditText codigoFan=new EditText(this);
+        codigoFan.setSingleLine(true); codigoFan.setHint("Código HEX do ventilador (ex.: 0x20DF10EF)");
+        codigoFan.setHintTextColor(GRAY); codigoFan.setTextColor(WHITE); codigoFan.setTextSize(14);
+        GradientDrawable fanInputBg=new GradientDrawable(); fanInputBg.setColor(CARD); fanInputBg.setCornerRadius(dp(14)); fanInputBg.setStroke(dp(1),BORDER);
+        codigoFan.setBackground(fanInputBg); codigoFan.setPadding(dp(14),0,dp(14),0);
+        LinearLayout.LayoutParams fanInputP=new LinearLayout.LayoutParams(-1,dp(48)); fanInputP.setMargins(0,dp(4),0,dp(6)); root.addView(codigoFan,fanInputP);
+        Button enviarFan=new Button(this); enviarFan.setText("ENVIAR CÓDIGO HEX"); enviarFan.setTextColor(WHITE); enviarFan.setTextSize(13); enviarFan.setAllCaps(false);
+        GradientDrawable enviarFanBg=new GradientDrawable(); enviarFanBg.setColor(KEY_DARK); enviarFanBg.setCornerRadius(dp(14)); enviarFanBg.setStroke(dp(1),BORDER); enviarFan.setBackground(enviarFanBg);
+        actionFeedback(enviarFan); enviarFan.setOnClickListener(v->{
+            String valor=codigoFan.getText().toString().trim();
+            if(valor.isEmpty()){codigoFan.setError("Digite o código HEX");return;}
+            boolean ok=irPerfilTeste.transmitManual(valor);
+            Toast.makeText(this,ok?"Código enviado":"Código inválido ou falha no emissor IR",Toast.LENGTH_SHORT).show();
+        });
+        root.addView(enviarFan,new LinearLayout.LayoutParams(-1,dp(48)));
         TextView info=label("⚠️ Compatibilidade varia conforme o modelo do ventilador. Se não responder, use TESTAR DISPOSITIVOS para experimentar outros códigos.",11); info.setTextColor(Color.rgb(190,170,110)); info.setGravity(Gravity.CENTER); root.addView(info,new LinearLayout.LayoutParams(-1,dp(62)));
         Button testar=new Button(this); testar.setText("🔎  TESTAR / SALVAR CONTROLE"); testar.setTextColor(WHITE); testar.setTextSize(13); testar.setAllCaps(false);
         GradientDrawable tb=new GradientDrawable(); tb.setColor(ACCENT); tb.setCornerRadius(dp(15)); testar.setBackground(tb); actionFeedback(testar);
@@ -968,7 +984,7 @@ render[0]=()->{
         section(root,"VOLUME E CANAIS");
         r=row(); add(r,key("📡 VOL +",VOL_UP,50,KEY,16)); add(r,key("🔇",MUTE,50,KEY,20));
         add(r,key("CH +  +",CH_UP,50,KEY,16)); root.addView(r);
-        r=row(); add(r,key("📡 VOL −",VOL_DOWN,50,KEY,16)); add(r,key("TV",SOURCE,50,KEY,16));
+        r=row(); add(r,key("📡 VOL −",VOL_DOWN,50,KEY,16)); add(r,key("TV",TV_INPUT,50,KEY,16));
         add(r,key("CH −  −",CH_DOWN,50,KEY,16)); root.addView(r);
 
         section(root,"SMART TV");
@@ -979,7 +995,7 @@ render[0]=()->{
 
         section(root,"TECLADO");
         String[][] nums={{"1","2 ABC","3 DEF"},{"4 GHI","5 JKL","6 MNO"},{"7 PQRS","8 TUV","9 WXYZ"},{"CC","0","SUBTITLE"}};
-        int[][] cmds={{1,2,3},{4,5,6},{7,8,9},{0x3C,0,SUBTITLE}};
+        int[][] cmds={{DIGIT_1,DIGIT_2,DIGIT_3},{DIGIT_4,DIGIT_5,DIGIT_6},{DIGIT_7,DIGIT_8,DIGIT_9},{CC,DIGIT_0,SUBTITLE}};
         for(int i=0;i<nums.length;i++){ r=row(); for(int j=0;j<3;j++){
             int fs=(i==0&&j==0)?20:14; add(r,key(nums[i][j],cmds[i][j],50,KEY_DARK,fs));
         } root.addView(r); }
@@ -1048,7 +1064,7 @@ render[0]=()->{
             case CH_UP:return "CH_UP"; case CH_DOWN:return "CH_DOWN";
             case UP:return "UP"; case DOWN:return "DOWN"; case LEFT:return "LEFT"; case RIGHT:return "RIGHT"; case OK:return "OK";
             case BACK:return "BACK"; case MENU:return "MENU"; case HOME:return "HOME"; case SOURCE:return "SOURCE"; case INFO:return "INFO"; case GUIDE:return "GUIDE";
-            case NETFLIX:return "NETFLIX"; case SETTINGS:return "SETTINGS"; case RED:return "RED"; case GREEN:return "GREEN"; case YELLOW:return "YELLOW"; case BLUE:return "BLUE"; case PLAY:return "PLAY"; case PAUSE:return "PAUSE"; case STOP:return "STOP";
+            case NETFLIX:return "NETFLIX"; case SETTINGS:return "SETTINGS"; case TV_INPUT:return "TV"; case CC:return "CC"; case DIGIT_0:return "DIGIT_0"; case DIGIT_1:return "DIGIT_1"; case DIGIT_2:return "DIGIT_2"; case DIGIT_3:return "DIGIT_3"; case DIGIT_4:return "DIGIT_4"; case DIGIT_5:return "DIGIT_5"; case DIGIT_6:return "DIGIT_6"; case DIGIT_7:return "DIGIT_7"; case DIGIT_8:return "DIGIT_8"; case DIGIT_9:return "DIGIT_9"; case RED:return "RED"; case GREEN:return "GREEN"; case YELLOW:return "YELLOW"; case BLUE:return "BLUE"; case PLAY:return "PLAY"; case PAUSE:return "PAUSE"; case STOP:return "STOP";
             case REWIND:return "REWIND"; case FAST_FORWARD:return "FAST_FORWARD"; case SUBTITLE:return "SUBTITLE"; case EXIT:return "EXIT";
             default:return "";
         }
@@ -1066,12 +1082,11 @@ render[0]=()->{
     private void send(int command){
         if(fanMode && command>=1 && command<=5){ irPerfilTeste.transmitirVentilador(command); return; }
         if(ir==null||!ir.hasIrEmitter()){
-            Toast.makeText(this,"Este telemóvel não possui emissor IR.",Toast.LENGTH_SHORT).show(); return;
+            Toast.makeText(this,"Este celular não possui emissor IR.",Toast.LENGTH_SHORT).show(); return;
         }
         try{
             String funcao=funcaoDoComando(command);
             if(enviarComandoSalvo(funcao)){
-                Toast.makeText(this,"Código salvo enviado",Toast.LENGTH_SHORT).show();
                 return;
             }
             if(command==POWER && controleAtivo!=null && controleAtivo.codigo>=0){
@@ -1127,7 +1142,7 @@ render[0]=()->{
             case POWER:return 0x08; case MUTE:return 0x09; case VOL_UP:return 0x02; case VOL_DOWN:return 0x03;
             case CH_UP:return 0x00; case CH_DOWN:return 0x01; case UP:return 0x40; case DOWN:return 0x41;
             case LEFT:return 0x07; case RIGHT:return 0x06; case OK:return 0x44; case BACK:return 0x28;
-            case MENU:return 0x43; case HOME:return 0x7C; case SOURCE:return 0x0B; case INFO:return 0xAA;
+            case MENU:return 0x43; case HOME:return 0x7C; case SOURCE:return 0x0B; case TV_INPUT:return 0xD6; case INFO:return 0xAA;
             case GUIDE:return 0xAB; case SETTINGS:return 0x43; case RED:return 0x72; case GREEN:return 0x71;
             case YELLOW:return 0x63; case BLUE:return 0x61; case PLAY:return 0xB0; case STOP:return 0xB1;
             case PAUSE:return 0xBA; case REWIND:return 0x8F; case FAST_FORWARD:return 0x8E;
