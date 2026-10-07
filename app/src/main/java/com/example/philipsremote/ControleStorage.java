@@ -308,6 +308,77 @@ public class ControleStorage {
         }
     }
 
+    public String exportarJson() {
+        JSONObject raiz = new JSONObject();
+        JSONArray controles = new JSONArray();
+        try {
+            for (Controle c : listar()) {
+                JSONObject o = new JSONObject();
+                o.put("nome", s(c.nome)); o.put("categoria", s(c.categoria));
+                o.put("marca", s(c.marca)); o.put("modelo", s(c.modelo));
+                o.put("perfil", s(c.perfil)); o.put("descricao", s(c.descricao));
+                o.put("codigo", c.codigo); o.put("frequencia", c.frequencia);
+                JSONArray comandos = new JSONArray();
+                if (c.comandos != null) {
+                    JSONArray nomes = c.comandos.names();
+                    if (nomes != null) for (int i=0;i<nomes.length();i++) {
+                        String funcao=nomes.optString(i,"");
+                        JSONObject item=c.comandos.optJSONObject(funcao);
+                        if(item==null||funcao.isEmpty()) continue;
+                        JSONObject cmd=new JSONObject();
+                        cmd.put("funcao",funcao); cmd.put("codigo",item.optInt("codigo",-1));
+                        cmd.put("perfil",item.optString("perfil",""));
+                        cmd.put("frequencia",Math.max(0,item.optInt("frequencia",0)));
+                        comandos.put(cmd);
+                    }
+                }
+                o.put("comandos",comandos); controles.put(o);
+            }
+            raiz.put("app","IR Remote BR"); raiz.put("backup_version",1);
+            raiz.put("created_at",System.currentTimeMillis()); raiz.put("controles",controles);
+            return raiz.toString(2);
+        } catch(Exception e){ Log.e(TAG,"Falha ao exportar backup",e); return null; }
+    }
+
+    public int importarJson(String json, boolean substituir) {
+        if(json==null||json.trim().isEmpty()) return -1;
+        SQLiteDatabase db=null;
+        try {
+            JSONObject raiz=new JSONObject(json);
+            if(raiz.optInt("backup_version",0)!=1) return -2;
+            JSONArray controles=raiz.optJSONArray("controles");
+            if(controles==null) return -3;
+            db=helper.getWritableDatabase(); db.beginTransaction();
+            if(substituir){ db.delete("commands",null,null); db.delete("controls",null,null); }
+            int adicionados=0;
+            for(int i=0;i<controles.length();i++){
+                JSONObject o=controles.optJSONObject(i); if(o==null) continue;
+                ContentValues v=new ContentValues();
+                v.put("nome",nomeSeguro(o.optString("nome",""),"Meu controle"));
+                v.put("categoria",s(o.optString("categoria","IR"))); v.put("marca",s(o.optString("marca","")));
+                v.put("modelo",s(o.optString("modelo",""))); v.put("perfil",s(o.optString("perfil","")));
+                v.put("descricao",s(o.optString("descricao",""))); v.put("codigo",o.optInt("codigo",-1));
+                v.put("frequencia",Math.max(0,o.optInt("frequencia",38000)));
+                long now=System.currentTimeMillis()+i; v.put("created",now); v.put("updated",now);
+                long id=db.insert("controls",null,v); if(id<0) continue;
+                JSONArray comandos=o.optJSONArray("comandos");
+                if(comandos!=null) for(int j=0;j<comandos.length();j++){
+                    JSONObject cmd=comandos.optJSONObject(j); if(cmd==null) continue;
+                    String funcao=s(cmd.optString("funcao","")).trim(); int codigo=cmd.optInt("codigo",-1);
+                    if(funcao.isEmpty()||codigo<0) continue;
+                    if(funcao.length()>80) funcao=funcao.substring(0,80);
+                    ContentValues cv=new ContentValues(); cv.put("control_id",id); cv.put("funcao",funcao);
+                    cv.put("codigo",codigo); cv.put("perfil",s(cmd.optString("perfil","")));
+                    cv.put("frequencia",Math.max(0,cmd.optInt("frequencia",0)));
+                    db.insertWithOnConflict("commands",null,cv,SQLiteDatabase.CONFLICT_REPLACE);
+                }
+                adicionados++;
+            }
+            db.setTransactionSuccessful(); return adicionados;
+        } catch(Exception e){ Log.e(TAG,"Falha ao importar backup",e); return -1; }
+        finally { if(db!=null&&db.inTransaction()) db.endTransaction(); }
+    }
+
     public void limpar() {
         try {
             SQLiteDatabase db = helper.getWritableDatabase();
