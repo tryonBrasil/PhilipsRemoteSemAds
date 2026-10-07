@@ -14,7 +14,7 @@ public class MonetizationManager {
     private static final String PREFS = "remote_prefs";
     private static final String KEY_PREMIUM = "premium_unlocked";
 
-    // IDs de TESTE do Google. Troque pelos IDs reais antes da publicação monetizada.
+    // IDs de TESTE. Substituir pelos IDs reais antes da monetizacao em producao.
     public static final String ADMOB_APP_ID_TEST = "ca-app-pub-3940256099942544~3347511713";
     private static final String BANNER_TEST_ID = "ca-app-pub-3940256099942544/9214589741";
 
@@ -24,6 +24,7 @@ public class MonetizationManager {
     private BillingClient billingClient;
     private ProductDetails premiumProduct;
     private boolean billingReady = false;
+    private boolean consultaEmAndamento = false;
 
     public MonetizationManager(Activity activity, Runnable onPremiumChanged) {
         this.activity = activity;
@@ -41,8 +42,10 @@ public class MonetizationManager {
         return isPremium() || quantidadeAtual < 3;
     }
 
+    public int limiteGratuito() { return 3; }
+
     public void addBanner(LinearLayout root) {
-        if (isPremium()) return;
+        if (root == null || isPremium()) return;
         FrameLayout box = new FrameLayout(activity);
         box.setPadding(0, 6, 0, 6);
         AdView ad = new AdView(activity);
@@ -56,19 +59,34 @@ public class MonetizationManager {
     }
 
     public void showPremiumDialog() {
+        if (isPremium()) {
+            new AlertDialog.Builder(activity)
+                    .setTitle("⭐ IR Remote BR Premium")
+                    .setMessage("Premium ativo nesta conta/app.\n\n"
+                            + "✓ Sem anuncios\n"
+                            + "✓ Controles salvos ilimitados\n"
+                            + "✓ Mais codigos e testes personalizados\n"
+                            + "✓ Recursos avancados para controles universais\n\n"
+                            + "Sua compra fica vinculada a sua conta do Google Play.")
+                    .setPositiveButton("OK", null)
+                    .setNeutralButton("VERIFICAR COMPRA", (d,w) -> restaurarCompra())
+                    .show();
+            return;
+        }
+
         String preco = premiumProduct != null && premiumProduct.getOneTimePurchaseOfferDetails() != null
-                ? premiumProduct.getOneTimePurchaseOfferDetails().getFormattedPrice() : "preço no Google Play";
+                ? premiumProduct.getOneTimePurchaseOfferDetails().getFormattedPrice() : "preco no Google Play";
 
         AlertDialog dialog = new AlertDialog.Builder(activity)
                 .setTitle("⭐ IR Remote BR Premium")
                 .setMessage("Desbloqueie o aplicativo completo.\n\n"
-                        + "✓ Sem anúncios\n"
+                        + "✓ Sem anuncios\n"
                         + "✓ Controles salvos ilimitados\n"
-                        + "✓ Mais códigos e testes personalizados\n"
-                        + "✓ Recursos avançados para controles universais\n"
-                        + "✓ Compra única, sem mensalidade\n\n"
-                        + "Preço: " + preco)
-                .setNegativeButton("AGORA NÃO", null)
+                        + "✓ Mais codigos e testes personalizados\n"
+                        + "✓ Recursos avancados para controles universais\n"
+                        + "✓ Compra unica, sem mensalidade\n\n"
+                        + "Preco: " + preco)
+                .setNegativeButton("AGORA NAO", null)
                 .setNeutralButton("RESTAURAR COMPRA", null)
                 .setPositiveButton("DESBLOQUEAR", (d,w) -> comprar())
                 .create();
@@ -80,7 +98,7 @@ public class MonetizationManager {
 
     public void restaurarCompra() {
         if (!billingReady || billingClient == null) {
-            Toast.makeText(activity, "Google Play ainda está conectando. Tente novamente.", Toast.LENGTH_SHORT).show();
+            Toast.makeText(activity, "Google Play ainda esta conectando. Tente novamente.", Toast.LENGTH_SHORT).show();
             iniciarBilling();
             return;
         }
@@ -98,8 +116,13 @@ public class MonetizationManager {
         billingReady = false;
         billingClient = BillingClient.newBuilder(activity)
                 .setListener((billingResult, purchases) -> {
-                    if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK) {
+                    int code = billingResult.getResponseCode();
+                    if (code == BillingClient.BillingResponseCode.OK) {
                         processarCompras(purchases);
+                    } else if (code == BillingClient.BillingResponseCode.USER_CANCELED) {
+                        // Cancelamento normal: nao exibir erro.
+                    } else {
+                        Toast.makeText(activity, "Nao foi possivel concluir a compra agora.", Toast.LENGTH_SHORT).show();
                     }
                 })
                 .enablePendingPurchases(
@@ -141,32 +164,45 @@ public class MonetizationManager {
     }
 
     private void consultarCompras(boolean mostrarResultado) {
-        if (!billingReady) return;
+        if (!billingReady || consultaEmAndamento) return;
+        consultaEmAndamento = true;
+
         QueryPurchasesParams params = QueryPurchasesParams.newBuilder()
                 .setProductType(BillingClient.ProductType.INAPP)
                 .build();
 
         billingClient.queryPurchasesAsync(params, (result, purchases) -> {
+            consultaEmAndamento = false;
             if (result.getResponseCode() == BillingClient.BillingResponseCode.OK) {
                 boolean encontrado = false;
                 if (purchases != null) {
                     for (Purchase purchase : purchases) {
-                        if (purchase.getPurchaseState() == Purchase.PurchaseState.PURCHASED
-                                && purchase.getProducts().contains(PREMIUM_PRODUCT_ID)) {
-                            encontrado = true;
-                            ativarPremium(purchase);
+                        if (purchase.getProducts().contains(PREMIUM_PRODUCT_ID)) {
+                            if (purchase.getPurchaseState() == Purchase.PurchaseState.PURCHASED) {
+                                encontrado = true;
+                                ativarPremium(purchase);
+                            } else if (purchase.getPurchaseState() == Purchase.PurchaseState.PENDING && mostrarResultado) {
+                                Toast.makeText(activity, "Compra Premium pendente. O acesso sera liberado apos a confirmacao do Google Play.", Toast.LENGTH_LONG).show();
+                            }
                         }
                     }
                 }
+
+                // So removemos o sinal local quando o Google Play respondeu com sucesso.
+                // Assim uma falha temporaria de rede nao bloqueia um Premium ja adquirido.
+                if (!encontrado && isPremium()) {
+                    definirPremium(false, false);
+                }
+
                 if (mostrarResultado && !encontrado) {
-                    activity.runOnUiThread(() -> Toast.makeText(activity,
-                            "Nenhuma compra Premium encontrada nesta conta do Google Play.",
-                            Toast.LENGTH_LONG).show());
+                    Toast.makeText(activity,
+                            "Nenhuma compra Premium ativa encontrada nesta conta do Google Play.",
+                            Toast.LENGTH_LONG).show();
                 }
             } else if (mostrarResultado) {
-                activity.runOnUiThread(() -> Toast.makeText(activity,
-                        "Não foi possível consultar suas compras agora.",
-                        Toast.LENGTH_LONG).show());
+                Toast.makeText(activity,
+                        "Nao foi possivel consultar suas compras agora.",
+                        Toast.LENGTH_LONG).show();
             }
         });
     }
@@ -174,29 +210,43 @@ public class MonetizationManager {
     private void processarCompras(List<Purchase> purchases) {
         if (purchases == null) return;
         for (Purchase purchase : purchases) {
-            if (purchase.getPurchaseState() == Purchase.PurchaseState.PURCHASED
-                    && purchase.getProducts().contains(PREMIUM_PRODUCT_ID)) {
-                ativarPremium(purchase);
+            if (purchase.getProducts().contains(PREMIUM_PRODUCT_ID)) {
+                if (purchase.getPurchaseState() == Purchase.PurchaseState.PURCHASED) {
+                    ativarPremium(purchase);
+                } else if (purchase.getPurchaseState() == Purchase.PurchaseState.PENDING) {
+                    Toast.makeText(activity, "Compra pendente. Aguarde a confirmacao do Google Play.", Toast.LENGTH_LONG).show();
+                }
             }
         }
     }
 
     private void ativarPremium(Purchase purchase) {
-        boolean mudou = !isPremium();
-        prefs.edit().putBoolean(KEY_PREMIUM, true).apply();
+        definirPremium(true, true);
 
         if (!purchase.isAcknowledged() && billingClient != null && billingClient.isReady()) {
             billingClient.acknowledgePurchase(
                     AcknowledgePurchaseParams.newBuilder()
                             .setPurchaseToken(purchase.getPurchaseToken())
                             .build(),
-                    result -> {});
+                    result -> {
+                        if (result.getResponseCode() != BillingClient.BillingResponseCode.OK) {
+                            android.util.Log.w("MonetizationManager", "Falha ao reconhecer compra Premium: " + result.getDebugMessage());
+                        }
+                    });
         }
+    }
 
-        if (mudou) {
+    private void definirPremium(boolean ativo, boolean mostrarToast) {
+        boolean mudou = isPremium() != ativo;
+        prefs.edit().putBoolean(KEY_PREMIUM, ativo).apply();
+        if (mudou || mostrarToast) {
             activity.runOnUiThread(() -> {
-                Toast.makeText(activity, "⭐ Premium ativado/restaurado!", Toast.LENGTH_LONG).show();
-                if (onPremiumChanged != null) onPremiumChanged.run();
+                if (mostrarToast) {
+                    Toast.makeText(activity,
+                            ativo ? "⭐ Premium ativado/restaurado!" : "Premium nao esta ativo nesta conta.",
+                            Toast.LENGTH_LONG).show();
+                }
+                if (mudou && onPremiumChanged != null) onPremiumChanged.run();
             });
         }
     }
@@ -204,7 +254,7 @@ public class MonetizationManager {
     private void comprar() {
         if (!billingReady || billingClient == null || premiumProduct == null) {
             Toast.makeText(activity,
-                    "Produto Premium ainda não disponível. Verifique o Google Play Console.",
+                    "Produto Premium ainda nao disponivel. Verifique o Google Play Console.",
                     Toast.LENGTH_LONG).show();
             iniciarBilling();
             return;
@@ -213,7 +263,7 @@ public class MonetizationManager {
         ProductDetails.OneTimePurchaseOfferDetails offer =
                 premiumProduct.getOneTimePurchaseOfferDetails();
         if (offer == null) {
-            Toast.makeText(activity, "Oferta Premium indisponível no momento.", Toast.LENGTH_LONG).show();
+            Toast.makeText(activity, "Oferta Premium indisponivel no momento.", Toast.LENGTH_LONG).show();
             return;
         }
 
