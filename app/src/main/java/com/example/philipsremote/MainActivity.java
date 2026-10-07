@@ -752,7 +752,7 @@ render[0]=()->{
                 if(filtro.isEmpty()||alvo.contains(filtro)) lista.add(c);
             }
             resumo.setText(filtro.isEmpty() ? monetizacao.resumoLimite(todos.size())
-                    : (lista.size()+" resultado"+(lista.size()==1?"":"s")+" para \""+filtro+"\" ));
+                    : (lista.size()+" resultado"+(lista.size()==1?"":"s")+" para \""+filtro+"\"));
             if(lista.isEmpty()){
                 TextView vazio=label(filtro.isEmpty()?"Nenhum controle salvo ainda.":"Nenhum controle encontrado.",15);
                 vazio.setTextColor(GRAY); vazio.setGravity(Gravity.CENTER); listaBox.addView(vazio,new LinearLayout.LayoutParams(-1,dp(130)));
