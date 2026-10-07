@@ -27,7 +27,7 @@ public class MainActivity extends Activity {
     private SharedPreferences prefs;
     private ControleStorage controleStorage;
     private ControleStorage.Controle controleAtivo;
-    private UpdateManager updateManager;
+    private UpdateManager updateManager;\n    private MonetizationManager monetizacao;
     private int aprenderFuncaoPos = 0;
 
 
@@ -64,7 +64,7 @@ private static final int CARD_2 = Color.rgb(31,31,36);
             lgMode="LG".equalsIgnoreCase(controleAtivo.marca);
             prefs.edit().putBoolean("lg_mode",lgMode).apply();
         }
-        updateManager=new UpdateManager(this);
+        updateManager=new UpdateManager(this);\n        monetizacao=new MonetizationManager(this,()->showSelector());
         showSelector();
     }
 
@@ -245,7 +245,7 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         GradientDrawable dispositivosBg=new GradientDrawable(); dispositivosBg.setColor(Color.rgb(42,42,48)); dispositivosBg.setCornerRadius(dp(16)); dispositivosBg.setStroke(dp(1),BORDER); dispositivos.setBackground(dispositivosBg); actionFeedback(dispositivos);
         dispositivos.setOnClickListener(v->showUniversalScanner(lgMode?"LG":"Philips",lgMode?"32LB620B":"50PUG6513/7"));
         LinearLayout.LayoutParams dispositivosParams=new LinearLayout.LayoutParams(-1,dp(52)); dispositivosParams.setMargins(0,dp(8),0,0); root.addView(dispositivos,dispositivosParams);
-        Button atualizar=new Button(this); atualizar.setText("↻  VERIFICAR ATUALIZAÇÃO"); atualizar.setTextColor(WHITE); atualizar.setTextSize(13); atualizar.setAllCaps(false);
+        Button premium=new Button(this);\n        premium.setText(monetizacao.isPremium()?"⭐  PREMIUM ATIVO":"⭐  IR REMOTE PREMIUM"); premium.setTextColor(WHITE); premium.setTextSize(13); premium.setAllCaps(false);\n        GradientDrawable premiumBg=new GradientDrawable(); premiumBg.setColor(monetizacao.isPremium()?Color.rgb(55,105,65):Color.rgb(70,55,20)); premiumBg.setCornerRadius(dp(16)); premium.setBackground(premiumBg); actionFeedback(premium); premium.setOnClickListener(v->{ if(monetizacao.isPremium()) Toast.makeText(this,"⭐ Premium já está ativo neste aparelho.",Toast.LENGTH_SHORT).show(); else monetizacao.showPremiumDialog(); });\n        LinearLayout.LayoutParams premiumParams=new LinearLayout.LayoutParams(-1,dp(50)); premiumParams.setMargins(0,dp(8),0,0); root.addView(premium,premiumParams);\n\n        Button atualizar=new Button(this); atualizar.setText("↻  VERIFICAR ATUALIZAÇÃO"); atualizar.setTextColor(WHITE); atualizar.setTextSize(13); atualizar.setAllCaps(false);
         GradientDrawable atualizarBg=new GradientDrawable(); atualizarBg.setColor(KEY_DARK); atualizarBg.setCornerRadius(dp(16)); atualizar.setBackground(atualizarBg); actionFeedback(atualizar); atualizar.setOnClickListener(v->updateManager.verificarManualmente());
         LinearLayout.LayoutParams atualizarParams=new LinearLayout.LayoutParams(-1,dp(50)); atualizarParams.setMargins(0,dp(8),0,0); root.addView(atualizar,atualizarParams);
         sv.addView(root); mostrar(sv);
@@ -504,7 +504,7 @@ private static final int CARD_2 = Color.rgb(31,31,36);
                 int freq=frequenciaPerfil(perfil);
                 String nome=nomeSelecionado[0]; String descricao=irPerfilTeste.descricaoAtual();
                 String categoria=perfil.startsWith("AC ")?"AR-CONDICIONADO":(perfil.equals("Ventilador Universal")?"VENTILADOR":"TV");
-                controleStorage.salvar(nome,categoria,marcaSelecionada[0],modelo,perfil,descricao,codigo,freq);
+                if(!monetizacao.podeSalvarControle(controleStorage.listar().size())){\n                    Toast.makeText(this,"Limite gratuito atingido (3 controles). Desbloqueie o Premium para salvar ilimitados.",Toast.LENGTH_LONG).show();\n                    monetizacao.showPremiumDialog();\n                    return;\n                }\n                controleStorage.salvar(nome,categoria,marcaSelecionada[0],modelo,perfil,descricao,codigo,freq);
                 dialog.dismiss();
                 List<ControleStorage.Controle> salvos=controleStorage.listar();
                 if(!salvos.isEmpty()){ controleAtivo=salvos.get(salvos.size()-1); prefs.edit().putLong("active_control_id",controleAtivo.id).apply(); }
