@@ -439,6 +439,131 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         monetizacao.addBanner(root);
         sv.addView(root); mostrar(sv);
     }
+    /** Banco online: consulta modelos do Flipper-IRDB sob demanda e importa somente os sinais escolhidos. */
+    private void showBancoOnline(String categoriaInicial, String marcaInicial){
+        final LinearLayout box=new LinearLayout(this);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setPadding(dp(18),dp(8),dp(18),dp(8));
+
+        TextView info=label("Escolha a categoria e a marca. O app baixa apenas o modelo selecionado; a base não fica embutida no APK.",13);
+        info.setTextColor(GRAY);
+        box.addView(info,new LinearLayout.LayoutParams(-1,dp(62)));
+
+        final String[] cats={"FAN","AC"};
+        final String[] catLabels={"🌀 VENTILADORES","❄️ AR-CONDICIONADO"};
+        final String[] cat={"FAN"};
+        Button categoria=new Button(this);
+        categoria.setText(catLabels[0]); categoria.setAllCaps(false); categoria.setTextColor(WHITE);
+        box.addView(categoria,new LinearLayout.LayoutParams(-1,dp(48)));
+
+        EditText marca=new EditText(this);
+        marca.setHint("Marca (ex.: Arno, Mondial, Midea)");
+        marca.setSingleLine(true); marca.setTextColor(WHITE); marca.setHintTextColor(GRAY);
+        box.addView(marca,new LinearLayout.LayoutParams(-1,dp(52)));
+
+        Button buscar=new Button(this);
+        buscar.setText("🔎  BUSCAR MODELOS");
+        buscar.setAllCaps(false); buscar.setTextColor(WHITE);
+        box.addView(buscar,new LinearLayout.LayoutParams(-1,dp(50)));
+
+        TextView status=label("Pronto para pesquisar.",12); status.setTextColor(GRAY);
+        box.addView(status,new LinearLayout.LayoutParams(-1,dp(42)));
+
+        final String[] selectedCat={"FAN"};
+        categoria.setOnClickListener(v->{
+            selectedCat[0]=selectedCat[0].equals("FAN")?"AC":"FAN";
+            categoria.setText(selectedCat[0].equals("FAN")?catLabels[0]:catLabels[1]);
+        });
+
+        android.app.AlertDialog d=new android.app.AlertDialog.Builder(this)
+            .setTitle("BANCO ONLINE DE CONTROLES")
+            .setView(wrapScroll(box))
+            .setNegativeButton("FECHAR",null).create();
+
+        buscar.setOnClickListener(v->{
+            String b=marca.getText().toString().trim();
+            if(b.isEmpty()){ marca.setError("Digite uma marca"); return; }
+            status.setText("⏳ Buscando modelos de "+b+"...");
+            buscar.setEnabled(false);
+            new Thread(()->{
+                try{
+                    java.util.List<IrRemoteDatabase.RemoteFile> files=IrRemoteDatabase.listar(selectedCat[0],b);
+                    runOnUiThread(()->{
+                        buscar.setEnabled(true);
+                        if(files.isEmpty()){ status.setText("Nenhum modelo encontrado. Tente outra marca."); return; }
+                        final String[] nomes=new String[files.size()];
+                        for(int i=0;i<files.size();i++) nomes[i]=files.get(i).model;
+                        escolher("MODELOS ENCONTRADOS ("+files.size()+")","Toque em um modelo para carregar os códigos.",nomes,w->abrirRemoteOnline(files.get(w)));
+                        status.setText("✓ "+files.size()+" modelo(s) encontrado(s).");
+                    });
+                }catch(Exception e){
+                    runOnUiThread(()->{ buscar.setEnabled(true); status.setText("✕ Não foi possível acessar o banco online."); Toast.makeText(this,e.getMessage()==null?"Erro de conexão":e.getMessage(),Toast.LENGTH_LONG).show(); });
+                }
+            }).start();
+        });
+
+        d.show();
+    }
+
+    private void abrirRemoteOnline(IrRemoteDatabase.RemoteFile remote){
+        Toast.makeText(this,"⏳ Carregando "+remote.model+"...",Toast.LENGTH_SHORT).show();
+        new Thread(()->{
+            try{
+                java.util.List<IrRemoteDatabase.Signal> sinais=IrRemoteDatabase.baixarSinais(remote);
+                runOnUiThread(()->mostrarSinaisOnline(remote,sinais));
+            }catch(Exception e){
+                runOnUiThread(()->Toast.makeText(this,e.getMessage()==null?"Falha ao carregar o controle.":e.getMessage(),Toast.LENGTH_LONG).show());
+            }
+        }).start();
+    }
+
+    private void mostrarSinaisOnline(IrRemoteDatabase.RemoteFile remote, java.util.List<IrRemoteDatabase.Signal> sinais){
+        if(sinais==null || sinais.isEmpty()){
+            new android.app.AlertDialog.Builder(this).setTitle(remote.model).setMessage("Este arquivo não possui sinais transmitíveis compatíveis com o app.").setPositiveButton("OK",null).show();
+            return;
+        }
+        final ControleStorage.Controle[] salvo={null};
+        LinearLayout box=new LinearLayout(this); box.setOrientation(LinearLayout.VERTICAL); box.setPadding(dp(14),dp(6),dp(14),dp(6));
+        TextView info=label("Teste cada função. Quando uma responder, toque em ADICIONAR. O controle fica salvo no aparelho e pode ser editado depois.",12);
+        info.setTextColor(GRAY); box.addView(info,new LinearLayout.LayoutParams(-1,dp(60)));
+        TextView count=label("0 funções salvas • "+sinais.size()+" encontradas",12); count.setTextColor(SUCCESS); box.addView(count,new LinearLayout.LayoutParams(-1,dp(34)));
+
+        for(int i=0;i<sinais.size();i++){
+            final IrRemoteDatabase.Signal s=sinais.get(i);
+            LinearLayout row=new LinearLayout(this); row.setGravity(Gravity.CENTER_VERTICAL);
+            TextView n=label(s.name,13); n.setTextColor(WHITE); row.addView(n,new LinearLayout.LayoutParams(0,dp(50),1));
+            Button test=new Button(this); test.setText("TESTAR"); test.setTextSize(10); test.setAllCaps(false); test.setTextColor(WHITE);
+            test.setOnClickListener(v->{
+                boolean ok=irPerfilTeste.transmitirRaw(s.frequency,s.pattern);
+                Toast.makeText(this,ok?"✓ IR enviado: "+s.name:"✕ Falha no emissor IR",Toast.LENGTH_SHORT).show();
+            });
+            row.addView(test,new LinearLayout.LayoutParams(dp(78),dp(44)));
+            Button add=new Button(this); add.setText("ADICIONAR"); add.setTextSize(9); add.setAllCaps(false); add.setTextColor(WHITE);
+            add.setOnClickListener(v->{
+                if(salvo[0]==null){
+                    long id=controleStorage.salvar(remote.model,remote.category,remote.brand,remote.model,"RAW","Importado do banco online", -1,s.frequency);
+                    if(id<0){ Toast.makeText(this,"Não foi possível criar o controle.",Toast.LENGTH_SHORT).show(); return; }
+                    salvo[0]=controleStorage.buscar(id);
+                    controleAtivo=salvo[0];
+                    prefs.edit().putLong("active_control_id",id).apply();
+                }
+                controleStorage.salvarComandoRaw(salvo[0],s.name,s.frequency,s.pattern);
+                salvo[0]=controleStorage.buscar(salvo[0].id);
+                count.setText(controleStorage.quantidadeComandos(salvo[0])+" funções salvas • "+sinais.size()+" encontradas");
+                add.setText("✓ SALVO"); add.setEnabled(false);
+            });
+            row.addView(add,new LinearLayout.LayoutParams(dp(86),dp(44)));
+            box.addView(row);
+        }
+        android.app.AlertDialog d=new android.app.AlertDialog.Builder(this)
+            .setTitle("IR • "+remote.brand+" • "+remote.model)
+            .setView(wrapScroll(box))
+            .setPositiveButton("ABRIR CONTROLE",null)
+            .setNegativeButton("FECHAR",null).create();
+        d.setOnShowListener(x->d.getButton(android.app.AlertDialog.BUTTON_POSITIVE).setOnClickListener(v->{ if(salvo[0]!=null){ controleAtivo=controleStorage.buscar(salvo[0].id); d.dismiss(); build(); } else Toast.makeText(this,"Adicione pelo menos uma função primeiro.",Toast.LENGTH_SHORT).show(); }));
+        d.show();
+    }
+
     private LinearLayout tvCard(String brand,String model,boolean selected,View.OnClickListener click){
         LinearLayout card=new LinearLayout(this); card.setOrientation(LinearLayout.VERTICAL); card.setGravity(Gravity.CENTER_VERTICAL); card.setPadding(dp(20),dp(10),dp(20),dp(10));
         GradientDrawable bg=new GradientDrawable(); bg.setColor(selected?Color.rgb(42,42,48):Color.rgb(27,27,30)); bg.setCornerRadius(dp(20)); bg.setStroke(dp(2),selected?Color.rgb(210,30,38):Color.rgb(55,55,58)); card.setBackground(bg);
