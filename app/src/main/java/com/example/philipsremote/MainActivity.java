@@ -83,6 +83,23 @@ private static final int CARD_2 = Color.rgb(31,31,36);
 
     private int dp(float v){ return (int)(v*getResources().getDisplayMetrics().density+0.5f); }
 
+    private void aplicarInsets(View root){
+        final int baseTop=root.getPaddingTop(), baseBottom=root.getPaddingBottom();
+        root.setOnApplyWindowInsetsListener((v,insets)->{
+            int top, bottom;
+            if(android.os.Build.VERSION.SDK_INT>=30){
+                android.graphics.Insets i=insets.getInsets(android.view.WindowInsets.Type.systemBars());
+                top=i.top; bottom=i.bottom;
+            }else{
+                top=insets.getSystemWindowInsetTop(); bottom=insets.getSystemWindowInsetBottom();
+            }
+            v.setPadding(v.getPaddingLeft(),baseTop+top,v.getPaddingRight(),baseBottom+bottom);
+            return insets;
+        });
+        root.requestApplyInsets();
+    }
+
+
     private void actionFeedback(View v){
         v.setHapticFeedbackEnabled(true);
         v.setOnTouchListener((view,event)->{
@@ -203,7 +220,7 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         Button atualizar=new Button(this); atualizar.setText("↻  VERIFICAR ATUALIZAÇÃO"); atualizar.setTextColor(WHITE); atualizar.setTextSize(13); atualizar.setAllCaps(false);
         GradientDrawable atualizarBg=new GradientDrawable(); atualizarBg.setColor(KEY_DARK); atualizarBg.setCornerRadius(dp(16)); atualizar.setBackground(atualizarBg); actionFeedback(atualizar); atualizar.setOnClickListener(v->updateManager.verificarManualmente());
         LinearLayout.LayoutParams atualizarParams=new LinearLayout.LayoutParams(-1,dp(50)); atualizarParams.setMargins(0,dp(8),0,0); root.addView(atualizar,atualizarParams);
-        sv.addView(root); setContentView(sv);
+        sv.addView(root); aplicarInsets(sv); setContentView(sv);
     }
     private LinearLayout tvCard(String brand,String model,boolean selected,View.OnClickListener click){
         LinearLayout card=new LinearLayout(this); card.setOrientation(LinearLayout.VERTICAL); card.setGravity(Gravity.CENTER_VERTICAL); card.setPadding(dp(20),dp(10),dp(20),dp(10));
