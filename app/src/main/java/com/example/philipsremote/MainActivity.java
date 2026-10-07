@@ -275,6 +275,7 @@ private static final int CARD_2 = Color.rgb(31,31,36);
 
     @Override protected void onResume(){
         super.onResume();
+        recarregarAtivo();
         if(updateManager!=null){
             updateManager.aoRetornarDoSistema();
             updateManager.verificarAoAbrir();
@@ -730,6 +731,21 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         Button voltar=new Button(this); voltar.setText("VOLTAR"); voltar.setTextColor(WHITE); voltar.setTextSize(12); voltar.setAllCaps(false);
         GradientDrawable vb=new GradientDrawable(); vb.setColor(CARD_2); vb.setCornerRadius(dp(14)); vb.setStroke(dp(1),Color.rgb(60,60,66)); voltar.setBackground(vb);
         actionFeedback(voltar); voltar.setOnClickListener(v->showSelector()); top.addView(voltar,new LinearLayout.LayoutParams(dp(90),dp(44))); root.addView(top);
+
+        LinearLayout premiumCard=new LinearLayout(this); premiumCard.setOrientation(LinearLayout.HORIZONTAL); premiumCard.setGravity(Gravity.CENTER_VERTICAL); premiumCard.setPadding(dp(14),0,dp(10),0);
+        boolean premiumAtivo=monetizacao.isPremium();
+        GradientDrawable premiumCardBg=new GradientDrawable(); premiumCardBg.setColor(premiumAtivo?Color.rgb(28,55,36):Color.rgb(48,40,24)); premiumCardBg.setCornerRadius(dp(15)); premiumCardBg.setStroke(dp(1),premiumAtivo?Color.rgb(80,160,100):Color.rgb(100,78,40)); premiumCard.setBackground(premiumCardBg);
+        LinearLayout premiumInfo=new LinearLayout(this); premiumInfo.setOrientation(LinearLayout.VERTICAL); premiumInfo.setGravity(Gravity.CENTER_VERTICAL);
+        TextView premiumTitle=label(premiumAtivo?"⭐  PREMIUM ATIVO":"⭐  PLANO GRATUITO",14); premiumTitle.setTypeface(Typeface.DEFAULT,Typeface.BOLD); premiumTitle.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
+        premiumInfo.addView(premiumTitle,new LinearLayout.LayoutParams(-1,dp(24)));
+        TextView premiumSub=label(monetizacao.resumoLimite(controleStorage.quantidadeControles())+" • "+(premiumAtivo?"sem anúncios":"desbloqueie controles ilimitados"),11); premiumSub.setTextColor(GRAY); premiumSub.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
+        premiumInfo.addView(premiumSub,new LinearLayout.LayoutParams(-1,dp(20)));
+        premiumCard.addView(premiumInfo,new LinearLayout.LayoutParams(0,dp(48),1));
+        Button premiumAction=new Button(this); premiumAction.setText(premiumAtivo?"VERIFICAR":"PREMIUM"); premiumAction.setTextColor(WHITE); premiumAction.setTextSize(11); premiumAction.setAllCaps(false); premiumAction.setMinHeight(0); premiumAction.setMinWidth(0); premiumAction.setPadding(dp(10),0,dp(10),0);
+        GradientDrawable premiumActionBg=new GradientDrawable(); premiumActionBg.setColor(premiumAtivo?Color.rgb(55,110,65):ACCENT); premiumActionBg.setCornerRadius(dp(11)); premiumAction.setBackground(premiumActionBg); actionFeedback(premiumAction);
+        premiumAction.setOnClickListener(v->monetizacao.showPremiumDialog());
+        premiumCard.addView(premiumAction,new LinearLayout.LayoutParams(dp(92),dp(40)));
+        LinearLayout.LayoutParams premiumCardP=new LinearLayout.LayoutParams(-1,dp(60)); premiumCardP.setMargins(0,dp(4),0,dp(8)); root.addView(premiumCard,premiumCardP);
 
         final EditText busca=new EditText(this);
         busca.setSingleLine(true); busca.setHint("🔎  Pesquisar marca, modelo ou nome...");
