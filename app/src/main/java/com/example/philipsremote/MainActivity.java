@@ -846,7 +846,11 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         buscaMarca.setBackground(buscaBg);
         box.addView(buscaMarca,new LinearLayout.LayoutParams(-1,dp(48)));
 
-        final String[] categoriaFiltro={""};
+        // Começa na categoria do aparelho de entrada; TV, AR e ventilador ficam separados.
+        final String categoriaInicial =
+                "Ventilador".equalsIgnoreCase(marca) ? "FAN" :
+                ("Universal".equalsIgnoreCase(marca) ? "" : "TV");
+        final String[] categoriaFiltro={categoriaInicial};
         LinearLayout filtros=row();
         Button filtroTodos=botaoAcao("TODOS",KEY_DARK,11);
         Button filtroTv=botaoAcao("📺 TV",KEY_DARK,11);
@@ -929,7 +933,7 @@ private static final int CARD_2 = Color.rgb(31,31,36);
             item.setOnClickListener(v->{
                 // Para ar-condicionado, a marca do catálogo é apenas a porta de entrada.
                 // O controle real vem do SmartIR, que precisa do modelo/protocolo exato.
-                if("AC".equals(nomes[pos].contains("Ar-condicionado")?"AC":"")){
+                if("AC".equals(tipos[pos])){
                     abrirSmartIrMarca(marcas[pos]);
                     return;
                 }
@@ -965,11 +969,8 @@ private static final int CARD_2 = Color.rgb(31,31,36);
             String categoria=categoriaFiltro[0];
             int visiveis=0;
             for(int i=0;i<itens.length;i++){
-                boolean categoriaOk=categoria.isEmpty()
-                    || (categoria.equals("TV") && nomes[i].contains("TV"))
-                    || (categoria.equals("AC") && nomes[i].contains("Ar-condicionado"))
-                    || (categoria.equals("FAN") && nomes[i].contains("Ventilador"));
-                String texto=(nomes[i]+" "+marcas[i]).toLowerCase(java.util.Locale.ROOT);
+                boolean categoriaOk=categoria.isEmpty() || categoria.equals(tipos[i]);
+                String texto=(tipos[i]+" "+nomes[i]+" "+marcas[i]+" "+modelos[i]+" "+perfisMapa[i]).toLowerCase(java.util.Locale.ROOT);
                 boolean buscaOk=busca.isEmpty() || texto.contains(busca);
                 itens[i].setVisibility(categoriaOk && buscaOk?View.VISIBLE:View.GONE);
                 if(categoriaOk && buscaOk) visiveis++;
