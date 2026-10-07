@@ -106,7 +106,7 @@ public final class IrRemoteDatabase {
             String type=valor(bloco,"type");
             if(name.isEmpty() || type.isEmpty()) continue;
             if("raw".equalsIgnoreCase(type)){
-                int freq=parseInt(valor(bloco,"frequency"),38000);
+                int freq=parseIntSeguro(valor(bloco,"frequency"),38000);
                 String data=valor(bloco,"data");
                 int[] p=parsePattern(data);
                 if(p.length>0) out.add(new Signal(name,freq,p,"RAW",0,0,true));
@@ -141,7 +141,7 @@ public final class IrRemoteDatabase {
         return 38000;
     }
 
-    private static int parseFlipperHex(String s){
+    private static int parseIntSeguro(String s,int padrao){ try { return Integer.parseInt(s.trim()); } catch(Exception e){ return padrao; } }\n\n    private static int parseFlipperHex(String s){
         if(s==null || s.trim().isEmpty()) return 0;
         String[] b=s.trim().split("\\s+");
         long v=0;
