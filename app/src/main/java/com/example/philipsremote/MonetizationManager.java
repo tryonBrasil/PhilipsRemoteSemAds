@@ -13,6 +13,8 @@ public class MonetizationManager {
     public static final String PREMIUM_PRODUCT_ID = "ir_remote_premium";
     private static final String PREFS = "remote_prefs";
     private static final String KEY_PREMIUM = "premium_unlocked";
+    private static final String KEY_PREMIUM_UPDATED = "premium_unlocked_at";
+    private static final int FREE_SAVED_LIMIT = 3;
 
     // IDs de TESTE. Substituir pelos IDs reais antes da monetizacao em producao.
     public static final String ADMOB_APP_ID_TEST = "ca-app-pub-3940256099942544~3347511713";
@@ -39,7 +41,13 @@ public class MonetizationManager {
     }
 
     public boolean podeSalvarControle(int quantidadeAtual) {
-        return isPremium() || quantidadeAtual < 3;
+        return isPremium() || Math.max(0, quantidadeAtual) < FREE_SAVED_LIMIT;
+    }
+
+    public int limiteGratuito() { return FREE_SAVED_LIMIT; }
+
+    public String resumoLimite(int quantidadeAtual) {
+        return isPremium() ? quantidadeAtual + " controles • ilimitado" : quantidadeAtual + "/" + FREE_SAVED_LIMIT + " controles salvos";
     }
 
     public int limiteGratuito() { return 3; }
