@@ -248,13 +248,19 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         dispositivos.setOnClickListener(v->showUniversalScanner(lgMode?"LG":"Philips",lgMode?"32LB620B":"50PUG6513/7"));
         LinearLayout.LayoutParams dispositivosParams=new LinearLayout.LayoutParams(-1,dp(52)); dispositivosParams.setMargins(0,dp(8),0,0); root.addView(dispositivos,dispositivosParams);
         Button premium=new Button(this);
-        premium.setText(monetizacao.isPremium()?"⭐  PREMIUM ATIVO":"⭐  IR REMOTE PREMIUM"); premium.setTextColor(WHITE); premium.setTextSize(13); premium.setAllCaps(false);
-        GradientDrawable premiumBg=new GradientDrawable(); premiumBg.setColor(monetizacao.isPremium()?Color.rgb(55,105,65):Color.rgb(70,55,20)); premiumBg.setCornerRadius(dp(16)); premium.setBackground(premiumBg); actionFeedback(premium); premium.setOnClickListener(v->{ if(monetizacao.isPremium()) Toast.makeText(this,"⭐ Premium já está ativo neste aparelho.",Toast.LENGTH_SHORT).show(); else monetizacao.showPremiumDialog(); });
-        LinearLayout.LayoutParams premiumParams=new LinearLayout.LayoutParams(-1,dp(50)); premiumParams.setMargins(0,dp(8),0,0); root.addView(premium,premiumParams);
+        premium.setText(monetizacao.isPremium()?"⭐  PREMIUM ATIVO":"⭐  IR REMOTE PREMIUM");
+        premium.setTextColor(WHITE); premium.setTextSize(13); premium.setAllCaps(false);
+        GradientDrawable premiumBg=new GradientDrawable();
+        premiumBg.setColor(monetizacao.isPremium()?Color.rgb(55,105,65):Color.rgb(70,55,20));
+        premiumBg.setCornerRadius(dp(16)); premium.setBackground(premiumBg); actionFeedback(premium);
+        premium.setOnClickListener(v->{ if(monetizacao.isPremium()) Toast.makeText(this,"⭐ Premium já está ativo neste aparelho.",Toast.LENGTH_SHORT).show(); else monetizacao.showPremiumDialog(); });
+        LinearLayout.LayoutParams premiumParams=new LinearLayout.LayoutParams(-1,dp(50));
+        premiumParams.setMargins(0,dp(8),0,0); root.addView(premium,premiumParams);
 
         Button atualizar=new Button(this); atualizar.setText("↻  VERIFICAR ATUALIZAÇÃO"); atualizar.setTextColor(WHITE); atualizar.setTextSize(13); atualizar.setAllCaps(false);
         GradientDrawable atualizarBg=new GradientDrawable(); atualizarBg.setColor(KEY_DARK); atualizarBg.setCornerRadius(dp(16)); atualizar.setBackground(atualizarBg); actionFeedback(atualizar); atualizar.setOnClickListener(v->updateManager.verificarManualmente());
         LinearLayout.LayoutParams atualizarParams=new LinearLayout.LayoutParams(-1,dp(50)); atualizarParams.setMargins(0,dp(8),0,0); root.addView(atualizar,atualizarParams);
+        monetizacao.addBanner(root);
         sv.addView(root); mostrar(sv);
     }
     private LinearLayout tvCard(String brand,String model,boolean selected,View.OnClickListener click){
@@ -483,8 +489,7 @@ private static final int CARD_2 = Color.rgb(31,31,36);
             listaCodigos.setOnClickListener(v->{
                 String dados=irPerfilTeste.savedCodes();
                 if(dados.isEmpty()){ Toast.makeText(this,"Nenhum código salvo ainda.",Toast.LENGTH_SHORT).show(); return; }
-                final String[] linhas=dados.split("
-");
+                final String[] linhas=dados.split("\n");
                 final String[] rotulos=new String[linhas.length];
                 for(int i=0;i<linhas.length;i++) rotulos[i]=IrPerfilTeste.rotuloDaLinha(linhas[i]);
                 escolher("CÓDIGOS SALVOS ("+linhas.length+")",null,rotulos,w->{
@@ -502,8 +507,7 @@ private static final int CARD_2 = Color.rgb(31,31,36);
                 int atual=irPerfilTeste.position(); int total=irPerfilTeste.total();
                 progresso.setText("Candidato "+atual+" de "+total);
                 if(atual>=total) detalhe.setText("Fim dos candidatos. Escolha outro aparelho na lista ou cancele e tente novamente.");
-                else detalhe.setText("Código enviado.
-Se respondeu, toque em FUNCIONOU / SALVAR.");
+                else detalhe.setText("Código enviado.\nSe respondeu, toque em FUNCIONOU / SALVAR.");
             });
             salvar.setOnClickListener(v->{
                 int codigo=irPerfilTeste.currentCode(); String perfil=irPerfilTeste.getPerfil();
@@ -765,8 +769,7 @@ render[0]=()->{
                 line.addView(badge,new LinearLayout.LayoutParams(-2,dp(26))); card.addView(line);
 
                 int qtd=controleStorage.quantidadeComandos(c);
-                TextView detail=label(c.marca+"  •  "+c.modelo+"
-"+c.perfil+"  •  "+qtd+" botão"+(qtd==1?"":"ões")+" configurado"+(qtd==1?"":"s"),12);
+                TextView detail=label(c.marca+"  •  "+c.modelo+"\n"+c.perfil+"  •  "+qtd+" botão"+(qtd==1?"":"ões")+" configurado"+(qtd==1?"":"s"),12);
                 detail.setTextColor(GRAY); detail.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL); card.addView(detail,new LinearLayout.LayoutParams(-1,dp(54)));
 
                 LinearLayout actions=row();
@@ -840,14 +843,9 @@ render[0]=()->{
         imageCard.addView(image,new LinearLayout.LayoutParams(-1,dp(210))); root.addView(imageCard,new LinearLayout.LayoutParams(-1,dp(238)));
         TextView aviso=label("A imagem representa o controle universal. Os códigos são testados por função.",11); aviso.setTextColor(GRAY); aviso.setGravity(Gravity.CENTER);
         root.addView(aviso,new LinearLayout.LayoutParams(-1,dp(38)));
-        LinearLayout r=row(); add(r,key("⏻
-LIGA / DESLIGA",1,64,Color.rgb(125,35,40),13)); add(r,key("🌀
-OSCILAÇÃO",2,64,KEY,13)); root.addView(r);
-        r=row(); add(r,key("＋
-VELOCIDADE",3,64,KEY,13)); add(r,key("⏱
-TIMER",4,64,KEY,13)); root.addView(r);
-        r=row(); add(r,key("🌙
-NOTURNO",5,64,KEY,13)); root.addView(r);
+        LinearLayout r=row(); add(r,key("⏻\nLIGA / DESLIGA",1,64,Color.rgb(125,35,40),13)); add(r,key("🌀\nOSCILAÇÃO",2,64,KEY,13)); root.addView(r);
+        r=row(); add(r,key("＋\nVELOCIDADE",3,64,KEY,13)); add(r,key("⏱\nTIMER",4,64,KEY,13)); root.addView(r);
+        r=row(); add(r,key("🌙\nNOTURNO",5,64,KEY,13)); root.addView(r);
         TextView info=label("⚠️ Compatibilidade varia conforme o modelo do ventilador. Se não responder, use TESTAR DISPOSITIVOS para experimentar outros códigos.",11); info.setTextColor(Color.rgb(190,170,110)); info.setGravity(Gravity.CENTER); root.addView(info,new LinearLayout.LayoutParams(-1,dp(62)));
         Button testar=new Button(this); testar.setText("🔎  TESTAR / SALVAR CONTROLE"); testar.setTextColor(WHITE); testar.setTextSize(13); testar.setAllCaps(false);
         GradientDrawable tb=new GradientDrawable(); tb.setColor(ACCENT); tb.setCornerRadius(dp(15)); testar.setBackground(tb); actionFeedback(testar);
@@ -865,15 +863,7 @@ NOTURNO",5,64,KEY,13)); root.addView(r);
         }catch(Exception ignored){}
         new android.app.AlertDialog.Builder(this)
             .setTitle("IR Remote BR")
-            .setMessage("Controle remoto por infravermelho
-
-Versão "+versao+"
-
-Controle TVs compatíveis usando o emissor infravermelho do celular.
-
-Seus controles e configurações são armazenados localmente no aparelho.
-
-Para transmitir IR, o celular precisa possuir emissor infravermelho compatível.")
+            .setMessage("Controle remoto por infravermelho\n\nVersão "+versao+"\n\nControle TVs compatíveis usando o emissor infravermelho do celular.\n\nSeus controles e configurações são armazenados localmente no aparelho.\n\nPara transmitir IR, o celular precisa possuir emissor infravermelho compatível.")
             .setPositiveButton("OK",null).show();
     }
 
@@ -884,11 +874,7 @@ Para transmitir IR, o celular precisa possuir emissor infravermelho compatível.
     }
 
     private void showAddControlWizard(){
-        wizardDialog("ADICIONAR CONTROLE","PASSO 1 → MARCA
-PASSO 2 → MODELO
-PASSO 3 → TESTE IR
-
-O controle só será salvo depois que você confirmar que a TV respondeu. Seus controles existentes não serão alterados.")
+        wizardDialog("ADICIONAR CONTROLE","PASSO 1 → MARCA\nPASSO 2 → MODELO\nPASSO 3 → TESTE IR\n\nO controle só será salvo depois que você confirmar que a TV respondeu. Seus controles existentes não serão alterados.")
             .setPositiveButton("COMEÇAR",(d,w)->showBrandWizard())
             .setNegativeButton("CANCELAR",(d,w)->showMeusControles()).show();
     }
@@ -904,9 +890,7 @@ O controle só será salvo depois que você confirmar que a TV respondeu. Seus c
         if("Philips".equals(marca)) modelos=new String[]{"50PUG6513/7","Outro modelo"};
         else if("LG".equals(marca)) modelos=new String[]{"32LB620B","Outro modelo"};
         else modelos=new String[]{"Smart TV","Outro modelo"};
-        escolher("PASSO 2 DE 3 • MODELO","Marca selecionada: "+marca+"
-
-Escolha um modelo conhecido ou informe o modelo manualmente.",modelos,w->{
+        escolher("PASSO 2 DE 3 • MODELO","Marca selecionada: "+marca+"\n\nEscolha um modelo conhecido ou informe o modelo manualmente.",modelos,w->{
             if(w==modelos.length-1){
                 final EditText input=new EditText(this);
                 input.setSingleLine(true); input.setHint("Ex.: 50PUG6513/7");
@@ -940,13 +924,7 @@ Escolha um modelo conhecido ou informe o modelo manualmente.",modelos,w->{
     }
 
     private void showTvSetup(String marca,String modelo){
-        wizardDialog("3 de 3 • Teste IR","TV: "+marca+" "+modelo+"
-
-1. Aponte o celular para a TV.
-2. Toque em TESTAR PRÓXIMO.
-3. Quando a TV responder, toque em FUNCIONOU / SALVAR.
-
-O primeiro código confirmado será usado como base do controle.")
+        wizardDialog("3 de 3 • Teste IR","TV: "+marca+" "+modelo+"\n\n1. Aponte o celular para a TV.\n2. Toque em TESTAR PRÓXIMO.\n3. Quando a TV responder, toque em FUNCIONOU / SALVAR.\n\nO primeiro código confirmado será usado como base do controle.")
             .setNegativeButton("CANCELAR",(d,w)->showMeusControles())
             .setPositiveButton("INICIAR TESTE",(d,w)->showUniversalScanner(marca,modelo)).show();
     }
@@ -1089,8 +1067,7 @@ O primeiro código confirmado será usado como base do controle.")
             barBg.setColor(Color.rgb(24,30,26)); barBg.setCornerRadius(dp(14));
             deviceBar.setBackground(barBg);
 
-            TextView deviceInfo=label("✓  "+controleAtivo.nome+"
-"+controleStorage.quantidadeComandos(controleAtivo)+" botões configurados",12);
+            TextView deviceInfo=label("✓  "+controleAtivo.nome+"\n"+controleStorage.quantidadeComandos(controleAtivo)+" botões configurados",12);
             deviceInfo.setTextColor(Color.rgb(105,175,115));
             deviceInfo.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
             deviceBar.addView(deviceInfo,new LinearLayout.LayoutParams(0,dp(52),1));
