@@ -597,7 +597,7 @@ private static final int CARD_2 = Color.rgb(31,31,36);
                 if(id>0){saved[0]=controleStorage.buscar(id); controleAtivo=saved[0]; prefs.edit().putLong("active_control_id",id).apply();}
             }
             if(saved[0]!=null){
-                int[] p=smartRaw(climate.command(mode[0],fan[0],temp[0]));
+                int[] p=smartRaw(climate.command(mode[0],fan[0],swing[0],temp[0]));
                 if(p.length>0) controleStorage.salvarComandoRaw(saved[0],"ESTADO ATUAL",38000,p);
                 Toast.makeText(this,"✓ Controle salvo.",Toast.LENGTH_SHORT).show(); build();
             }
@@ -606,13 +606,13 @@ private static final int CARD_2 = Color.rgb(31,31,36);
 
         Button back=botaoAcao("← VOLTAR",KEY_DARK,12); back.setOnClickListener(v->showSelector());
         root.addView(back,new LinearLayout.LayoutParams(-1,dp(48)));
-        atualizarEstadoAc(state,mode[0],fan[0],temp[0]);
+        atualizarEstadoAc(state,mode[0],fan[0],swing[0],temp[0]);
         menos.setOnClickListener(v->{temp[0]=Math.max(climate.minTemp,temp[0]-climate.precision);tv.setText(temp[0]+" °C");});
         mais.setOnClickListener(v->{temp[0]=Math.min(climate.maxTemp,temp[0]+climate.precision);tv.setText(temp[0]+" °C");});
         sv.addView(root); mostrar(sv);
     }
 
-    private void enviarEstadoAc(SmartIrDatabase.Climate c,String mode,String fan,int temp,TextView status){
+    private void enviarEstadoAc(SmartIrDatabase.Climate c,String mode,String fan,String swing,int temp,TextView status){
         String b64=c.command(mode,fan,swing,temp);
         if(b64.isEmpty()){Toast.makeText(this,"Estado não disponível para este modelo.",Toast.LENGTH_SHORT).show();return;}
         enviarBase64Smart(b64,status,modoTexto(mode)+" • "+temp+" °C");
