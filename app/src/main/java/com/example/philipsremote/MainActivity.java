@@ -450,7 +450,7 @@ private static final int CARD_2 = Color.rgb(31,31,36);
             listaCodigos.setOnClickListener(v->{
                 String dados=irPerfilTeste.savedCodes();
                 if(dados.isEmpty()){ Toast.makeText(this,"Nenhum código salvo ainda.",Toast.LENGTH_SHORT).show(); return; }
-                String[] linhas=dados.split("\\n");
+                String[] linhas=dados.split("\n");
                 new android.app.AlertDialog.Builder(this).setTitle("CÓDIGOS SALVOS ("+linhas.length+")")
                     .setItems(linhas,(d,w)->{
                         String[] partes=linhas[w].split("\\|");
@@ -947,7 +947,7 @@ render[0]=()->{
     }
 
     private void showTvSetup(String marca,String modelo){
-        wizardDialog("3 de 3 • Teste IR","TV: "+marca+" "+modelo+"\n\n1. Aponte o celular para a TV.\\n2. Toque em TESTAR PRÓXIMO.\\n3. Quando a TV responder, toque em FUNCIONOU / SALVAR.\\n\\nO primeiro código confirmado será usado como base do controle.")
+        wizardDialog("3 de 3 • Teste IR","TV: "+marca+" "+modelo+"\n\n1. Aponte o celular para a TV.\n2. Toque em TESTAR PRÓXIMO.\n3. Quando a TV responder, toque em FUNCIONOU / SALVAR.\n\nO primeiro código confirmado será usado como base do controle.")
             .setNegativeButton("CANCELAR",(d,w)->showMeusControles())
             .setPositiveButton("INICIAR TESTE",(d,w)->showUniversalScanner(marca,modelo)).show();
     }
