@@ -42,7 +42,9 @@ public class IrPerfilTeste {
         selecionar("LG / NEC");
     }
 
-    public boolean hasEmitter() { return ir != null && ir.hasIrEmitter(); }\n\n    /** Transmite um padrão RAW já convertido para marca/espaço em microssegundos. */
+    public boolean hasEmitter() { return ir != null && ir.hasIrEmitter(); }
+
+    /** Transmite um padrão RAW já convertido para marca/espaço em microssegundos. */
     public boolean transmitirRaw(int frequencia, int[] padrao) {
         if (!hasEmitter() || frequencia <= 0 || padrao == null || padrao.length == 0) return false;
         try {
@@ -287,22 +289,28 @@ public class IrPerfilTeste {
         if (codigo < 0) return "Nenhum código testado.";
         String n = (nome == null || nome.trim().isEmpty()) ? "Código " + (savedCount() + 1) : nome.trim();
         String old = savedCodes();
-        String item = perfil + "|" + n.replace("|", "/").replace("\n", " ") + "|" + codigo;
-        prefs.edit().putString(BANK_KEY, old.isEmpty() ? item : old + "\n" + item).apply();
+        String item = perfil + "|" + n.replace("|", "/").replace("
+", " ") + "|" + codigo;
+        prefs.edit().putString(BANK_KEY, old.isEmpty() ? item : old + "
+" + item).apply();
         return "Código salvo: " + n;
     }
 
     public String savedCodes() {
         String s = prefs.getString(BANK_KEY, null);
-        if (s == null) {                                   // migra o formato antigo (separador gravado como "\n" literal)
+        if (s == null) {                                   // migra o formato antigo (separador gravado como "
+" literal)
             String old = prefs.getString(OLD_BANK_KEY, "");
-            s = old.replace("\\n", "\n");
+            s = old.replace("\
+", "
+");
             if (!old.isEmpty()) prefs.edit().putString(BANK_KEY, s).remove(OLD_BANK_KEY).apply();
         }
         return s;
     }
 
-    public int savedCount() { String s = savedCodes(); return s.isEmpty() ? 0 : s.split("\n").length; }
+    public int savedCount() { String s = savedCodes(); return s.isEmpty() ? 0 : s.split("
+").length; }
     public void clearSavedCodes() { prefs.edit().remove(BANK_KEY).remove(OLD_BANK_KEY).apply(); }
 
     /** Código de uma linha do banco, ou -1 se a linha estiver malformada (nunca lança exceção). */
