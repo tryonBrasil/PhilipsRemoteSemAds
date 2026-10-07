@@ -42,6 +42,25 @@ public class ControleStorage {
 
     private static String s(String v) { return v == null ? "" : v; }
 
+    private static String nomeSeguro(String v, String padrao) {
+        String n = s(v).trim().replaceAll("\\s+", " ");
+        if (n.length() > 80) n = n.substring(0, 80).trim();
+        return n.isEmpty() ? padrao : n;
+    }
+
+    /** Quantidade atual de controles salvos. */
+    public int quantidadeControles() {
+        try {
+            SQLiteDatabase db = helper.getReadableDatabase();
+            Cursor c = db.rawQuery("SELECT COUNT(*) FROM controls", null);
+            try { return c.moveToFirst() ? c.getInt(0) : 0; }
+            finally { c.close(); }
+        } catch (Exception e) {
+            Log.e(TAG, "Falha ao contar controles", e);
+            return 0;
+        }
+    }
+
     private void migrarDadosAntigos() {
         if (oldPrefs.getBoolean(MIGRATED, false)) return;
         SQLiteDatabase db = helper.getWritableDatabase();
@@ -101,8 +120,8 @@ public class ControleStorage {
             SQLiteDatabase db = helper.getWritableDatabase();
             ContentValues v = new ContentValues();
             long now = System.currentTimeMillis();
-            v.put("nome", nome); v.put("categoria", categoria); v.put("marca", marca);
-            v.put("modelo", modelo); v.put("perfil", perfil); v.put("descricao", descricao);
+            v.put("nome", nomeSeguro(nome, "Meu controle")); v.put("categoria", s(categoria).trim()); v.put("marca", s(marca).trim());
+            v.put("modelo", s(modelo).trim()); v.put("perfil", s(perfil).trim()); v.put("descricao", s(descricao).trim());
             v.put("codigo", codigo); v.put("frequencia", frequencia);
             v.put("created", now); v.put("updated", now);
             return db.insert("controls", null, v);
@@ -178,7 +197,7 @@ public class ControleStorage {
     }
 
     public void salvarComando(Controle controle, String funcao, int codigo, String perfil, int frequencia) {
-        if (controle == null || funcao == null || funcao.isEmpty() || codigo < 0) return;
+        if (controle == null || funcao == null || funcao.trim().isEmpty() || codigo < 0) return;\n        funcao = funcao.trim();\n        if (funcao.length() > 80) funcao = funcao.substring(0, 80);
         try {
             SQLiteDatabase db = helper.getWritableDatabase();
             ContentValues v = new ContentValues();
@@ -221,7 +240,7 @@ public class ControleStorage {
 
     public void renomear(Controle controle, String novoNome) {
         if (controle == null || novoNome == null || novoNome.trim().isEmpty()) return;
-        String nome = novoNome.trim();
+        String nome = nomeSeguro(novoNome, controle.nome);
         try {
             SQLiteDatabase db = helper.getWritableDatabase();
             ContentValues v = new ContentValues();
@@ -249,7 +268,7 @@ public class ControleStorage {
 
     public Controle duplicar(Controle original, String novoNome) {
         if (original == null) return null;
-        long id = salvar(novoNome == null || novoNome.trim().isEmpty() ? original.nome + " (cópia)" : novoNome.trim(),
+        String copiaNome = nomeSeguro(novoNome, original.nome + " (cópia)");\n        long id = salvar(copiaNome,
                 original.categoria, original.marca, original.modelo, original.perfil, original.descricao,
                 original.codigo, original.frequencia);
         if (id < 0) return null;
