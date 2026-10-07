@@ -116,6 +116,8 @@ public class ControleStorage {
 
     /** Salva um novo controle e devolve o id (ou -1 em caso de erro). */
     public long salvar(String nome, String categoria, String marca, String modelo, String perfil, String descricao, int codigo, int frequencia) {
+        if (nome == null || nome.trim().isEmpty()) return -1;
+        if (codigo < -1 || frequencia < 0) return -1;
         try {
             SQLiteDatabase db = helper.getWritableDatabase();
             ContentValues v = new ContentValues();
@@ -268,20 +270,40 @@ public class ControleStorage {
 
     public Controle duplicar(Controle original, String novoNome) {
         if (original == null) return null;
-        String copiaNome = nomeSeguro(novoNome, original.nome + " (cópia)");\n        long id = salvar(copiaNome,
-                original.categoria, original.marca, original.modelo, original.perfil, original.descricao,
-                original.codigo, original.frequencia);
-        if (id < 0) return null;
-        Controle novo = buscar(id);
-        if (novo == null) return null;
-        JSONArray names = original.comandos == null ? null : original.comandos.names();
-        if (names != null) for (int i = 0; i < names.length(); i++) {
-            String funcao = names.optString(i, "");
-            JSONObject item = original.comandos.optJSONObject(funcao);
-            if (item != null) salvarComando(novo, funcao, item.optInt("codigo", -1),
-                    item.optString("perfil", ""), item.optInt("frequencia", 0));
+        SQLiteDatabase db = null;
+        long id = -1;
+        try {
+            db = helper.getWritableDatabase();
+            db.beginTransaction();
+            ContentValues v = new ContentValues();
+            long now = System.currentTimeMillis();
+            v.put("nome", (novoNome == null || novoNome.trim().isEmpty()) ? original.nome + " (cópia)" : novoNome.trim());
+            v.put("categoria", s(original.categoria)); v.put("marca", s(original.marca));
+            v.put("modelo", s(original.modelo)); v.put("perfil", s(original.perfil));
+            v.put("descricao", s(original.descricao)); v.put("codigo", original.codigo);
+            v.put("frequencia", original.frequencia); v.put("created", now); v.put("updated", now);
+            id = db.insert("controls", null, v);
+            if (id < 0) return null;
+            JSONArray names = original.comandos == null ? null : original.comandos.names();
+            if (names != null) for (int i = 0; i < names.length(); i++) {
+                String funcao = names.optString(i, "");
+                JSONObject item = original.comandos.optJSONObject(funcao);
+                if (item == null || funcao.isEmpty()) continue;
+                ContentValues cv = new ContentValues();
+                cv.put("control_id", id); cv.put("funcao", funcao);
+                cv.put("codigo", item.optInt("codigo", -1));
+                cv.put("perfil", item.optString("perfil", ""));
+                cv.put("frequencia", Math.max(0, item.optInt("frequencia", 0)));
+                if (db.insertWithOnConflict("commands", null, cv, SQLiteDatabase.CONFLICT_REPLACE) < 0) return null;
+            }
+            db.setTransactionSuccessful();
+            return buscar(id);
+        } catch (Exception e) {
+            Log.e(TAG, "Falha ao duplicar controle", e);
+            return null;
+        } finally {
+            if (db != null && db.inTransaction()) db.endTransaction();
         }
-        return novo;
     }
 
     public void limpar() {
