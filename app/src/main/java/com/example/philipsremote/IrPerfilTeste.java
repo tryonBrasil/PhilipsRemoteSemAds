@@ -121,12 +121,12 @@ public class IrPerfilTeste {
         String n=(nome==null||nome.trim().isEmpty()) ? "Código "+(savedCount()+1) : nome.trim();
         String old=savedPrefs.getString(SAVED_KEY,"");
         String item=perfil+"|"+n.replace("|","/")+"|"+codigo;
-        String all=old.isEmpty()?item:old+"\\n"+item;
+        String all=old.isEmpty()?item:old+"\n"+item;
         savedPrefs.edit().putString(SAVED_KEY,all).apply();
         return "Código salvo: "+n;
     }
     public String savedCodes(){return savedPrefs.getString(SAVED_KEY,"");}
-    public int savedCount(){String s=savedCodes();return s.isEmpty()?0:s.split("\\n").length;}
+    public int savedCount(){String s=savedCodes();return s.isEmpty()?0:s.split("\n").length;}
     public void clearSavedCodes(){savedPrefs.edit().remove(SAVED_KEY).apply();}
     public boolean transmitManual(String value){
         if(!hasEmitter() || value==null) return false;
@@ -212,7 +212,7 @@ public class IrPerfilTeste {
     }
 
     private int[] nec(int addr,int cmd){
-        int[] b={addr&255,(~addr)&255,cmd&255,(~cmd)&255}; ArrayList<Integer>p=new ArrayList<>();
+        int[] b={addr&255,addr&255,cmd&255,(~cmd)&255}; ArrayList<Integer>p=new ArrayList<>();
         add(p,9000);add(p,4500); for(int v:b)for(int m=1;m<=128;m<<=1){add(p,560);add(p,(v&m)!=0?1690:560);} add(p,560);add(p,20000);return arr(p);
     }
     private int[] samsung(int addr,int cmd){
@@ -220,13 +220,13 @@ public class IrPerfilTeste {
         add(p,4500);add(p,4500);for(int v:b)for(int m=1;m<=128;m<<=1){add(p,560);add(p,(v&m)!=0?1600:560);}add(p,560);add(p,20000);return arr(p);
     }
     private int[] sony(int addr,int cmd){
-        ArrayList<Integer>p=new ArrayList<>();for(int r=0;r<3;r++){add(p,2400);add(p,600);for(int i=0;i<7;i++){add(p,600);add(p,((cmd>>i)&1)!=0?1200:600);}for(int i=0;i<5;i++){add(p,600);add(p,((addr>>i)&1)!=0?1200:600);}if(r<2)add(p,10000);}return arr(p);
+        ArrayList<Integer>p=new ArrayList<>();for(int r=0;r<3;r++){add(p,2400);add(p,600);for(int i=0;i<7;i++){add(p,600);add(p,((cmd>>i)&1)!=0?1200:600);}for(int i=0;i<5;i++){add(p,600);add(p,((addr>>i)&1)!=0?1200:600);}if(r<2){ int last=p.size()-1; p.set(last,p.get(last)+10000); }}return arr(p);
     }
     private int[] rc5(int addr,int cmd,boolean tog){
         ArrayList<Integer>p=new ArrayList<>();
-        manchester(p,1,889); manchester(p,1,889); manchester(p,tog?1:0,889);
-        for(int m=16;m!=0;m>>=1) manchester(p,(addr&m)!=0?1:0,889);
-        for(int m=64;m!=0;m>>=1) manchester(p,(cmd&m)!=0?1:0,889);
+        rc5Bit(p,1,889); rc5Bit(p,1,889); rc5Bit(p,tog?1:0,889);
+        for(int m=16;m!=0;m>>=1) rc5Bit(p,(addr&m)!=0?1:0,889);
+        for(int m=32;m!=0;m>>=1) rc5Bit(p,(cmd&m)!=0?1:0,889);
         return arr(p);
     }
     private int[] rc6(int addr,int cmd,boolean tog){
@@ -239,7 +239,8 @@ public class IrPerfilTeste {
         return arr(p);
     }
     private int[] coolix(int code){
-        ArrayList<Integer>p=new ArrayList<>();add(p,4000);add(p,4000);for(int i=0;i<24;i++){add(p,500);add(p,((code>>i)&1)!=0?1500:500);}add(p,500);return arr(p);
+        int[] bytes=interleavedBytes(code);
+        return acSixBytes(bytes,4000,4000,500,1500,5000);
     }
     private int[] panasonic(int function){
         final int unit=432;
@@ -255,11 +256,37 @@ public class IrPerfilTeste {
         return arr(p);
     }
     private int[] midea(int shortCode){
-        int a=(shortCode>>8)&255,b=shortCode&255;int[] bytes={0xB2,a,b,(~0xB2)&255,(~a)&255,(~b)&255};ArrayList<Integer>p=new ArrayList<>();
-        add(p,4350);add(p,4400);for(int rep=0;rep<2;rep++){for(int v:bytes)for(int m=1;m<=128;m<<=1){add(p,560);add(p,(v&m)!=0?1690:560);}add(p,560);if(rep==0){add(p,4400);}}return arr(p);
+        int[] bytes=interleavedBytes(shortCode);
+        return acSixBytes(bytes,4350,4400,560,1690,5200);
+    }
+
+    private int[] interleavedBytes(int code){
+        int b0=(code>>16)&0xFF;
+        int b1=(code>>8)&0xFF;
+        int b2=code&0xFF;
+        return new int[]{b0,(~b0)&0xFF,b1,(~b1)&0xFF,b2,(~b2)&0xFF};
+    }
+
+    private int[] acSixBytes(int[] bytes,int headerMark,int headerSpace,int bitMark,int oneSpace,int gap){
+        ArrayList<Integer>p=new ArrayList<>();
+        for(int rep=0;rep<2;rep++){
+            add(p,headerMark); add(p,headerSpace);
+            for(int v:bytes){
+                for(int m=0x80;m!=0;m>>=1){
+                    add(p,bitMark);
+                    add(p,(v&m)!=0?oneSpace:bitMark);
+                }
+            }
+            add(p,bitMark);
+            if(rep==0) add(p,gap);
+        }
+        return arr(p);
     }
     private void manchester(ArrayList<Integer>p,int v,int h){
         if(v==1){add(p,true,h);add(p,false,h);}else{add(p,false,h);add(p,true,h);}
+    }
+    private void rc5Bit(ArrayList<Integer>p,int v,int h){
+        if(v==1){add(p,false,h);add(p,true,h);}else{add(p,true,h);add(p,false,h);}
     }
     private void add(ArrayList<Integer>p,int d){p.add(d);} 
     private void add(ArrayList<Integer>p,boolean mark,int d){
