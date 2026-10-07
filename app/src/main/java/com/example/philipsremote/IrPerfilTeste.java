@@ -289,10 +289,8 @@ public class IrPerfilTeste {
         if (codigo < 0) return "Nenhum código testado.";
         String n = (nome == null || nome.trim().isEmpty()) ? "Código " + (savedCount() + 1) : nome.trim();
         String old = savedCodes();
-        String item = perfil + "|" + n.replace("|", "/").replace("
-", " ") + "|" + codigo;
-        prefs.edit().putString(BANK_KEY, old.isEmpty() ? item : old + "
-" + item).apply();
+        String item = perfil + "|" + n.replace("|", "/").replace("\\n", " ") + "|" + codigo;
+        prefs.edit().putString(BANK_KEY, old.isEmpty() ? item : old + "\\n" + item).apply();
         return "Código salvo: " + n;
     }
 
