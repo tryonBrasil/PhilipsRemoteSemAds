@@ -351,6 +351,7 @@ public class ControleStorage {
                 cv.put("codigo", item.optInt("codigo", -1));
                 cv.put("perfil", item.optString("perfil", ""));
                 cv.put("frequencia", Math.max(0, item.optInt("frequencia", 0)));
+                if(item.has("raw_data")) cv.put("raw_data", item.optString("raw_data",""));
                 if (db.insertWithOnConflict("commands", null, cv, SQLiteDatabase.CONFLICT_REPLACE) < 0) return null;
             }
             db.setTransactionSuccessful();
