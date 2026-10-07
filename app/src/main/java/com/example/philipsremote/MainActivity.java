@@ -554,23 +554,39 @@ private static final int CARD_2 = Color.rgb(31,31,36);
 
     private void showUniversalScanner(String marca,String modelo){
         final String[] perfis=irPerfilTeste.perfis();
-        final String[] nomes={
-            "Philips TV","LG TV","Samsung TV","Sony TV","Panasonic TV",
-            "AOC TV","TCL TV","Philco TV","Semp TV","Toshiba / JVC TV",
-            "Ar-condicionado Coolix","Ar-condicionado Midea","Ventilador Universal"
-        };
-        final String[] marcas={
-            "Philips","LG","Samsung","Sony","Panasonic",
-            "AOC","TCL","Philco","Semp","Toshiba",
-            "Coolix","Midea","Ventilador"
-        };
-        final String[] perfisMapa={
-            "Philips / RC6","LG / NEC","Samsung TV","Sony TV","Panasonic TV",
-            "AOC / NEC","TCL / NEC","Philco / NEC","Semp / NEC","Toshiba / JVC / NEC",
-            "AC Coolix","AC Midea","Ventilador Universal"
-        };
+        final IrCatalog catalog=new IrCatalog(this);
+        final java.util.List<IrCatalog.Device> catalogDevices=catalog.all();
+
+        final String[] nomes;
+        final String[] marcas;
+        final String[] modelos;
+        final String[] perfisMapa;
+        final String[] tipos;
+
+        if(catalogDevices.isEmpty()){
+            nomes=new String[]{"Philips TV","LG TV","Samsung TV","Sony TV","Panasonic TV","AOC TV","TCL TV","Philco TV","Semp TV","Toshiba / JVC TV","Ar-condicionado Coolix","Ar-condicionado Midea","Ventilador Universal"};
+            marcas=new String[]{"Philips","LG","Samsung","Sony","Panasonic","AOC","TCL","Philco","Semp","Toshiba","Coolix","Midea","Ventilador"};
+            modelos=new String[]{"Smart TV / RC6","Smart TV / NEC","Smart TV / Samsung","TV / SIRC","TV / Kaseikyo","Smart TV / NEC","Smart TV / NEC","TV / NEC","TV / NEC","TV / NEC","Linha compatível","Linha compatível","Universal"};
+            perfisMapa=new String[]{"Philips / RC6","LG / NEC","Samsung TV","Sony TV","Panasonic TV","AOC / NEC","TCL / NEC","Philco / NEC","Semp / NEC","Toshiba / JVC / NEC","AC Coolix","AC Midea","Ventilador Universal"};
+            tipos=new String[]{"TV","TV","TV","TV","TV","TV","TV","TV","TV","TV","AC","AC","FAN"};
+        }else{
+            nomes=new String[catalogDevices.size()];
+            marcas=new String[catalogDevices.size()];
+            modelos=new String[catalogDevices.size()];
+            perfisMapa=new String[catalogDevices.size()];
+            tipos=new String[catalogDevices.size()];
+            for(int i=0;i<catalogDevices.size();i++){
+                IrCatalog.Device d=catalogDevices.get(i);
+                nomes[i]=d.label();
+                marcas[i]=d.brand;
+                modelos[i]=d.model;
+                perfisMapa[i]=d.profile;
+                tipos[i]=d.type;
+            }
+        }
         final String[] marcaSelecionada={marca};
         final String[] perfilSelecionado={perfis[perfilInicialPara(marca,modelo,perfis)]};
+        final String[] modeloSelecionado={modelo};
         final String[] nomeSelecionado={marca+" "+modelo};
 
         LinearLayout box=new LinearLayout(this);
@@ -683,7 +699,8 @@ private static final int CARD_2 = Color.rgb(31,31,36);
                 selecionado[0]=pos;
                 marcaSelecionada[0]=marcas[pos];
                 perfilSelecionado[0]=perfisMapa[pos];
-                nomeSelecionado[0]=marcas[pos]+" "+modelo;
+                modeloSelecionado[0]=modelos[pos];
+                nomeSelecionado[0]=marcas[pos]+" "+modelos[pos];
                 aparelho.setText(nomeSelecionado[0]);
                 perfilInfo.setText("Perfil: "+perfilSelecionado[0]);
                 irPerfilTeste.selecionar(perfilSelecionado[0]);
@@ -817,14 +834,14 @@ private static final int CARD_2 = Color.rgb(31,31,36);
                     Toast.makeText(this,"Teste pelo menos um código antes de salvar.",Toast.LENGTH_SHORT).show(); return;
                 }
                 int freq=frequenciaPerfil(perfil);
-                String nome=nomeSelecionado[0]; String descricao=irPerfilTeste.descricaoAtual();
+                String nome=nomeSelecionado[0]; String modeloSalvo=modeloSelecionado[0]; String descricao=irPerfilTeste.descricaoAtual();
                 String categoria=perfil.startsWith("AC ")?"AR-CONDICIONADO":(perfil.equals("Ventilador Universal")?"VENTILADOR":"TV");
                 if(!monetizacao.podeSalvarControle(controleStorage.listar().size())){
                     Toast.makeText(this,"Limite gratuito atingido (3 controles). Desbloqueie o Premium para salvar ilimitados.",Toast.LENGTH_LONG).show();
                     monetizacao.showPremiumDialog();
                     return;
                 }
-                long novoId=controleStorage.salvar(nome,categoria,marcaSelecionada[0],modelo,perfil,descricao,codigo,freq);
+                long novoId=controleStorage.salvar(nome,categoria,marcaSelecionada[0],modeloSalvo,perfil,descricao,codigo,freq);
                 if(novoId<0){
                     Toast.makeText(this,"Não foi possível salvar este controle. Tente novamente.",Toast.LENGTH_LONG).show();
                     return;
