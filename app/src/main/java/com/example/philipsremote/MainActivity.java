@@ -29,6 +29,8 @@ public class MainActivity extends Activity {
     private String setupModel="50PUG6513/7";
     private UpdateManager updateManager;
     private int aprenderFuncaoPos = 0;
+    private static final int REQ_EXPORT_BACKUP = 4101;
+    private static final int REQ_IMPORT_BACKUP = 4102;
 
     private static final int FREQ = 36000;
     private static final int LG_FREQ = 38000;
@@ -643,6 +645,51 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         dialog.show();
     }
 
+    private void exportarBackup(){
+        try{
+            android.content.Intent i=new android.content.Intent(android.content.Intent.ACTION_CREATE_DOCUMENT);
+            i.setType("application/json");
+            i.putExtra(android.content.Intent.EXTRA_TITLE,"IRRemoteBR-backup.json");
+            startActivityForResult(i,REQ_EXPORT_BACKUP);
+        }catch(Exception e){ Toast.makeText(this,"Não foi possível abrir o exportador.",Toast.LENGTH_SHORT).show(); }
+    }
+
+    private void importarBackup(){
+        try{
+            android.content.Intent i=new android.content.Intent(android.content.Intent.ACTION_OPEN_DOCUMENT);
+            i.setType("application/json");
+            i.addCategory(android.content.Intent.CATEGORY_OPENABLE);
+            startActivityForResult(i,REQ_IMPORT_BACKUP);
+        }catch(Exception e){ Toast.makeText(this,"Não foi possível abrir o importador.",Toast.LENGTH_SHORT).show(); }
+    }
+
+    @Override protected void onActivityResult(int requestCode,int resultCode,android.content.Intent data){
+        super.onActivityResult(requestCode,resultCode,data);
+        if(resultCode!=RESULT_OK || data==null || data.getData()==null) return;
+        try{
+            android.net.Uri uri=data.getData();
+            if(requestCode==REQ_EXPORT_BACKUP){
+                java.io.OutputStream out=getContentResolver().openOutputStream(uri);
+                if(out==null) throw new java.io.IOException("stream nulo");
+                out.write(controleStorage.exportarJson().getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                out.close();
+                Toast.makeText(this,"Backup exportado com sucesso.",Toast.LENGTH_LONG).show();
+            }else if(requestCode==REQ_IMPORT_BACKUP){
+                java.io.InputStream in=getContentResolver().openInputStream(uri);
+                if(in==null) throw new java.io.IOException("stream nulo");
+                java.io.ByteArrayOutputStream buffer=new java.io.ByteArrayOutputStream();
+                byte[] chunk=new byte[8192]; int n;
+                while((n=in.read(chunk))!=-1) buffer.write(chunk,0,n);
+                in.close();
+                int qtd=controleStorage.importarJson(new String(buffer.toByteArray(),java.nio.charset.StandardCharsets.UTF_8));
+                Toast.makeText(this,qtd+" controle(s) importado(s).",Toast.LENGTH_LONG).show();
+                showMeusControles();
+            }
+        }catch(Exception e){
+            Toast.makeText(this,"Falha no backup: "+e.getMessage(),Toast.LENGTH_LONG).show();
+        }
+    }
+
     private void showMeusControles(){
         ScrollView sv=new ScrollView(this); sv.setFillViewport(true); sv.setBackgroundColor(BG);
         LinearLayout root=new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL);
@@ -668,6 +715,14 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         final TextView resumo=label("",12); resumo.setTextColor(GRAY); resumo.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
         root.addView(resumo,new LinearLayout.LayoutParams(-1,dp(30)));
         final LinearLayout listaBox=new LinearLayout(this); listaBox.setOrientation(LinearLayout.VERTICAL); root.addView(listaBox,new LinearLayout.LayoutParams(-1,-2));
+         LinearLayout backupRow=row();
+         Button exportar=new Button(this); exportar.setText("EXPORTAR"); exportar.setTextColor(WHITE); exportar.setTextSize(12); exportar.setAllCaps(false);
+         GradientDrawable exportBg=new GradientDrawable(); exportBg.setColor(CARD_2); exportBg.setCornerRadius(dp(13)); exportBg.setStroke(dp(1),BORDER); exportar.setBackground(exportBg); actionFeedback(exportar); exportar.setOnClickListener(v->exportarBackup());
+         Button importar=new Button(this); importar.setText("IMPORTAR"); importar.setTextColor(WHITE); importar.setTextSize(12); importar.setAllCaps(false);
+         GradientDrawable importBg=new GradientDrawable(); importBg.setColor(CARD_2); importBg.setCornerRadius(dp(13)); importBg.setStroke(dp(1),BORDER); importar.setBackground(importBg); actionFeedback(importar); importar.setOnClickListener(v->importarBackup());
+         backupRow.addView(exportar,new LinearLayout.LayoutParams(0,dp(44),1)); backupRow.addView(importar,new LinearLayout.LayoutParams(0,dp(44),1));
+         LinearLayout.LayoutParams backupP=new LinearLayout.LayoutParams(-1,dp(48)); backupP.setMargins(0,dp(2),0,dp(4)); root.addView(backupRow,backupP);
+         
 
         final Runnable[] render=new Runnable[1];
 render[0]=()->{
