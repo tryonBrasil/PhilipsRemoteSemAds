@@ -47,21 +47,23 @@ public final class SmartIrDatabase {
 
     public static final class Climate {
         public final String manufacturer, code;
-        public final List<String> models, modes, fans;
+        public final List<String> models, modes, fans, swings;
         public final int minTemp, maxTemp, precision;
         private final JSONObject commands;
 
-        Climate(String manufacturer,String code,List<String> models,List<String> modes,List<String> fans,
+        Climate(String manufacturer,String code,List<String> models,List<String> modes,List<String> fans,List<String> swings,
                 int minTemp,int maxTemp,int precision,JSONObject commands){
             this.manufacturer=manufacturer; this.code=code; this.models=models; this.modes=modes;
-            this.fans=fans; this.minTemp=minTemp; this.maxTemp=maxTemp; this.precision=precision;
+            this.fans=fans; this.swings=swings; this.minTemp=minTemp; this.maxTemp=maxTemp; this.precision=precision;
             this.commands=commands;
         }
 
         public String offCommand(){ return commands.optString("off",""); }
 
         /** Procura o comando de estado mode -> fan -> temperature, tolerando pequenas variações de estrutura. */
-        public String command(String mode,String fan,int temperature){
+        public String command(String mode,String fan,int temperature){ return command(mode,fan,swings.isEmpty()?null:swings.get(0),temperature); }
+
+        public String command(String mode,String fan,String swing,int temperature){
             if(mode==null || mode.trim().isEmpty()) return offCommand();
             JSONObject modeObj=commands.optJSONObject(mode);
             if(modeObj==null) modeObj=findObjectIgnoreCase(commands,mode);
@@ -72,19 +74,23 @@ public final class SmartIrDatabase {
                 if(candidate==null) candidate=findObjectIgnoreCase(modeObj,fan);
                 if(candidate!=null) fanObj=candidate;
             }
-            String exact=fanObj.optString(String.valueOf(temperature),"");
+            JSONObject tempObj=fanObj;
+            if(swing!=null && !swing.isEmpty()){
+                JSONObject candidate=fanObj.optJSONObject(swing);
+                if(candidate==null) candidate=findObjectIgnoreCase(fanObj,swing);
+                if(candidate!=null) tempObj=candidate;
+            }
+            String exact=tempObj.optString(String.valueOf(temperature),"");
             if(!exact.isEmpty()) return exact;
-            JSONObject nested=findObjectByTemperature(fanObj,temperature);
-            if(nested!=null) return nested.optString(String.valueOf(temperature),"");
             String closest="";
             int best=Integer.MAX_VALUE;
-            Iterator<String> it=fanObj.keys();
+            Iterator<String> it=tempObj.keys();
             while(it.hasNext()){
                 String k=it.next();
                 try{
                     int t=Integer.parseInt(k);
                     int d=Math.abs(t-temperature);
-                    if(d<best && fanObj.optString(k,"").length()>0){best=d;closest=fanObj.optString(k,"");}
+                    if(d<best && tempObj.optString(k,"").length()>0){best=d;closest=tempObj.optString(k,"");}
                 }catch(Exception ignored){}
             }
             return closest;
@@ -167,12 +173,13 @@ public final class SmartIrDatabase {
         List<String> models=toList(o.optJSONArray("supportedModels"));
         List<String> modes=toList(o.optJSONArray("operationModes"));
         List<String> fans=toList(o.optJSONArray("fanModes"));
+        List<String> swings=toList(o.optJSONArray("swingModes"));
         int min=(int)Math.round(o.optDouble("minTemperature",16));
         int max=(int)Math.round(o.optDouble("maxTemperature",30));
         int precision=(int)Math.round(o.optDouble("precision",1));
         JSONObject commands=o.optJSONObject("commands");
         if(commands==null) commands=new JSONObject();
-        return new Climate(manufacturer,code,models,modes,fans,min,max,Math.max(1,precision),commands);
+        return new Climate(manufacturer,code,models,modes,fans,swings,min,max,Math.max(1,precision),commands);
     }
 
     /**
