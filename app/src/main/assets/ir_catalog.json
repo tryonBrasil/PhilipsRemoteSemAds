@@ -1,0 +1,409 @@
+{
+  "version": 1,
+  "updated_at": "2026-10-07",
+  "note": "Perfis candidatos. A compatibilidade é confirmada pelo teste IR.",
+  "devices": [
+    [
+      "TV",
+      "Philips",
+      "Smart TV / RC6",
+      "Philips / RC6"
+    ],
+    [
+      "TV",
+      "LG",
+      "Smart TV / NEC",
+      "LG / NEC"
+    ],
+    [
+      "TV",
+      "Samsung",
+      "Smart TV / Samsung",
+      "Samsung TV"
+    ],
+    [
+      "TV",
+      "Sony",
+      "TV / SIRC",
+      "Sony TV"
+    ],
+    [
+      "TV",
+      "Panasonic",
+      "TV / Kaseikyo",
+      "Panasonic TV"
+    ],
+    [
+      "TV",
+      "AOC",
+      "Smart TV / NEC",
+      "AOC / NEC"
+    ],
+    [
+      "TV",
+      "TCL",
+      "Smart TV / NEC",
+      "TCL / NEC"
+    ],
+    [
+      "TV",
+      "Philco",
+      "TV / NEC",
+      "Philco / NEC"
+    ],
+    [
+      "TV",
+      "Semp",
+      "TV / NEC",
+      "Semp / NEC"
+    ],
+    [
+      "TV",
+      "Toshiba",
+      "TV / NEC",
+      "Toshiba / JVC / NEC"
+    ],
+    [
+      "TV",
+      "JVC",
+      "TV / NEC",
+      "Toshiba / JVC / NEC"
+    ],
+    [
+      "TV",
+      "CCE",
+      "TV / NEC",
+      "Toshiba / JVC / NEC"
+    ],
+    [
+      "TV",
+      "H-Buster",
+      "TV / NEC",
+      "Toshiba / JVC / NEC"
+    ],
+    [
+      "TV",
+      "Lenoxx",
+      "TV / NEC",
+      "Toshiba / JVC / NEC"
+    ],
+    [
+      "TV",
+      "Multilaser",
+      "TV / NEC",
+      "Toshiba / JVC / NEC"
+    ],
+    [
+      "TV",
+      "Britânia",
+      "TV / NEC",
+      "Philco / NEC"
+    ],
+    [
+      "TV",
+      "Buster",
+      "TV / NEC",
+      "Toshiba / JVC / NEC"
+    ],
+    [
+      "TV",
+      "Gradiente",
+      "TV / NEC",
+      "Toshiba / JVC / NEC"
+    ],
+    [
+      "TV",
+      "Semp TCL",
+      "TV / NEC",
+      "TCL / NEC"
+    ],
+    [
+      "TV",
+      "Sharp",
+      "TV / NEC",
+      "Toshiba / JVC / NEC"
+    ],
+    [
+      "TV",
+      "Hitachi",
+      "TV / NEC",
+      "Toshiba / JVC / NEC"
+    ],
+    [
+      "TV",
+      "Sanyo",
+      "TV / NEC",
+      "Toshiba / JVC / NEC"
+    ],
+    [
+      "TV",
+      "Aiwa",
+      "TV / NEC",
+      "Toshiba / JVC / NEC"
+    ],
+    [
+      "TV",
+      "Epson",
+      "TV / NEC",
+      "Toshiba / JVC / NEC"
+    ],
+    [
+      "TV",
+      "Metz",
+      "TV / NEC",
+      "Toshiba / JVC / NEC"
+    ],
+    [
+      "TV",
+      "Vestel",
+      "TV / NEC",
+      "Toshiba / JVC / NEC"
+    ],
+    [
+      "AC",
+      "Midea",
+      "Linha compatível / Midea",
+      "AC Midea"
+    ],
+    [
+      "AC",
+      "Comfee",
+      "Linha compatível / Midea",
+      "AC Midea"
+    ],
+    [
+      "AC",
+      "Kaysun",
+      "Linha compatível / Midea",
+      "AC Midea"
+    ],
+    [
+      "AC",
+      "MrCool",
+      "Linha compatível / Midea",
+      "AC Midea"
+    ],
+    [
+      "AC",
+      "Pioneer",
+      "Linha compatível / Midea",
+      "AC Midea"
+    ],
+    [
+      "AC",
+      "Lennox",
+      "Linha compatível / Midea",
+      "AC Midea"
+    ],
+    [
+      "AC",
+      "Keystone",
+      "Linha compatível / Midea",
+      "AC Midea"
+    ],
+    [
+      "AC",
+      "Beko",
+      "Linha compatível / Coolix",
+      "AC Coolix"
+    ],
+    [
+      "AC",
+      "Airwell",
+      "Linha compatível / Coolix",
+      "AC Coolix"
+    ],
+    [
+      "AC",
+      "Toshiba",
+      "Linha compatível / Coolix",
+      "AC Coolix"
+    ],
+    [
+      "AC",
+      "Bosch",
+      "Linha compatível / Coolix",
+      "AC Coolix"
+    ],
+    [
+      "AC",
+      "Fisher",
+      "Linha compatível / Coolix",
+      "AC Coolix"
+    ],
+    [
+      "AC",
+      "Carrier",
+      "Candidato / Coolix",
+      "AC Coolix"
+    ],
+    [
+      "AC",
+      "Springer",
+      "Candidato / Coolix",
+      "AC Coolix"
+    ],
+    [
+      "AC",
+      "Consul",
+      "Candidato / Midea",
+      "AC Midea"
+    ],
+    [
+      "AC",
+      "Elgin",
+      "Candidato / Midea",
+      "AC Midea"
+    ],
+    [
+      "AC",
+      "Electrolux",
+      "Candidato / Midea",
+      "AC Midea"
+    ],
+    [
+      "AC",
+      "Philco",
+      "Candidato / Midea",
+      "AC Midea"
+    ],
+    [
+      "AC",
+      "Agratto",
+      "Candidato / Midea",
+      "AC Midea"
+    ],
+    [
+      "AC",
+      "EOS",
+      "Candidato / Midea",
+      "AC Midea"
+    ],
+    [
+      "AC",
+      "Gree",
+      "Candidato / Midea",
+      "AC Midea"
+    ],
+    [
+      "AC",
+      "LG",
+      "Candidato / Midea",
+      "AC Midea"
+    ],
+    [
+      "AC",
+      "Samsung",
+      "Candidato / Midea",
+      "AC Midea"
+    ],
+    [
+      "AC",
+      "TCL",
+      "Candidato / Midea",
+      "AC Midea"
+    ],
+    [
+      "AC",
+      "Daikin",
+      "Candidato / Midea",
+      "AC Midea"
+    ],
+    [
+      "AC",
+      "Fujitsu",
+      "Candidato / Midea",
+      "AC Midea"
+    ],
+    [
+      "AC",
+      "Mitsubishi",
+      "Candidato / Midea",
+      "AC Midea"
+    ],
+    [
+      "AC",
+      "Whirlpool",
+      "Candidato / Midea",
+      "AC Midea"
+    ],
+    [
+      "FAN",
+      "Arno",
+      "Universal",
+      "Ventilador Universal"
+    ],
+    [
+      "FAN",
+      "Mondial",
+      "Universal",
+      "Ventilador Universal"
+    ],
+    [
+      "FAN",
+      "Britânia",
+      "Universal",
+      "Ventilador Universal"
+    ],
+    [
+      "FAN",
+      "Mallory",
+      "Universal",
+      "Ventilador Universal"
+    ],
+    [
+      "FAN",
+      "Ventisol",
+      "Universal",
+      "Ventilador Universal"
+    ],
+    [
+      "FAN",
+      "WAP",
+      "Universal",
+      "Ventilador Universal"
+    ],
+    [
+      "FAN",
+      "Midea",
+      "Universal",
+      "Ventilador Universal"
+    ],
+    [
+      "FAN",
+      "Philco",
+      "Universal",
+      "Ventilador Universal"
+    ],
+    [
+      "FAN",
+      "Cadence",
+      "Universal",
+      "Ventilador Universal"
+    ],
+    [
+      "FAN",
+      "Oster",
+      "Universal",
+      "Ventilador Universal"
+    ],
+    [
+      "FAN",
+      "Aliseu",
+      "Universal",
+      "Ventilador Universal"
+    ],
+    [
+      "FAN",
+      "Tron",
+      "Universal",
+      "Ventilador Universal"
+    ],
+    [
+      "FAN",
+      "Venti-Delta",
+      "Universal",
+      "Ventilador Universal"
+    ]
+  ]
+}
