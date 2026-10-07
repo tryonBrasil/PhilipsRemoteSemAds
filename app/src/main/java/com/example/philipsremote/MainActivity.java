@@ -406,7 +406,7 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         root.addView(meus,new LinearLayout.LayoutParams(-1,dp(52)));
         Button dispositivos=new Button(this); dispositivos.setText("📺  TESTAR DISPOSITIVOS"); dispositivos.setTextColor(WHITE); dispositivos.setTextSize(14); dispositivos.setAllCaps(false);
         GradientDrawable dispositivosBg=new GradientDrawable(); dispositivosBg.setColor(Color.rgb(42,42,48)); dispositivosBg.setCornerRadius(dp(16)); dispositivosBg.setStroke(dp(1),BORDER); dispositivos.setBackground(dispositivosBg); actionFeedback(dispositivos);
-        dispositivos.setOnClickListener(v->showUniversalScanner(lgMode?"LG":"Philips",lgMode?"32LB620B":"50PUG6513/7"));
+        dispositivos.setOnClickListener(v->showTesteFacil(lgMode?"LG":"Philips",lgMode?"32LB620B":"50PUG6513/7"));
         LinearLayout.LayoutParams dispositivosParams=new LinearLayout.LayoutParams(-1,dp(52)); dispositivosParams.setMargins(0,dp(8),0,0); root.addView(dispositivos,dispositivosParams);
         Button premium=new Button(this);
         premium.setText(monetizacao.isPremium()?"⭐  PREMIUM ATIVO":"⭐  IR REMOTE PREMIUM");
@@ -477,6 +477,79 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         if(perfil.equals("Panasonic TV")) return 37000;
         if(perfil.equals("Ventilador Universal")) return 38000;
         return 38000;
+    }
+
+    /** Teste fácil: reduz a configuração a aparelho → função → testar → funcionou. */
+    private void showTesteFacil(String marcaInicial,String modeloInicial){
+        final String[] nomes={"📺 TV","❄️ Ar-condicionado","🌀 Ventilador"};
+        final String[] marcas={"Philips","Coolix","Ventilador"};
+        final String[] modelos={modeloInicial==null||modeloInicial.isEmpty()?"TV":"TV", "Universal", "Universal"};
+        final String[] perfis={"Philips / RC6","AC Coolix","Ventilador Universal"};
+        final String[] funcoes={"Ligar / Desligar","Volume +","Volume -","Canal +","Canal -","OK","Menu"};
+        final String[] chaves={"POWER","VOL_UP","VOL_DOWN","CH_UP","CH_DOWN","OK","MENU"};
+        final int[] tipo={0};
+        final String[] perfil={"Philips / RC6"};
+        final int[] funcao={0};
+        final boolean[] controleCriado={false};
+        final long[] controleId={-1L};
+
+        LinearLayout box=new LinearLayout(this); box.setOrientation(LinearLayout.VERTICAL); box.setPadding(dp(18),dp(6),dp(18),dp(6));
+        TextView passo=label("PASSO 1 • ESCOLHA O APARELHO",12); passo.setTextColor(ACCENT); passo.setTypeface(Typeface.DEFAULT,Typeface.BOLD); box.addView(passo,new LinearLayout.LayoutParams(-1,dp(30)));
+        TextView titulo=label("Teste fácil",25); titulo.setTypeface(Typeface.DEFAULT,Typeface.BOLD); titulo.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL); box.addView(titulo,new LinearLayout.LayoutParams(-1,dp(42)));
+        TextView ajuda=label("Você não precisa entender códigos. Escolha o aparelho e nós vamos testar os comandos para você.",13); ajuda.setTextColor(GRAY); ajuda.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL); box.addView(ajuda,new LinearLayout.LayoutParams(-1,dp(52)));
+        LinearLayout lista=new LinearLayout(this); lista.setOrientation(LinearLayout.VERTICAL);
+        for(int i=0;i<nomes.length;i++){
+            final int p=i; Button b=botaoAcao(nomes[i],i==0?Color.rgb(48,30,32):CARD_2,15); b.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL); b.setPadding(dp(14),0,0,0);
+            b.setOnClickListener(v->{ tipo[0]=p; perfil[0]=perfis[p]; atualizarBotoesTesteFacil(lista,nomes,tipo[0]); });
+            lista.addView(b,new LinearLayout.LayoutParams(-1,dp(48)));
+        }
+        box.addView(lista,new LinearLayout.LayoutParams(-1,dp(154)));
+        TextView selecionado=label("✓ TV selecionada",13); selecionado.setTextColor(Color.rgb(105,190,125)); selecionado.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL); box.addView(selecionado,new LinearLayout.LayoutParams(-1,dp(34)));
+        TextView passo2=label("PASSO 2 • ESCOLHA O QUE QUER TESTAR",12); passo2.setTextColor(ACCENT); passo2.setTypeface(Typeface.DEFAULT,Typeface.BOLD); box.addView(passo2,new LinearLayout.LayoutParams(-1,dp(30)));
+        LinearLayout funcoesBox=new LinearLayout(this); funcoesBox.setOrientation(LinearLayout.VERTICAL);
+        for(int i=0;i<funcoes.length;i++){
+            final int p=i; Button b=botaoAcao((i==0?"●  ":"")+funcoes[i],i==0?Color.rgb(58,58,68):CARD_2,14); b.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL); b.setPadding(dp(14),0,0,0);
+            b.setOnClickListener(v->{funcao[0]=p; atualizarBotoesFuncaoFacil(funcoesBox,funcoes,funcao[0]); passo.setText("PASSO 3 • TESTE O COMANDO"); selecionado.setText("✓ "+nomes[tipo[0]]+" • "+funcoes[funcao[0]]);});
+            funcoesBox.addView(b,new LinearLayout.LayoutParams(-1,dp(42)));
+        }
+        box.addView(funcoesBox,new LinearLayout.LayoutParams(-1,dp(7*45)));
+        TextView status=label("Aponte o celular para o aparelho e toque em TESTAR.",14); status.setTextColor(GRAY); status.setGravity(Gravity.CENTER); GradientDrawable sb=new GradientDrawable(); sb.setColor(CARD); sb.setCornerRadius(dp(14)); sb.setStroke(dp(1),BORDER); status.setBackground(sb); box.addView(status,new LinearLayout.LayoutParams(-1,dp(58)));
+        LinearLayout acao=row(); Button testar=botaoAcao("TESTAR",ACCENT,16); Button proximo=botaoAcao("OUTRO CÓDIGO ▶",KEY_DARK,13); acao.addView(testar,lpPeso()); acao.addView(proximo,lpPeso()); box.addView(acao,new LinearLayout.LayoutParams(-1,dp(52)));
+        Button funcionou=botaoAcao("✓ FUNCIONOU — SALVAR",Color.rgb(45,90,55),15); box.addView(funcionou,new LinearLayout.LayoutParams(-1,dp(52)));
+        TextView dica=label("Não funcionou? Toque em OUTRO CÓDIGO. O aplicativo continua procurando automaticamente.",12); dica.setTextColor(GRAY); dica.setGravity(Gravity.CENTER); box.addView(dica,new LinearLayout.LayoutParams(-1,dp(48)));
+
+        android.app.AlertDialog dialog=new android.app.AlertDialog.Builder(this).setTitle("🔰 TESTE FÁCIL").setView(wrapScroll(box)).setNegativeButton("FECHAR",(d,w)->showSelector()).create();
+        dialog.setOnShowListener(x->{
+            irPerfilTeste.selecionar(perfil[0]);
+            final boolean[] preparado={false};
+            Runnable preparar=()->{ if(!preparado[0] || !perfil[0].equals(irPerfilTeste.getPerfil())){ irPerfilTeste.selecionarVarredura(perfil[0],-1); preparado[0]=true; } };
+            testar.setOnClickListener(v->{ preparar.run(); String resultado=irPerfilTeste.next(); status.setText("●  "+resultado+"\nSe o aparelho respondeu, toque em FUNCIONOU — SALVAR."); status.setTextColor(Color.rgb(205,180,90)); });
+            proximo.setOnClickListener(v->{ preparar.run(); String resultado=irPerfilTeste.next(); status.setText("●  "+resultado); status.setTextColor(Color.rgb(205,180,90)); });
+            funcionou.setOnClickListener(v->{
+                int codigo=irPerfilTeste.currentCode(); if(codigo<0){ status.setText("Primeiro toque em TESTAR."); status.setTextColor(ACCENT); return; }
+                int freq=frequenciaPerfil(perfil[0]);
+                if(!controleCriado[0]){
+                    if(!monetizacao.podeSalvarControle(controleStorage.listar().size())){ monetizacao.showPremiumDialog(); return; }
+                    String nome=nomes[tipo[0]].replace("📺 ","").replace("❄️ ","").replace("🌀 ","")+" Universal";
+                    String marca=marcas[tipo[0]]; String modelo=modelos[tipo[0]];
+                    int base=codigo; long id=controleStorage.salvar(nome,tipo[0]==2?"VENTILADOR":(tipo[0]==1?"AR-CONDICIONADO":"TV"),marca,modelo,perfil[0],"Configurado pelo Teste Fácil",base,freq);
+                    if(id<0){ status.setText("Não foi possível salvar. Tente novamente."); status.setTextColor(ACCENT); return; }
+                    controleId[0]=id; controleCriado[0]=true; controleAtivo=controleStorage.buscar(id); prefs.edit().putLong("active_control_id",id).apply();
+                }
+                controleAtivo=controleStorage.buscar(controleId[0]);
+                controleStorage.salvarComando(controleAtivo,chaves[funcao[0]],codigo,perfil[0],freq);
+                status.setText("✓ "+funcoes[funcao[0]]+" salvo! Agora você pode testar outro comando."); status.setTextColor(Color.rgb(105,190,125));
+                int next=(funcao[0]+1)%funcoes.length; funcao[0]=next; atualizarBotoesFuncaoFacil(funcoesBox,funcoes,funcao[0]); selecionado.setText("✓ "+nomes[tipo[0]]+" • "+funcoes[funcao[0]]);
+            });
+        });
+        dialog.show();
+    }
+
+    private void atualizarBotoesTesteFacil(LinearLayout box,String[] nomes,int selecionado){
+        for(int i=0;i<box.getChildCount();i++){ View v=box.getChildAt(i); if(v instanceof Button){ GradientDrawable g=new GradientDrawable(); g.setColor(i==selecionado?Color.rgb(48,30,32):CARD_2); g.setCornerRadius(dp(14)); g.setStroke(dp(1),i==selecionado?ACCENT:BORDER); v.setBackground(g); } }
+    }
+    private void atualizarBotoesFuncaoFacil(LinearLayout box,String[] funcoes,int selecionado){
+        for(int i=0;i<box.getChildCount();i++){ View v=box.getChildAt(i); if(v instanceof Button){ ((Button)v).setText((i==selecionado?"●  ":"")+funcoes[i]); GradientDrawable g=new GradientDrawable(); g.setColor(i==selecionado?Color.rgb(58,58,68):CARD_2); g.setCornerRadius(dp(12)); g.setStroke(dp(1),i==selecionado?ACCENT:BORDER); v.setBackground(g); } }
     }
 
     private void showUniversalScanner(String marca,String modelo){
