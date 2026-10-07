@@ -298,7 +298,7 @@ public class IrPerfilTeste {
         String s = prefs.getString(BANK_KEY, null);
         if (s == null) {                                   // migra o formato antigo
             String old = prefs.getString(OLD_BANK_KEY, "");
-            s = old.replace("\n", "\n");
+            s = old.replace("\\n", "\n");
             if (!old.isEmpty()) prefs.edit().putString(BANK_KEY, s).remove(OLD_BANK_KEY).apply();
         }
         return s;
