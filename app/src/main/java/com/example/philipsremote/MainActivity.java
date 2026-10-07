@@ -1140,11 +1140,60 @@ render[0]=()->{
             }
             resumo.setText(filtro.isEmpty() ? monetizacao.resumoLimite(todos.size()) : lista.size() + " resultado" + (lista.size()==1 ? "" : "s") + " para \"" + filtro + "\"");
             if(lista.isEmpty()){
-                TextView vazio=label(filtro.isEmpty()?"Nenhum controle salvo ainda.":"Nenhum controle encontrado.",15);
-                vazio.setTextColor(GRAY); vazio.setGravity(Gravity.CENTER); listaBox.addView(vazio,new LinearLayout.LayoutParams(-1,dp(130)));
-                Button addVazio=new Button(this); addVazio.setText("+  ADICIONAR CONTROLE"); addVazio.setTextColor(WHITE); addVazio.setTextSize(13); addVazio.setAllCaps(false);
-                GradientDrawable av=new GradientDrawable(); av.setColor(ACCENT); av.setCornerRadius(dp(15)); addVazio.setBackground(av); actionFeedback(addVazio);
-                addVazio.setOnClickListener(v->showAddControlWizard()); listaBox.addView(addVazio,new LinearLayout.LayoutParams(-1,dp(50)));
+                if(filtro.isEmpty()){
+                    LinearLayout vazioBox=new LinearLayout(this);
+                    vazioBox.setOrientation(LinearLayout.VERTICAL);
+                    vazioBox.setGravity(Gravity.CENTER_HORIZONTAL);
+                    vazioBox.setPadding(dp(18),dp(22),dp(18),dp(22));
+                    GradientDrawable vazioBg=new GradientDrawable();
+                    vazioBg.setColor(CARD);
+                    vazioBg.setCornerRadius(dp(20));
+                    vazioBg.setStroke(dp(1),BORDER);
+                    vazioBox.setBackground(vazioBg);
+
+                    TextView emoji=label("📭",38);
+                    emoji.setGravity(Gravity.CENTER);
+                    vazioBox.addView(emoji,new LinearLayout.LayoutParams(-1,dp(48)));
+
+                    TextView tituloVazio=label("Nenhum controle salvo ainda",18);
+                    tituloVazio.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
+                    tituloVazio.setGravity(Gravity.CENTER);
+                    tituloVazio.setTextColor(WHITE);
+                    vazioBox.addView(tituloVazio,new LinearLayout.LayoutParams(-1,dp(34)));
+
+                    TextView textoVazio=label("🔎 Use o CONTROLE UNIVERSAL para encontrar seu aparelho, testar os códigos e salvar o controle que funcionar.",13);
+                    textoVazio.setTextColor(GRAY);
+                    textoVazio.setGravity(Gravity.CENTER);
+                    vazioBox.addView(textoVazio,new LinearLayout.LayoutParams(-1,dp(68)));
+
+                    TextView dicaVazia=label("💡 Depois de salvar, ele aparecerá aqui para acesso rápido.",12);
+                    dicaVazia.setTextColor(Color.rgb(155,155,160));
+                    dicaVazia.setGravity(Gravity.CENTER);
+                    vazioBox.addView(dicaVazia,new LinearLayout.LayoutParams(-1,dp(42)));
+
+                    Button addVazio=new Button(this);
+                    addVazio.setText("🔎  ENCONTRAR MEU CONTROLE");
+                    addVazio.setTextColor(WHITE);
+                    addVazio.setTextSize(13);
+                    addVazio.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
+                    addVazio.setAllCaps(false);
+                    GradientDrawable av=new GradientDrawable();
+                    av.setColor(ACCENT);
+                    av.setCornerRadius(dp(15));
+                    addVazio.setBackground(av);
+                    actionFeedback(addVazio);
+                    addVazio.setOnClickListener(v->showUniversalScanner("Universal","Universal"));
+                    vazioBox.addView(addVazio,new LinearLayout.LayoutParams(-1,dp(52)));
+
+                    LinearLayout.LayoutParams vp=new LinearLayout.LayoutParams(-1,dp(296));
+                    vp.setMargins(0,dp(4),0,dp(8));
+                    listaBox.addView(vazioBox,vp);
+                }else{
+                    TextView vazio=label("🔎 Nenhum controle encontrado para \""+filtro+"\".",15);
+                    vazio.setTextColor(GRAY);
+                    vazio.setGravity(Gravity.CENTER);
+                    listaBox.addView(vazio,new LinearLayout.LayoutParams(-1,dp(100)));
+                }
                 return;
             }
             for(ControleStorage.Controle c:lista){
