@@ -6,7 +6,7 @@ import android.database.sqlite.SQLiteOpenHelper;
 
 public class ControleDatabase extends SQLiteOpenHelper {
     private static final String NAME = "ir_remote.db";
-    private static final int VERSION = 2;
+    private static final int VERSION = 3;
 
     public ControleDatabase(Context context) {
         super(context.getApplicationContext(), NAME, null, VERSION);
@@ -31,6 +31,7 @@ public class ControleDatabase extends SQLiteOpenHelper {
                 "codigo INTEGER NOT NULL," +
                 "perfil TEXT," +
                 "frequencia INTEGER NOT NULL DEFAULT 0," +
+                "raw_data TEXT," +
                 "PRIMARY KEY(control_id, funcao)," +
                 "FOREIGN KEY(control_id) REFERENCES controls(id) ON DELETE CASCADE)");
         db.execSQL("CREATE INDEX idx_commands_control ON commands(control_id)");
@@ -40,6 +41,9 @@ public class ControleDatabase extends SQLiteOpenHelper {
         if(oldVersion < 2){
             db.execSQL("ALTER TABLE controls ADD COLUMN updated INTEGER NOT NULL DEFAULT 0");
             db.execSQL("UPDATE controls SET updated=created WHERE updated=0");
+        }
+        if(oldVersion < 3){
+            db.execSQL("ALTER TABLE commands ADD COLUMN raw_data TEXT");
         }
     }
 
