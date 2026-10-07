@@ -239,8 +239,8 @@ public class IrPerfilTeste {
         return arr(p);
     }
     private int[] coolix(int code){
-        int[] bytes=interleavedBytes(code);
-        return acSixBytes(bytes,4000,4000,500,1500,5000);
+        int[] bytes=protocolBytes(code);
+        return acSixBytes(bytes,4000,4000,500,1500,5000,true);
     }
     private int[] panasonic(int function){
         final int unit=432;
@@ -256,21 +256,25 @@ public class IrPerfilTeste {
         return arr(p);
     }
     private int[] midea(int shortCode){
-        int[] bytes=interleavedBytes(shortCode);
-        return acSixBytes(bytes,4350,4400,560,1690,5200);
+        int[] bytes=protocolBytes(shortCode);
+        return acSixBytes(bytes,4350,4400,560,1690,5200,false);
     }
 
-    private int[] interleavedBytes(int code){
+    // Os seis bytes são os três bytes de dados seguidos pelos seus complementos.
+    // Ex.: B2 4D 7B 84 E0 1F.
+    private int[] protocolBytes(int code){
         int b0=(code>>16)&0xFF;
         int b1=(code>>8)&0xFF;
         int b2=code&0xFF;
-        return new int[]{b0,(~b0)&0xFF,b1,(~b1)&0xFF,b2,(~b2)&0xFF};
+        return new int[]{b0,b1,b2,(~b0)&0xFF,(~b1)&0xFF,(~b2)&0xFF};
     }
 
-    private int[] acSixBytes(int[] bytes,int headerMark,int headerSpace,int bitMark,int oneSpace,int gap){
+    private int[] acSixBytes(int[] bytes,int headerMark,int headerSpace,int bitMark,int oneSpace,int gap,boolean repeatHeader){
         ArrayList<Integer>p=new ArrayList<>();
         for(int rep=0;rep<2;rep++){
-            add(p,headerMark); add(p,headerSpace);
+            if(rep==0 || repeatHeader){
+                add(p,headerMark); add(p,headerSpace);
+            }
             for(int v:bytes){
                 for(int m=0x80;m!=0;m>>=1){
                     add(p,bitMark);
