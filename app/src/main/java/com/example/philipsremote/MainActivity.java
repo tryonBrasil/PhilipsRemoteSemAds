@@ -71,7 +71,8 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         }
         updateManager=new UpdateManager(this);
         monetizacao=new MonetizationManager(this,()->showSelector());
-        showSelector();
+        if(!prefs.getBoolean("initial_screen_seen",false)) showInitialScreen();
+        else showSelector();
     }
 
     private int dp(float v){ return (int)(v*getResources().getDisplayMetrics().density+0.5f); }
@@ -190,6 +191,146 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         bg.setColor(color); bg.setCornerRadius(dp(12));
         b.setBackground(bg);
         return b;
+    }
+
+    private void showInitialScreen() {
+        ScrollView sv=new ScrollView(this);
+        sv.setFillViewport(true);
+        sv.setBackgroundColor(BG);
+
+        LinearLayout root=new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setGravity(Gravity.CENTER_HORIZONTAL);
+        root.setPadding(dp(24),dp(42),dp(24),dp(30));
+
+        Space top=new Space(this);
+        root.addView(top,new LinearLayout.LayoutParams(1,dp(28)));
+
+        TextView logo=label("IR",56);
+        logo.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
+        logo.setTextColor(WHITE);
+        GradientDrawable logoBg=new GradientDrawable();
+        logoBg.setColor(ACCENT);
+        logoBg.setCornerRadius(dp(28));
+        logo.setBackground(logoBg);
+        logo.setGravity(Gravity.CENTER);
+        root.addView(logo,new LinearLayout.LayoutParams(dp(112),dp(112)));
+
+        TextView brand=label("IR REMOTE BR",18);
+        brand.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
+        brand.setLetterSpacing(.12f);
+        brand.setTextColor(ACCENT);
+        LinearLayout.LayoutParams brandP=new LinearLayout.LayoutParams(-1,dp(34));
+        brandP.setMargins(0,dp(22),0,0);
+        root.addView(brand,brandP);
+
+        TextView title=label("Controle seus aparelhos\nde um jeito simples",27);
+        title.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
+        title.setGravity(Gravity.CENTER);
+        LinearLayout.LayoutParams titleP=new LinearLayout.LayoutParams(-1,dp(78));
+        titleP.setMargins(0,dp(8),0,0);
+        root.addView(title,titleP);
+
+        TextView sub=label("Comece agora. Não é necessário criar uma conta para usar os recursos gratuitos.",14);
+        sub.setTextColor(GRAY);
+        sub.setGravity(Gravity.CENTER);
+        LinearLayout.LayoutParams subP=new LinearLayout.LayoutParams(-1,dp(60));
+        subP.setMargins(0,dp(4),0,dp(22));
+        root.addView(sub,subP);
+
+        Button comecar=botaoAcao("COMEÇAR",Color.rgb(190,24,32),18);
+        LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(-1,dp(58));
+        cp.setMargins(0,dp(4),0,dp(10));
+        root.addView(comecar,cp);
+        comecar.setOnClickListener(v->{
+            prefs.edit().putBoolean("initial_screen_seen",true).apply();
+            showSelector();
+        });
+
+        Button conta=new Button(this);
+        conta.setText("ENTRAR / CONTA PREMIUM");
+        conta.setTextColor(WHITE);
+        conta.setTextSize(14);
+        conta.setAllCaps(false);
+        GradientDrawable contaBg=new GradientDrawable();
+        contaBg.setColor(KEY_DARK);
+        contaBg.setCornerRadius(dp(16));
+        contaBg.setStroke(dp(1),BORDER);
+        conta.setBackground(contaBg);
+        actionFeedback(conta);
+        conta.setOnClickListener(v->showPremiumAccountScreen());
+        root.addView(conta,new LinearLayout.LayoutParams(-1,dp(52)));
+
+        TextView note=label("⭐ O Premium é vinculado à sua compra no Google Play.",12);
+        note.setTextColor(GRAY);
+        note.setGravity(Gravity.CENTER);
+        LinearLayout.LayoutParams np=new LinearLayout.LayoutParams(-1,dp(48));
+        np.setMargins(0,dp(16),0,dp(0));
+        root.addView(note,np);
+
+        TextView version=label("",11);
+        version.setTextColor(GRAY);
+        try{
+            version.setText("Versão "+getPackageManager().getPackageInfo(getPackageName(),0).versionName);
+        }catch(Exception ignored){}
+        root.addView(version,new LinearLayout.LayoutParams(-1,dp(28)));
+
+        sv.addView(root);
+        mostrar(sv);
+    }
+
+    private void showPremiumAccountScreen(){
+        ScrollView sv=new ScrollView(this);
+        sv.setFillViewport(true);
+        sv.setBackgroundColor(BG);
+        LinearLayout root=new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setPadding(dp(20),dp(28),dp(20),dp(30));
+
+        TextView title=label("CONTA E PREMIUM",26);
+        title.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
+        title.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
+        root.addView(title,new LinearLayout.LayoutParams(-1,dp(52)));
+
+        TextView info=label("A compra do Premium é associada à conta do Google Play usada na compra.\n\nVocê não precisa criar uma senha separada para usar o aplicativo.",14);
+        info.setTextColor(GRAY);
+        info.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
+        LinearLayout.LayoutParams ip=new LinearLayout.LayoutParams(-1,dp(92));
+        ip.setMargins(0,dp(8),0,dp(18));
+        root.addView(info,ip);
+
+        TextView status=label(monetizacao.isPremium() ? "✓ PREMIUM ATIVO" : "○ PREMIUM NÃO ATIVO",16);
+        status.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
+        status.setTextColor(monetizacao.isPremium()?SUCCESS:WHITE);
+        GradientDrawable statusBg=new GradientDrawable();
+        statusBg.setColor(monetizacao.isPremium()?Color.rgb(38,70,48):CARD);
+        statusBg.setCornerRadius(dp(16));
+        statusBg.setStroke(dp(1),BORDER);
+        status.setBackground(statusBg);
+        status.setGravity(Gravity.CENTER);
+        root.addView(status,new LinearLayout.LayoutParams(-1,dp(54)));
+
+        Button restaurar=botaoAcao("RESTAURAR / VERIFICAR PREMIUM",Color.rgb(55,55,62),14);
+        LinearLayout.LayoutParams rp=new LinearLayout.LayoutParams(-1,dp(52));
+        rp.setMargins(0,dp(12),0,dp(8));
+        root.addView(restaurar,rp);
+        restaurar.setOnClickListener(v->{
+            monetizacao.restaurarCompra();
+            v.postDelayed(()->showPremiumAccountScreen(),1200L);
+        });
+
+        Button premium=botaoAcao(monetizacao.isPremium()?"PREMIUM ATIVO":"CONHECER O PREMIUM",Color.rgb(70,55,20),14);
+        root.addView(premium,new LinearLayout.LayoutParams(-1,dp(52)));
+        premium.setOnClickListener(v->monetizacao.showPremiumDialog());
+
+        Button voltar=botaoAcao("VOLTAR",KEY_DARK,14);
+        LinearLayout.LayoutParams vp=new LinearLayout.LayoutParams(-1,dp(48));
+        vp.setMargins(0,dp(18),0,dp(0));
+        root.addView(voltar,vp);
+        voltar.setOnClickListener(v->showInitialScreen());
+
+        sv.addView(root);
+        mostrar(sv);
     }
 
     private void showSelector(){
