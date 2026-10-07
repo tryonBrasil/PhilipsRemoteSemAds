@@ -289,8 +289,8 @@ public class IrPerfilTeste {
         if (codigo < 0) return "Nenhum código testado.";
         String n = (nome == null || nome.trim().isEmpty()) ? "Código " + (savedCount() + 1) : nome.trim();
         String old = savedCodes();
-        String item = perfil + "|" + n.replace("|", "/").replace("\\n", " ") + "|" + codigo;
-        prefs.edit().putString(BANK_KEY, old.isEmpty() ? item : old + "\\n" + item).apply();
+        String item = perfil + "|" + n.replace("|", "/").replace("\n", " ") + "|" + codigo;
+        prefs.edit().putString(BANK_KEY, old.isEmpty() ? item : old + "\n" + item).apply();
         return "Código salvo: " + n;
     }
 
@@ -298,13 +298,13 @@ public class IrPerfilTeste {
         String s = prefs.getString(BANK_KEY, null);
         if (s == null) {                                   // migra o formato antigo
             String old = prefs.getString(OLD_BANK_KEY, "");
-            s = old.replace("\\n", "\n");
+            s = old.replace("\n", "\n");
             if (!old.isEmpty()) prefs.edit().putString(BANK_KEY, s).remove(OLD_BANK_KEY).apply();
         }
         return s;
     }
 
-    public int savedCount() { String s = savedCodes(); return s.isEmpty() ? 0 : s.split("\\n").length; }
+    public int savedCount() { String s = savedCodes(); return s.isEmpty() ? 0 : s.split("\n").length; }
     public void clearSavedCodes() { prefs.edit().remove(BANK_KEY).remove(OLD_BANK_KEY).apply(); }
 
     /** Código de uma linha do banco, ou -1 se a linha estiver malformada (nunca lança exceção). */
