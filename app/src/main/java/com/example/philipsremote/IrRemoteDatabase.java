@@ -226,8 +226,7 @@ public final class IrRemoteDatabase {
         if(in==null) return "";
         BufferedReader r=new BufferedReader(new InputStreamReader(in,StandardCharsets.UTF_8));
         StringBuilder b=new StringBuilder(); String line;
-        while((line=r.readLine())!=null) b.append(line).append('\
-');
+        while((line=r.readLine())!=null) b.append(line).append('\\n');
         r.close(); return b.toString();
     }
 }
