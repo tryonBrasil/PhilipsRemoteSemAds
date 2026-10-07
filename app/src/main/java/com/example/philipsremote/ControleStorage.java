@@ -426,6 +426,7 @@ public class ControleStorage {
                     ContentValues cv=new ContentValues(); cv.put("control_id",id); cv.put("funcao",funcao);
                     cv.put("codigo",codigo); cv.put("perfil",s(cmd.optString("perfil","")));
                     cv.put("frequencia",Math.max(0,cmd.optInt("frequencia",0)));
+                    if(cmd.has("raw_data")) cv.put("raw_data",cmd.optString("raw_data",""));
                     db.insertWithOnConflict("commands",null,cv,SQLiteDatabase.CONFLICT_REPLACE);
                 }
                 adicionados++;
