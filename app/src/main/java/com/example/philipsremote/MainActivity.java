@@ -365,6 +365,23 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         root.addView(sub,new LinearLayout.LayoutParams(-1,dp(30)));
         List<ControleStorage.Controle> salvosHome=controleStorage.listar();
         boolean temControlesSalvos=!salvosHome.isEmpty();
+        Button meusControlesHome=new Button(this);
+        meusControlesHome.setText("★  MEUS CONTROLES  •  "+salvosHome.size());
+        meusControlesHome.setTextColor(WHITE);
+        meusControlesHome.setTextSize(15);
+        meusControlesHome.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
+        meusControlesHome.setAllCaps(false);
+        GradientDrawable meusHomeBg=new GradientDrawable();
+        meusHomeBg.setColor(salvosHome.isEmpty()?Color.rgb(45,45,50):Color.rgb(55,75,60));
+        meusHomeBg.setCornerRadius(dp(17));
+        meusHomeBg.setStroke(dp(1),salvosHome.isEmpty()?BORDER:Color.rgb(85,145,95));
+        meusControlesHome.setBackground(meusHomeBg);
+        actionFeedback(meusControlesHome);
+        meusControlesHome.setOnClickListener(v->showMeusControles());
+        LinearLayout.LayoutParams meusHomeP=new LinearLayout.LayoutParams(-1,dp(58));
+        meusHomeP.setMargins(0,dp(10),0,dp(6));
+        root.addView(meusControlesHome,meusHomeP);
+
         LinearLayout bancoCard=new LinearLayout(this); bancoCard.setOrientation(LinearLayout.HORIZONTAL); bancoCard.setGravity(Gravity.CENTER_VERTICAL);
         bancoCard.setPadding(dp(14),0,dp(14),0);
         GradientDrawable bancoBg=new GradientDrawable(); bancoBg.setColor(CARD); bancoBg.setCornerRadius(dp(15)); bancoBg.setStroke(dp(1),Color.rgb(55,55,60)); bancoCard.setBackground(bancoBg);
@@ -372,7 +389,7 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         bancoCard.addView(bancoTitulo,new LinearLayout.LayoutParams(0,dp(42),1));
         TextView bancoQtd=label(salvosHome.size()+" "+(salvosHome.size()==1?"controle":"controles"),12); bancoQtd.setTextColor(GRAY);
         bancoCard.addView(bancoQtd,new LinearLayout.LayoutParams(-2,dp(42)));
-        LinearLayout.LayoutParams bp=new LinearLayout.LayoutParams(-1,dp(44)); bp.setMargins(0,dp(10),0,dp(4)); root.addView(bancoCard,bp);
+        LinearLayout.LayoutParams bp=new LinearLayout.LayoutParams(-1,dp(44)); bp.setMargins(0,dp(4),0,dp(4)); root.addView(bancoCard,bp);
         if(controleAtivo!=null){
             TextView ativo=label("CONTROLE ATIVO  •  "+controleAtivo.nome,13);
             ativo.setTextColor(WHITE);
@@ -1193,7 +1210,7 @@ render[0]=()->{
                     .setMessage("Remover \""+c.nome+"\" deste aparelho?").setNegativeButton("CANCELAR",null)
                     .setPositiveButton("EXCLUIR",(d,w)->{controleStorage.excluir(c);if(controleAtivo!=null&&controleAtivo.id==c.id){controleAtivo=null;prefs.edit().remove("active_control_id").apply();}render[0].run();}).show());
 
-                LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(-1,dp(190)); cp.setMargins(0,dp(6),0,dp(6)); listaBox.addView(card,cp);
+                LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(-1,dp(276)); cp.setMargins(0,dp(6),0,dp(6)); listaBox.addView(card,cp);
             }
         };
         busca.addTextChangedListener(new android.text.TextWatcher(){
@@ -1262,7 +1279,7 @@ render[0]=()->{
         LinearLayout r=row(); add(r,key("⏻\nLIGA / DESLIGA",1,64,Color.rgb(125,35,40),13)); add(r,key("🌀\nOSCILAÇÃO",2,64,KEY,13)); root.addView(r);
         r=row(); add(r,key("＋\nVELOCIDADE",3,64,KEY,13)); add(r,key("⏱\nTIMER",4,64,KEY,13)); root.addView(r);
         r=row(); add(r,key("🌙\nNOTURNO",5,64,KEY,13)); root.addView(r);
-        TextView info=label("⚠️ Compatibilidade varia conforme o modelo do ventilador. Se não responder, use TESTAR DISPOSITIVOS para experimentar outros códigos.",11); info.setTextColor(Color.rgb(190,170,110)); info.setGravity(Gravity.CENTER); root.addView(info,new LinearLayout.LayoutParams(-1,dp(62)));
+        TextView info=label("⚠️ Compatibilidade varia conforme o modelo do ventilador. Se não responder, use CONTROLE UNIVERSAL para experimentar outros códigos.",11); info.setTextColor(Color.rgb(190,170,110)); info.setGravity(Gravity.CENTER); root.addView(info,new LinearLayout.LayoutParams(-1,dp(62)));
         Button testar=new Button(this); testar.setText("🔎  TESTAR / SALVAR CONTROLE"); testar.setTextColor(WHITE); testar.setTextSize(13); testar.setAllCaps(false);
         GradientDrawable tb=new GradientDrawable(); tb.setColor(ACCENT); tb.setCornerRadius(dp(15)); testar.setBackground(tb); actionFeedback(testar);
         testar.setOnClickListener(v->showUniversalScanner("Ventilador","Universal")); root.addView(testar,new LinearLayout.LayoutParams(-1,dp(52)));
