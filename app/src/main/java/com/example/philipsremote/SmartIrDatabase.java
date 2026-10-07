@@ -126,7 +126,8 @@ public final class SmartIrDatabase {
         JSONObject root=getJson(INDEX_URL);
         JSONObject climate=root.optJSONObject("platforms");
         if(climate==null) return Collections.emptyList();
-        JSONObject manufacturers=climate.optJSONObject("climate");
+        JSONObject manufacturers=climate.optJSONObject("manufacturers");
+        // Compatibilidade com índices antigos.
         if(manufacturers==null) manufacturers=climate.optJSONObject("climate");
         if(manufacturers==null) return Collections.emptyList();
 
