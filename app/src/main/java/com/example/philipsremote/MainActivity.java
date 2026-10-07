@@ -16,6 +16,7 @@ import android.os.Build;
 import android.view.WindowInsets;
 import java.util.ArrayList;
 import java.util.List;
+import org.json.JSONArray;
 import static com.example.philipsremote.RemoteKeys.*;
 
 public class MainActivity extends Activity {
@@ -924,7 +925,6 @@ render[0]=()->{
                     return;
                 }
                 irPerfilTeste.selecionar(perfil);
-                irPerfilTeste.setFrequencia(freq);
                 boolean ok=irPerfilTeste.transmitManual("0x"+Integer.toHexString(codigo));
                 Toast.makeText(this,ok?"✓ "+funcao+" enviado":"✕ Falha ao enviar "+funcao,Toast.LENGTH_SHORT).show();
             },null);
