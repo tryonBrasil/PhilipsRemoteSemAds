@@ -103,7 +103,8 @@ public class ControleStorage {
                     cv.put("funcao", funcao);
                     cv.put("codigo", item.optInt("codigo", -1));
                     cv.put("perfil", item.optString("perfil", ""));
-                    cv.put("frequencia", item.optInt("frequencia", 0));\n                if(item.has("raw_data")) cv.put("raw_data", item.optString("raw_data",""));
+                    cv.put("frequencia", item.optInt("frequencia", 0));
+                if(item.has("raw_data")) cv.put("raw_data", item.optString("raw_data",""));
                     db.insertWithOnConflict("commands", null, cv, SQLiteDatabase.CONFLICT_REPLACE);
                 }
             }
@@ -195,7 +196,8 @@ public class ControleStorage {
     private static void colocarComando(Controle controle, String funcao, int codigo, String perfil, int frequencia, String rawData) {
         try {
             JSONObject item = new JSONObject();
-            item.put("codigo", codigo); item.put("perfil", s(perfil)); item.put("frequencia", frequencia);\n            if (rawData != null && !rawData.isEmpty()) item.put("raw_data", rawData);
+            item.put("codigo", codigo); item.put("perfil", s(perfil)); item.put("frequencia", frequencia);
+            if (rawData != null && !rawData.isEmpty()) item.put("raw_data", rawData);
             controle.comandos.put(funcao, item);
         } catch (Exception e) { Log.w(TAG, "Comando ignorado: " + funcao, e); }
     }
@@ -381,7 +383,8 @@ public class ControleStorage {
                         JSONObject cmd=new JSONObject();
                         cmd.put("funcao",funcao); cmd.put("codigo",item.optInt("codigo",-1));
                         cmd.put("perfil",item.optString("perfil",""));
-                        cmd.put("frequencia",Math.max(0,item.optInt("frequencia",0)));\n                        if(item.has("raw_data")) cmd.put("raw_data", item.optString("raw_data",""));
+                        cmd.put("frequencia",Math.max(0,item.optInt("frequencia",0)));
+                        if(item.has("raw_data")) cmd.put("raw_data", item.optString("raw_data",""));
                         comandos.put(cmd);
                     }
                 }
