@@ -31,6 +31,8 @@ public class MainActivity extends Activity {
     private UpdateManager updateManager;
     private MonetizationManager monetizacao;
     private int aprenderFuncaoPos = 0;
+    private static final int REQ_EXPORT_BACKUP = 4101;
+    private static final int REQ_IMPORT_BACKUP = 4102;
 
 
     private static final int BG = Color.rgb(12,12,12);
@@ -764,6 +766,67 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         dialog.show();
     }
 
+    private void exportarBackup() {
+        if (controleStorage.quantidadeControles() == 0) {
+            Toast.makeText(this,"Não há controles salvos para exportar.",Toast.LENGTH_SHORT).show();
+            return;
+        }
+        Intent i=new Intent(Intent.ACTION_CREATE_DOCUMENT);
+        i.addCategory(Intent.CATEGORY_OPENABLE); i.setType("application/json");
+        i.putExtra(Intent.EXTRA_TITLE,"ir-remote-backup.json");
+        startActivityForResult(i,REQ_EXPORT_BACKUP);
+    }
+
+    private void importarBackup() {
+        Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        i.addCategory(Intent.CATEGORY_OPENABLE); i.setType("application/json");
+        startActivityForResult(i,REQ_IMPORT_BACKUP);
+    }
+
+    @Override protected void onActivityResult(int requestCode,int resultCode,android.content.Intent data) {
+        super.onActivityResult(requestCode,resultCode,data);
+        if(resultCode!=RESULT_OK || data==null || data.getData()==null) return;
+        android.net.Uri uri=data.getData();
+        if(requestCode==REQ_EXPORT_BACKUP) {
+            try(java.io.OutputStream out=getContentResolver().openOutputStream(uri)) {
+                String json=controleStorage.exportarJson();
+                if(json==null || out==null) throw new java.io.IOException("backup vazio");
+                out.write(json.getBytes(java.nio.charset.StandardCharsets.UTF_8)); out.flush();
+                Toast.makeText(this,"✓ Backup exportado com sucesso.",Toast.LENGTH_LONG).show();
+            } catch(Exception e) {
+                Toast.makeText(this,"Não foi possível exportar o backup.",Toast.LENGTH_LONG).show();
+            }
+        } else if(requestCode==REQ_IMPORT_BACKUP) {
+            try(java.io.InputStream in=getContentResolver().openInputStream(uri)) {
+                if(in==null) throw new java.io.IOException("arquivo indisponível");
+                java.io.ByteArrayOutputStream buffer=new java.io.ByteArrayOutputStream();
+                byte[] dataBuf=new byte[8192]; int n;
+                while((n=in.read(dataBuf))!=-1) buffer.write(dataBuf,0,n);
+                String json=new String(buffer.toByteArray(),java.nio.charset.StandardCharsets.UTF_8);
+                final String backup=json;
+                new android.app.AlertDialog.Builder(this)
+                    .setTitle("Restaurar backup")
+                    .setMessage("Escolha como importar os controles encontrados neste backup.")
+                    .setNegativeButton("ADICIONAR",(d,w)->finalizarImportacao(backup,false))
+                    .setPositiveButton("SUBSTITUIR",(d,w)->finalizarImportacao(backup,true))
+                    .show();
+            } catch(Exception e) {
+                Toast.makeText(this,"Arquivo de backup inválido ou inacessível.",Toast.LENGTH_LONG).show();
+            }
+        }
+    }
+
+    private void finalizarImportacao(String json, boolean substituir) {
+        int qtd=controleStorage.importarJson(json,substituir);
+        if(qtd<0) {
+            Toast.makeText(this,"Não foi possível importar: backup inválido ou incompatível.",Toast.LENGTH_LONG).show();
+            return;
+        }
+        controleAtivo=null; prefs.edit().remove("active_control_id").apply();
+        Toast.makeText(this,"✓ "+qtd+" controle"+(qtd==1?"":"s")+" restaurado"+(qtd==1?"":"s")+".",Toast.LENGTH_LONG).show();
+        showMeusControles();
+    }
+
     private void showMeusControles(){
         ScrollView sv=new ScrollView(this); sv.setFillViewport(true); sv.setBackgroundColor(BG);
         LinearLayout root=new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL);
@@ -794,6 +857,16 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         premiumAction.setOnClickListener(v->monetizacao.showPremiumDialog());
         premiumCard.addView(premiumAction,new LinearLayout.LayoutParams(dp(92),dp(40)));
         LinearLayout.LayoutParams premiumCardP=new LinearLayout.LayoutParams(-1,dp(60)); premiumCardP.setMargins(0,dp(4),0,dp(8)); root.addView(premiumCard,premiumCardP);
+        LinearLayout backupRow=row();
+        Button exportar=smallAction("EXPORTAR BACKUP",Color.rgb(55,85,65));
+        Button importar=smallAction("IMPORTAR BACKUP",Color.rgb(65,70,90));
+        backupRow.addView(exportar,new LinearLayout.LayoutParams(0,dp(40),1));
+        backupRow.addView(importar,new LinearLayout.LayoutParams(0,dp(40),1));
+        exportar.setOnClickListener(v->exportarBackup());
+        importar.setOnClickListener(v->importarBackup());
+        LinearLayout.LayoutParams backupP=new LinearLayout.LayoutParams(-1,dp(48));
+        backupP.setMargins(0,0,0,dp(4)); root.addView(backupRow,backupP);
+
 
         final EditText busca=new EditText(this);
         busca.setSingleLine(true); busca.setHint("🔎  Pesquisar marca, modelo ou nome...");
