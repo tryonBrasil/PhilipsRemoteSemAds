@@ -576,10 +576,14 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         device.addView(profileBadge,new LinearLayout.LayoutParams(-2,dp(28)));
         box.addView(device,new LinearLayout.LayoutParams(-1,dp(42)));
 
+        LinearLayout progressRow=row();
         TextView progress=label("",12);
         progress.setTextColor(Color.rgb(105,175,115));
         progress.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
-        box.addView(progress,new LinearLayout.LayoutParams(-1,dp(30)));
+        progressRow.addView(progress,new LinearLayout.LayoutParams(0,dp(30),1));
+        Button proximoNaoConfigurado=smallAction("PRÓXIMO PENDENTE",Color.rgb(55,65,80));
+        progressRow.addView(proximoNaoConfigurado,new LinearLayout.LayoutParams(dp(132),dp(32)));
+        box.addView(progressRow,new LinearLayout.LayoutParams(-1,dp(34)));
 
         TextView selectedTitle=label("",16);
         selectedTitle.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
@@ -644,6 +648,23 @@ private static final int CARD_2 = Color.rgb(31,31,36);
             }
         };
 
+        proximoNaoConfigurado.setOnClickListener(v->{
+            int inicio=pos[0];
+            for(int passo=1;passo<=funcoes.length;passo++){
+                int candidato=(inicio+passo)%funcoes.length;
+                if(!controleStorage.possuiComando(controle,chaves[candidato])){
+                    pos[0]=candidato;
+                    aprenderFuncaoPos=candidato;
+                    irPerfilTeste.reset();
+                    status.setText("Aguardando teste para "+funcoes[candidato]);
+                    status.setTextColor(GRAY);
+                    atualizarLista.run();
+                    return;
+                }
+            }
+            status.setText("✓ Todos os botões já estão configurados.");
+            status.setTextColor(Color.rgb(105,190,125));
+        });
         for(int i=0;i<funcoes.length;i++){
             final int indice=i;
             Button item=new Button(this);
