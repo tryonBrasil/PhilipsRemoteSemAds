@@ -796,7 +796,9 @@ render[0]=()->{
                 line.addView(badge,new LinearLayout.LayoutParams(-2,dp(26))); card.addView(line);
 
                 int qtd=controleStorage.quantidadeComandos(c);
-                TextView detail=label(c.marca+"  •  "+c.modelo+"\n"+c.perfil+"  •  "+qtd+" botão"+(qtd==1?"":"ões")+" configurado"+(qtd==1?"":"s"),12);
+                int totalFuncoes=(IrPerfilTeste.PERFIL_VENTILADOR.equals(c.perfil)?RemoteKeys.FAN_FUNCOES.length:RemoteKeys.FUNCOES.length);
+                int percentual=totalFuncoes<=0?0:Math.min(100,(qtd*100)/totalFuncoes);
+                TextView detail=label(c.marca+"  •  "+c.modelo+"\n"+c.perfil+"  •  "+qtd+" de "+totalFuncoes+" botões configurados  •  "+percentual+"%",12);
                 detail.setTextColor(GRAY); detail.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL); card.addView(detail,new LinearLayout.LayoutParams(-1,dp(54)));
 
                 LinearLayout actions=row();
