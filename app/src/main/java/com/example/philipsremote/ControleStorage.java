@@ -79,7 +79,7 @@ public class ControleStorage {
             }
             db.setTransactionSuccessful();
             oldPrefs.edit().putBoolean(MIGRATED,true).apply();
-        }catch(Exception ignored){} finally{
+        }catch(Exception e){ android.util.Log.w("ControleStorage","Falha ao migrar controles antigos",e); } finally{
             if(db.inTransaction()) db.endTransaction();
         }
     }
@@ -133,7 +133,7 @@ public class ControleStorage {
                 item.put("frequencia",c.getInt(3));
                 controle.comandos.put(c.getString(0),item);
             }
-        }catch(Exception ignored){} finally{ c.close(); }
+        }catch(Exception e){ android.util.Log.w("ControleStorage","Falha ao carregar comandos",e); } finally{ c.close(); }
     }
 
     public void salvarComando(Controle controle,String funcao,int codigo,String perfil,int frequencia){
@@ -208,6 +208,73 @@ public class ControleStorage {
             }
         }
         return novo;
+    }
+
+    public String exportarJson(){
+        JSONArray controls=new JSONArray();
+        for(Controle c:listar()){
+            try{
+                JSONObject o=new JSONObject();
+                o.put("id",c.id);
+                o.put("nome",c.nome); o.put("categoria",c.categoria); o.put("marca",c.marca);
+                o.put("modelo",c.modelo); o.put("perfil",c.perfil); o.put("descricao",c.descricao);
+                o.put("codigo",c.codigo); o.put("frequencia",c.frequencia);
+                JSONArray comandos=new JSONArray();
+                if(c.comandos!=null){
+                    JSONArray nomes=c.comandos.names();
+                    if(nomes!=null) for(int i=0;i<nomes.length();i++){
+                        String funcao=nomes.optString(i,"");
+                        JSONObject item=c.comandos.optJSONObject(funcao);
+                        if(item==null) continue;
+                        JSONObject cmd=new JSONObject();
+                        cmd.put("funcao",funcao);
+                        cmd.put("codigo",item.optInt("codigo",-1));
+                        cmd.put("perfil",item.optString("perfil",""));
+                        cmd.put("frequencia",item.optInt("frequencia",0));
+                        comandos.put(cmd);
+                    }
+                }
+                o.put("comandos",comandos);
+                controls.put(o);
+            }catch(Exception e){ android.util.Log.w("ControleStorage","Falha ao exportar controle",e); }
+        }
+        JSONObject root=new JSONObject();
+        try{
+            root.put("format","IRRemoteBR");
+            root.put("version",1);
+            root.put("controls",controls);
+        }catch(Exception e){ android.util.Log.w("ControleStorage","Falha ao montar backup",e); }
+        return root.toString(2);
+    }
+
+    public int importarJson(String json){
+        if(json==null || json.trim().isEmpty()) throw new IllegalArgumentException("Arquivo vazio");
+        try{
+            JSONObject root=new JSONObject(json);
+            if(!"IRRemoteBR".equals(root.optString("format",""))) throw new IllegalArgumentException("Arquivo não é um backup do IR Remote BR");
+            JSONArray controls=root.optJSONArray("controls");
+            if(controls==null) throw new IllegalArgumentException("Backup sem controles");
+            int imported=0;
+            for(int i=0;i<controls.length();i++){
+                JSONObject o=controls.getJSONObject(i);
+                String nome=o.optString("nome","Controle importado");
+                salvar(nome,o.optString("categoria","IR"),o.optString("marca",""),o.optString("modelo",""),
+                        o.optString("perfil",""),o.optString("descricao",""),o.optInt("codigo",-1),o.optInt("frequencia",38000));
+                List<Controle> lista=listar();
+                if(lista.isEmpty()) continue;
+                Controle novo=lista.get(lista.size()-1);
+                JSONArray comandos=o.optJSONArray("comandos");
+                if(comandos!=null) for(int j=0;j<comandos.length();j++){
+                    JSONObject cmd=comandos.getJSONObject(j);
+                    salvarComando(novo,cmd.optString("funcao",""),cmd.optInt("codigo",-1),
+                            cmd.optString("perfil",""),cmd.optInt("frequencia",0));
+                }
+                imported++;
+            }
+            return imported;
+        }catch(JSONException e){
+            throw new IllegalArgumentException("JSON inválido",e);
+        }
     }
 
     public void limpar(){
