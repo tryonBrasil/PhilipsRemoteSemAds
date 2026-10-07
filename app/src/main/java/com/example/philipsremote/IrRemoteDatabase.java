@@ -141,7 +141,9 @@ public final class IrRemoteDatabase {
         return 38000;
     }
 
-    private static int parseIntSeguro(String s,int padrao){ try { return Integer.parseInt(s.trim()); } catch(Exception e){ return padrao; } }\n\n    private static int parseFlipperHex(String s){
+    private static int parseIntSeguro(String s,int padrao){ try { return Integer.parseInt(s.trim()); } catch(Exception e){ return padrao; } }
+
+    private static int parseFlipperHex(String s){
         if(s==null || s.trim().isEmpty()) return 0;
         String[] b=s.trim().split("\\s+");
         long v=0;
@@ -224,7 +226,8 @@ public final class IrRemoteDatabase {
         if(in==null) return "";
         BufferedReader r=new BufferedReader(new InputStreamReader(in,StandardCharsets.UTF_8));
         StringBuilder b=new StringBuilder(); String line;
-        while((line=r.readLine())!=null) b.append(line).append('\\n');
+        while((line=r.readLine())!=null) b.append(line).append('\
+');
         r.close(); return b.toString();
     }
 }
