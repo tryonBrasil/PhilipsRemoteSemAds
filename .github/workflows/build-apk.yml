@@ -1,4 +1,5 @@
 name: Gerar APK
+# Build release automatico — validacao da versao atual
 
 on:
   push:
