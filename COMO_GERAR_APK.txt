@@ -1,23 +1,13 @@
-IR REMOTE BR
+IR REMOTE BR (PhilipsRemoteSemAds)
 
-GERAR APK DE TESTE PELO GITHUB:
-1. Abra a aba Actions.
-2. Execute o workflow "CI" (push/PR também executam automaticamente).
-3. Aguarde Lint, testes e assembleDebug.
-4. Abra a execução concluída.
-5. Em Artifacts, baixe "PhilipsRemoteSemAds-debug".
-6. Extraia e instale o APK de debug no Redmi Note 12.
+GERAR PELO GITHUB (APK assinado, publicado em Releases):
+1. Aumente versionName e versionCode em app/build.gradle.
+2. Faça push em main (ou Actions > "Gerar APK" > Run workflow).
+3. Aguarde terminar; o APK e o app-release.apk.sha256 ficam na aba Releases
+   (e em Artifacts: "PhilipsRemoteSemAds-release").
+Requer os secrets KEYSTORE_B64, KEYSTORE_PASSWORD, KEY_ALIAS e KEY_PASSWORD (veja o README.md).
 
-GERAR RELEASE ASSINADO:
-1. Atualize versionName/versionCode em app/build.gradle.
-2. Crie uma tag vX.Y.Z exatamente igual ao versionName.
-3. O workflow "Release" valida a versão antes de compilar.
-4. O release publica o APK assinado e o arquivo .sha256.
+GERAR NO WINDOWS (versao de teste, debug):
+Execute GERAR_APK.bat. O APK fica em app\build\outputs\apk\debug\app-debug.apk.
 
-SECRETS DO RELEASE:
-KEYSTORE_B64
-KEYSTORE_PASSWORD
-KEY_ALIAS
-KEY_PASSWORD
-
-A keystore é criada somente em RUNNER_TEMP durante o build. Nunca commite *.jks, *.keystore ou senhas.
+TESTES: ./gradlew testDebugUnitTest
