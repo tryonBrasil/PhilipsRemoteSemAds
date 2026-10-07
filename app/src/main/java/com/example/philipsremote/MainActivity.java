@@ -490,16 +490,24 @@ private static final int CARD_2 = Color.rgb(31,31,36);
             listaCodigos.setOnClickListener(v->{
                 String dados=irPerfilTeste.savedCodes();
                 if(dados.isEmpty()){ Toast.makeText(this,"Nenhum código salvo ainda.",Toast.LENGTH_SHORT).show(); return; }
-                final String[] linhas=dados.split("\n");
+                final String[] linhas=dados.split("\\n");
                 final String[] rotulos=new String[linhas.length];
                 for(int i=0;i<linhas.length;i++) rotulos[i]=IrPerfilTeste.rotuloDaLinha(linhas[i]);
-                escolher("CÓDIGOS SALVOS ("+linhas.length+")",null,rotulos,w->{
+                escolher("CÓDIGOS SALVOS ("+linhas.length+")", "Toque em um código para carregar e testar imediatamente.", rotulos, w->{
                     int cod=IrPerfilTeste.codigoDaLinha(linhas[w]);
-                    if(cod<0){ Toast.makeText(this,"Registro inválido.",Toast.LENGTH_SHORT).show(); return; }
-                    codigoManual.setText("0x"+Integer.toHexString(cod).toUpperCase(java.util.Locale.ROOT)); codigoManual.setSelection(codigoManual.length());
                     String pf=IrPerfilTeste.perfilDaLinha(linhas[w]);
-                    status.setText(pf.equals(perfilSelecionado[0])?"●  Código carregado. Toque em TESTAR.":"●  Atenção: este código foi salvo no perfil "+pf);
-                    status.setTextColor(GRAY);
+                    if(cod<0 || pf.isEmpty()){ Toast.makeText(this,"Registro inválido.",Toast.LENGTH_SHORT).show(); return; }
+                    codigoManual.setText("0x"+Integer.toHexString(cod).toUpperCase(java.util.Locale.ROOT));
+                    codigoManual.setSelection(codigoManual.length());
+                    irPerfilTeste.selecionar(pf);
+                    boolean ok=irPerfilTeste.transmitManual("0x"+Integer.toHexString(cod));
+                    status.setText(ok
+                        ?"✓  Código salvo enviado • "+pf+" • 0x"+Integer.toHexString(cod).toUpperCase(java.util.Locale.ROOT)
+                        :"✕  Falha ao enviar o código salvo • "+pf);
+                    status.setTextColor(ok?SUCCESS:ACCENT);
+                    detalhe.setText(ok
+                        ?"Código salvo testado. Se o aparelho respondeu, use FUNCIONOU / SALVAR para gravá-lo no controle."
+                        :"Não foi possível enviar este código. Verifique o emissor IR e tente novamente.");
                 },null);
             });
             testar.setOnClickListener(v->{
