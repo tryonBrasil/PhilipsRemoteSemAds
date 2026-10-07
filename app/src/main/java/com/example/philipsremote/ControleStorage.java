@@ -245,7 +245,12 @@ public class ControleStorage {
             root.put("version",1);
             root.put("controls",controls);
         }catch(Exception e){ android.util.Log.w("ControleStorage","Falha ao montar backup",e); }
-        return root.toString(2);
+        try {
+            return root.toString(2);
+        } catch (JSONException e) {
+            android.util.Log.w("ControleStorage","Falha ao serializar backup",e);
+            return "{\"format\":\"IRRemoteBR\",\"version\":1,\"controls\":[]}";
+        }
     }
 
     public int importarJson(String json){
