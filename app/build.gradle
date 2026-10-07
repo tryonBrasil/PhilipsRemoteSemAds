@@ -10,8 +10,8 @@ android {
         applicationId 'com.example.philipsremote'
         minSdk 23
         targetSdk 35
-        versionCode 27
-        versionName '1.3.8'
+        versionCode 28
+        versionName '1.3.9'
     }
 
     compileOptions {
@@ -34,7 +34,6 @@ android {
     buildTypes {
         release {
             minifyEnabled false
-            // Sem keystore no ambiente (build local), usa a assinatura de debug para o release poder ser gerado/testado.
             signingConfig System.getenv("KEYSTORE_FILE") ? signingConfigs.release : signingConfigs.debug
         }
     }
