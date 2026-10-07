@@ -212,11 +212,11 @@ public class IrPerfilTeste {
     }
 
     private int[] nec(int addr,int cmd){
-        int[] b={addr&255,addr&255,cmd&255,(~cmd)&255}; ArrayList<Integer>p=new ArrayList<>();
+        int[] b={addr&255,(~addr)&255,cmd&255,(~cmd)&255}; ArrayList<Integer>p=new ArrayList<>();
         add(p,9000);add(p,4500); for(int v:b)for(int m=1;m<=128;m<<=1){add(p,560);add(p,(v&m)!=0?1690:560);} add(p,560);add(p,20000);return arr(p);
     }
     private int[] samsung(int addr,int cmd){
-        int[] b={addr&255,(~addr)&255,cmd&255,(~cmd)&255}; ArrayList<Integer>p=new ArrayList<>();
+        int[] b={addr&255,addr&255,cmd&255,(~cmd)&255}; ArrayList<Integer>p=new ArrayList<>();
         add(p,4500);add(p,4500);for(int v:b)for(int m=1;m<=128;m<<=1){add(p,560);add(p,(v&m)!=0?1600:560);}add(p,560);add(p,20000);return arr(p);
     }
     private int[] sony(int addr,int cmd){
