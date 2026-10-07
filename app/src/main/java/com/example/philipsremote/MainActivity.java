@@ -795,10 +795,54 @@ private static final int CARD_2 = Color.rgb(31,31,36);
                 lgMode="LG".equalsIgnoreCase(marcaSelecionada[0]);
                 prefs.edit().putBoolean("lg_mode",lgMode).apply();
                 Toast.makeText(this,"✓ Controle salvo e definido como ativo.",Toast.LENGTH_SHORT).show();
-                showMeusControles();
+                oferecerConfiguracaoAutomatica(controleAtivo);
             });
         });
         dialog.show();
+    }
+
+    private void oferecerConfiguracaoAutomatica(ControleStorage.Controle controle){
+        if(controle==null){ showMeusControles(); return; }
+
+        AutoConfigurator.Result resultado=AutoConfigurator.configurar(controle,controleStorage);
+        final int totalFuncoes=IrPerfilTeste.PERFIL_VENTILADOR.equals(controle.perfil)
+                ? RemoteKeys.FAN_FUNCOES.length : RemoteKeys.FUNCOES.length;
+        int qtd=controleStorage.quantidadeComandos(controle);
+
+        if(resultado.suportado && resultado.configurados>0){
+            String mensagem="⚡ O aplicativo pode montar automaticamente os principais botões deste controle.\n\n"
+                    +"✓ "+resultado.configurados+" funções configuradas agora\n"
+                    +"✓ "+qtd+" de "+totalFuncoes+" botões prontos\n\n"
+                    +"Você pode abrir o controle e testar. Se alguma função não responder, ela poderá ser ajustada depois em CONFIGURAR.";
+
+            new android.app.AlertDialog.Builder(this)
+                .setTitle("CONFIGURAÇÃO AUTOMÁTICA")
+                .setMessage(mensagem)
+                .setNegativeButton("CONFIGURAR MANUALMENTE",(d,w)->showAprenderComandos(controle))
+                .setPositiveButton("ABRIR CONTROLE",(d,w)->{
+                    controleAtivo=controleStorage.buscar(controle.id);
+                    prefs.edit().putLong("active_control_id",controle.id).apply();
+                    lgMode="LG".equalsIgnoreCase(controle.marca);
+                    prefs.edit().putBoolean("lg_mode",lgMode).apply();
+                    build();
+                }).show();
+        } else if(resultado.suportado){
+            new android.app.AlertDialog.Builder(this)
+                .setTitle("CONTROLE JÁ CONFIGURADO")
+                .setMessage("✓ Os botões automáticos disponíveis já estão configurados.\n\nVocê pode abrir o controle ou ajustar alguma função manualmente.")
+                .setNegativeButton("CONFIGURAR",(d,w)->showAprenderComandos(controle))
+                .setPositiveButton("ABRIR",(d,w)->{
+                    controleAtivo=controleStorage.buscar(controle.id);
+                    prefs.edit().putLong("active_control_id",controle.id).apply();
+                    build();
+                }).show();
+        } else {
+            new android.app.AlertDialog.Builder(this)
+                .setTitle("CONFIGURAÇÃO GUIADA")
+                .setMessage("Este perfil não possui uma tabela automática confiável no aplicativo ainda.\n\nEm vez de gravar códigos que podem não corresponder ao seu aparelho, vamos usar a configuração guiada para confirmar cada função.\n\nO código que você encontrou continua salvo como base.")
+                .setNegativeButton("AGORA NÃO",(d,w)->showMeusControles())
+                .setPositiveButton("CONFIGURAR",(d,w)->showAprenderComandos(controle)).show();
+        }
     }
 
     private void showAprenderComandos(ControleStorage.Controle controle){
@@ -815,7 +859,7 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         box.setOrientation(LinearLayout.VERTICAL);
         box.setPadding(dp(18),dp(4),dp(18),dp(4));
 
-        TextView intro=label("Configure os botões um por vez. Teste os códigos até a TV responder e depois salve.",13);
+        TextView intro=label("⚡ A configuração automática já preenche o que é conhecido. Use esta tela apenas para corrigir ou adicionar funções.",13);
         intro.setTextColor(GRAY);
         intro.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
         box.addView(intro,new LinearLayout.LayoutParams(-1,dp(54)));
@@ -1215,7 +1259,7 @@ render[0]=()->{
 
                 LinearLayout actions=row();
                 Button abrir=smallAction("ABRIR",Color.rgb(55,110,65));
-                Button config=smallAction("CONFIGURAR",Color.rgb(65,65,72));
+                Button config=smallAction("⚡ AUTOMÁTICO",Color.rgb(65,85,70));
                 Button testar=smallAction("TESTAR",Color.rgb(55,65,80));
                 Button copiar=smallAction("DUPLICAR",Color.rgb(75,60,45));
                 actions.addView(abrir,new LinearLayout.LayoutParams(0,dp(42),1));
@@ -1226,7 +1270,7 @@ render[0]=()->{
                 copyRow.addView(copiar,new LinearLayout.LayoutParams(-1,dp(38)));
                 card.addView(copyRow);
                 abrir.setOnClickListener(v->{controleAtivo=c;lgMode="LG".equalsIgnoreCase(c.marca);prefs.edit().putLong("active_control_id",c.id).putBoolean("lg_mode",lgMode).apply();showingSelector=false;build();Toast.makeText(this,"✓ "+c.nome+" está ativo",Toast.LENGTH_SHORT).show();});
-                config.setOnClickListener(v->{controleAtivo=c;lgMode="LG".equalsIgnoreCase(c.marca);prefs.edit().putLong("active_control_id",c.id).putBoolean("lg_mode",lgMode).apply();showAprenderComandos(c);});
+                config.setOnClickListener(v->{controleAtivo=c;lgMode="LG".equalsIgnoreCase(c.marca);prefs.edit().putLong("active_control_id",c.id).putBoolean("lg_mode",lgMode).apply();oferecerConfiguracaoAutomatica(c);});
                 testar.setOnClickListener(v->showComandosConfigurados(c));
                 copiar.setOnClickListener(v->{
                     int totalAtual=controleStorage.listar().size();
