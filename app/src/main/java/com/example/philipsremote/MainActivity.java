@@ -522,10 +522,14 @@ private static final int CARD_2 = Color.rgb(31,31,36);
                     monetizacao.showPremiumDialog();
                     return;
                 }
-                controleStorage.salvar(nome,categoria,marcaSelecionada[0],modelo,perfil,descricao,codigo,freq);
+                long novoId=controleStorage.salvar(nome,categoria,marcaSelecionada[0],modelo,perfil,descricao,codigo,freq);
+                if(novoId<0){
+                    Toast.makeText(this,"Não foi possível salvar este controle. Tente novamente.",Toast.LENGTH_LONG).show();
+                    return;
+                }
                 dialog.dismiss();
-                List<ControleStorage.Controle> salvos=controleStorage.listar();
-                if(!salvos.isEmpty()){ controleAtivo=salvos.get(salvos.size()-1); prefs.edit().putLong("active_control_id",controleAtivo.id).apply(); }
+                controleAtivo=controleStorage.buscar(novoId);
+                if(controleAtivo!=null) prefs.edit().putLong("active_control_id",controleAtivo.id).apply();
                 lgMode="LG".equalsIgnoreCase(marcaSelecionada[0]);
                 prefs.edit().putBoolean("lg_mode",lgMode).apply();
                 Toast.makeText(this,"✓ Controle salvo e definido como ativo.",Toast.LENGTH_SHORT).show();
@@ -747,8 +751,8 @@ render[0]=()->{
                 String alvo=(c.nome+" "+c.marca+" "+c.modelo+" "+c.categoria).toLowerCase(java.util.Locale.ROOT);
                 if(filtro.isEmpty()||alvo.contains(filtro)) lista.add(c);
             }
-            resumo.setText(filtro.isEmpty() ? (todos.size()+" "+(todos.size()==1?"controle salvo":"controles salvos"))
-                    : (lista.size()+" resultado"+(lista.size()==1?"":"s")+" para \""+filtro+"\""));
+            resumo.setText(filtro.isEmpty() ? monetizacao.resumoLimite(todos.size())
+                    : (lista.size()+" resultado"+(lista.size()==1?"":"s")+" para \""+filtro+"\" ));
             if(lista.isEmpty()){
                 TextView vazio=label(filtro.isEmpty()?"Nenhum controle salvo ainda.":"Nenhum controle encontrado.",15);
                 vazio.setTextColor(GRAY); vazio.setGravity(Gravity.CENTER); listaBox.addView(vazio,new LinearLayout.LayoutParams(-1,dp(130)));
@@ -783,8 +787,15 @@ render[0]=()->{
                 abrir.setOnClickListener(v->{controleAtivo=c;lgMode="LG".equalsIgnoreCase(c.marca);prefs.edit().putLong("active_control_id",c.id).putBoolean("lg_mode",lgMode).apply();showingSelector=false;build();Toast.makeText(this,"✓ "+c.nome+" está ativo",Toast.LENGTH_SHORT).show();});
                 config.setOnClickListener(v->{controleAtivo=c;lgMode="LG".equalsIgnoreCase(c.marca);prefs.edit().putLong("active_control_id",c.id).putBoolean("lg_mode",lgMode).apply();showAprenderComandos(c);});
                 copiar.setOnClickListener(v->{
+                    int totalAtual=controleStorage.listar().size();
+                    if(!monetizacao.podeSalvarControle(totalAtual)){
+                        Toast.makeText(this,"Limite gratuito de "+monetizacao.limiteGratuito()+" controles atingido.",Toast.LENGTH_LONG).show();
+                        monetizacao.showPremiumDialog();
+                        return;
+                    }
                     ControleStorage.Controle novo=controleStorage.duplicar(c,c.nome+" (cópia)");
-                    if(novo!=null) Toast.makeText(this,"✓ Controle duplicado",Toast.LENGTH_SHORT).show();
+                    if(novo!=null) Toast.makeText(this,"✓ Controle duplicado e salvo",Toast.LENGTH_SHORT).show();
+                    else Toast.makeText(this,"Não foi possível duplicar o controle.",Toast.LENGTH_SHORT).show();
                     render[0].run();
                 });
 
