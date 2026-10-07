@@ -42,7 +42,7 @@ public class MonetizationManager {
         return prefs.getBoolean(KEY_PREMIUM, false);
     }
 
-    public podeSalvarControle(int quantidadeAtual) {
+    public boolean podeSalvarControle(int quantidadeAtual) {
         return isPremium() || Math.max(0, quantidadeAtual) < FREE_SAVED_LIMIT;
     }
 
