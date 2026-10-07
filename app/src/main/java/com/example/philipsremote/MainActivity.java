@@ -586,9 +586,28 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         aparelho.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
         box.addView(aparelho,new LinearLayout.LayoutParams(-1,dp(36)));
 
-        TextView subtitulo=label("Toque diretamente no aparelho que deseja testar. A opção selecionada fica destacada.",12);
+        TextView subtitulo=label("Escolha o tipo de aparelho e a marca. Você também pode pesquisar pelo nome da marca.",12);
         subtitulo.setTextColor(GRAY); subtitulo.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
         box.addView(subtitulo,new LinearLayout.LayoutParams(-1,dp(42)));
+
+        EditText buscaMarca=new EditText(this);
+        buscaMarca.setHint("🔎  Pesquisar marca...");
+        buscaMarca.setHintTextColor(Color.rgb(120,120,125)); buscaMarca.setTextColor(WHITE);
+        buscaMarca.setSingleLine(true); buscaMarca.setTextSize(14);
+        buscaMarca.setPadding(dp(14),0,dp(14),0);
+        GradientDrawable buscaBg=new GradientDrawable(); buscaBg.setColor(CARD_2); buscaBg.setCornerRadius(dp(12)); buscaBg.setStroke(dp(1),BORDER);
+        buscaMarca.setBackground(buscaBg);
+        box.addView(buscaMarca,new LinearLayout.LayoutParams(-1,dp(48)));
+
+        final String[] categoriaFiltro={""};
+        LinearLayout filtros=row();
+        Button filtroTodos=botaoAcao("TODOS",KEY_DARK,11);
+        Button filtroTv=botaoAcao("📺 TV",KEY_DARK,11);
+        Button filtroAc=botaoAcao("❄️ AR",KEY_DARK,11);
+        Button filtroFan=botaoAcao("🌀 VENT.",KEY_DARK,11);
+        filtros.addView(filtroTodos,lpPeso()); filtros.addView(filtroTv,lpPeso());
+        filtros.addView(filtroAc,lpPeso()); filtros.addView(filtroFan,lpPeso());
+        box.addView(filtros,new LinearLayout.LayoutParams(-1,dp(46)));
 
         LinearLayout lista=new LinearLayout(this);
         lista.setOrientation(LinearLayout.VERTICAL);
@@ -686,6 +705,46 @@ private static final int CARD_2 = Color.rgb(31,31,36);
             lista.addView(item,ip);
             itens[i]=item;
         }
+
+        final Runnable aplicarFiltroMarcas=()->{
+            String busca=buscaMarca.getText().toString().trim().toLowerCase(java.util.Locale.ROOT);
+            String categoria=categoriaFiltro[0];
+            int visiveis=0;
+            for(int i=0;i<itens.length;i++){
+                boolean categoriaOk=categoria.isEmpty()
+                    || (categoria.equals("TV") && nomes[i].contains("TV"))
+                    || (categoria.equals("AC") && nomes[i].contains("Ar-condicionado"))
+                    || (categoria.equals("FAN") && nomes[i].contains("Ventilador"));
+                String texto=(nomes[i]+" "+marcas[i]).toLowerCase(java.util.Locale.ROOT);
+                boolean buscaOk=busca.isEmpty() || texto.contains(busca);
+                itens[i].setVisibility(categoriaOk && buscaOk?View.VISIBLE:View.GONE);
+                if(categoriaOk && buscaOk) visiveis++;
+            }
+            if(visiveis==0){
+                status.setText("●  Nenhuma marca encontrada");
+                status.setTextColor(ACCENT);
+            } else {
+                status.setText("●  Pronto para testar");
+                status.setTextColor(GRAY);
+            }
+        };
+        buscaMarca.addTextChangedListener(new android.text.TextWatcher(){
+            public void beforeTextChanged(CharSequence s,int start,int count,int after){}
+            public void onTextChanged(CharSequence s,int start,int before,int count){ aplicarFiltroMarcas.run(); }
+            public void afterTextChanged(android.text.Editable s){}
+        });
+        View.OnClickListener aplicarCategoria=v->{
+            if(v==filtroTv) categoriaFiltro[0]="TV";
+            else if(v==filtroAc) categoriaFiltro[0]="AC";
+            else if(v==filtroFan) categoriaFiltro[0]="FAN";
+            else categoriaFiltro[0]="";
+            aplicarFiltroMarcas.run();
+        };
+        filtroTodos.setOnClickListener(aplicarCategoria);
+        filtroTv.setOnClickListener(aplicarCategoria);
+        filtroAc.setOnClickListener(aplicarCategoria);
+        filtroFan.setOnClickListener(aplicarCategoria);
+        aplicarFiltroMarcas.run();
 
         android.app.AlertDialog dialog=new android.app.AlertDialog.Builder(this)
             .setTitle("TESTE UNIVERSAL")
