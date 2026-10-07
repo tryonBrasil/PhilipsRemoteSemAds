@@ -481,10 +481,10 @@ private static final int CARD_2 = Color.rgb(31,31,36);
 
     /** Teste fácil: reduz a configuração a aparelho → função → testar → funcionou. */
     private void showTesteFacil(String marcaInicial,String modeloInicial){
-        final String[] nomes={"📺 TV","❄️ Ar-condicionado","🌀 Ventilador"};
-        final String[] marcas={"Philips","Coolix","Ventilador"};
-        final String[] modelos={modeloInicial==null||modeloInicial.isEmpty()?"TV":"TV", "Universal", "Universal"};
-        final String[] perfis={"Philips / RC6","AC Coolix","Ventilador Universal"};
+        final String[] nomes={"📺 TV","❄️ Ar-condicionado"};
+        final String[] marcas={"Philips","Coolix"};
+        final String[] modelos={modeloInicial==null||modeloInicial.isEmpty()?"TV":"TV", "Universal"};
+        final String[] perfis={"Philips / RC6","AC Coolix"};
         final String[] funcoes={"Ligar / Desligar","Volume +","Volume -","Canal +","Canal -","OK","Menu"};
         final String[] chaves={"POWER","VOL_UP","VOL_DOWN","CH_UP","CH_DOWN","OK","MENU"};
         final int[] tipo={0};
@@ -503,7 +503,7 @@ private static final int CARD_2 = Color.rgb(31,31,36);
             b.setOnClickListener(v->{ tipo[0]=p; perfil[0]=perfis[p]; atualizarBotoesTesteFacil(lista,nomes,tipo[0]); });
             lista.addView(b,new LinearLayout.LayoutParams(-1,dp(48)));
         }
-        box.addView(lista,new LinearLayout.LayoutParams(-1,dp(154)));
+        box.addView(lista,new LinearLayout.LayoutParams(-1,dp(104)));
         TextView selecionado=label("✓ TV selecionada",13); selecionado.setTextColor(Color.rgb(105,190,125)); selecionado.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL); box.addView(selecionado,new LinearLayout.LayoutParams(-1,dp(34)));
         TextView passo2=label("PASSO 2 • ESCOLHA O QUE QUER TESTAR",12); passo2.setTextColor(ACCENT); passo2.setTypeface(Typeface.DEFAULT,Typeface.BOLD); box.addView(passo2,new LinearLayout.LayoutParams(-1,dp(30)));
         LinearLayout funcoesBox=new LinearLayout(this); funcoesBox.setOrientation(LinearLayout.VERTICAL);
@@ -530,9 +530,9 @@ private static final int CARD_2 = Color.rgb(31,31,36);
                 int freq=frequenciaPerfil(perfil[0]);
                 if(!controleCriado[0]){
                     if(!monetizacao.podeSalvarControle(controleStorage.listar().size())){ monetizacao.showPremiumDialog(); return; }
-                    String nome=nomes[tipo[0]].replace("📺 ","").replace("❄️ ","").replace("🌀 ","")+" Universal";
+                    String nome=nomes[tipo[0]].replace("📺 ","").replace("❄️ ","")+" Universal";
                     String marca=marcas[tipo[0]]; String modelo=modelos[tipo[0]];
-                    int base=codigo; long id=controleStorage.salvar(nome,tipo[0]==2?"VENTILADOR":(tipo[0]==1?"AR-CONDICIONADO":"TV"),marca,modelo,perfil[0],"Configurado pelo Teste Fácil",base,freq);
+                    int base=codigo; long id=controleStorage.salvar(nome,tipo[0]==1?"AR-CONDICIONADO":"TV",marca,modelo,perfil[0],"Configurado pelo Teste Fácil",base,freq);
                     if(id<0){ status.setText("Não foi possível salvar. Tente novamente."); status.setTextColor(ACCENT); return; }
                     controleId[0]=id; controleCriado[0]=true; controleAtivo=controleStorage.buscar(id); prefs.edit().putLong("active_control_id",id).apply();
                 }
