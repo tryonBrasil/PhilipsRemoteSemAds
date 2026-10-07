@@ -1,0 +1,24 @@
+# Gradle
+.gradle/
+build/
+**/build/
+local.properties
+
+# Android Studio
+.idea/
+*.iml
+captures/
+
+# Signing keys and secrets
+*.jks
+*.keystore
+*.p12
+keystore.properties
+
+# Generated APKs
+*.apk
+*.aab
+
+# OS
+.DS_Store
+Thumbs.db
