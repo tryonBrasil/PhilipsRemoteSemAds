@@ -858,7 +858,7 @@ render[0]=()->{
         sv.addView(root); setContentView(sv);
     }
     private void showSobre(){
-        String versao="1.3.0";
+        String versao="1.3.6";
         try{
             android.content.pm.PackageInfo info=getPackageManager().getPackageInfo(getPackageName(),0);
             if(info.versionName!=null) versao=info.versionName;
@@ -902,7 +902,6 @@ render[0]=()->{
 
         new android.app.AlertDialog.Builder(this)
             .setTitle("PASSO 2 DE 3 • MODELO")
-            .setMessage("Marca selecionada: "+marca+"\\n\\nEscolha um modelo conhecido ou informe o modelo manualmente.")
             .setItems(modelos,(d,w)->{
                 if(w==modelos.length-1){
                     final EditText input=new EditText(this);
@@ -948,7 +947,7 @@ render[0]=()->{
     }
 
     private void showTvSetup(String marca,String modelo){
-        wizardDialog("3 de 3 • Teste IR","TV: "+marca+" "+modelo+"\\n\\n1. Aponte o celular para a TV.\\n2. Toque em TESTAR PRÓXIMO.\\n3. Quando a TV responder, toque em FUNCIONOU / SALVAR.\\n\\nO primeiro código confirmado será usado como base do controle.")
+        wizardDialog("3 de 3 • Teste IR","TV: "+marca+" "+modelo+"\n\n1. Aponte o celular para a TV.\\n2. Toque em TESTAR PRÓXIMO.\\n3. Quando a TV responder, toque em FUNCIONOU / SALVAR.\\n\\nO primeiro código confirmado será usado como base do controle.")
             .setNegativeButton("CANCELAR",(d,w)->showMeusControles())
             .setPositiveButton("INICIAR TESTE",(d,w)->showUniversalScanner(marca,modelo)).show();
     }
