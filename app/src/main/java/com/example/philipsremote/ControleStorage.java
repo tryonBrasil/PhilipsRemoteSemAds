@@ -199,7 +199,9 @@ public class ControleStorage {
     }
 
     public void salvarComando(Controle controle, String funcao, int codigo, String perfil, int frequencia) {
-        if (controle == null || funcao == null || funcao.trim().isEmpty() || codigo < 0) return;\n        funcao = funcao.trim();\n        if (funcao.length() > 80) funcao = funcao.substring(0, 80);
+        if (controle == null || funcao == null || funcao.trim().isEmpty() || codigo < 0) return;
+        funcao = funcao.trim();
+        if (funcao.length() > 80) funcao = funcao.substring(0, 80);
         try {
             SQLiteDatabase db = helper.getWritableDatabase();
             ContentValues v = new ContentValues();
