@@ -76,9 +76,7 @@ public class UpdateManager {
 
     public void verificarAoAbrir() {
         verificarDownloadPendente(false);
-        // Ao abrir o aplicativo, a verificação é feita novamente para garantir
-        // que uma nova versão publicada no GitHub seja detectada imediatamente.
-        prefs.edit().putLong("last_silent_check", 0L).apply();
+        // O cooldown é persistente: abrir/retomar a Activity não deve reiniciá-lo.
         verificar(false);
     }
 
@@ -128,13 +126,8 @@ public class UpdateManager {
 
                 activity.runOnUiThread(() -> {
                     if (update) {
-                        if (!manual) {
-                            if (!temDownloadPendente()) {
-                                baixarAutomaticamente(finalApkUrl, finalLatest);
-                            }
-                        } else {
-                            mostrarAtualizacao(finalLatest, finalApkUrl);
-                        }
+                        // Nunca baixa silenciosamente. O usuário confirma o download.
+                        mostrarAtualizacao(finalLatest, finalApkUrl);
                     } else if (manual) {
                         Toast.makeText(activity, "Você já está usando a versão mais recente.", Toast.LENGTH_SHORT).show();
                     }
@@ -286,6 +279,10 @@ public class UpdateManager {
             request.setTitle("IR Remote BR " + versao);
             request.setDescription(automatico ? "Baixando atualização automaticamente..." : "Baixando atualização...");
             request.setMimeType("application/vnd.android.package-archive");
+            // Atualizações nunca consomem dados móveis.
+            request.setAllowedNetworkTypes(DownloadManager.Request.NETWORK_WIFI);
+            request.setAllowedOverMetered(false);
+            request.setAllowedOverRoaming(false);
             request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
             request.setDestinationInExternalFilesDir(
                 activity, Environment.DIRECTORY_DOWNLOADS, "IRRemoteBR-update-" + versao + ".apk");
@@ -340,7 +337,7 @@ public class UpdateManager {
 
     private void abrirInstalador(Uri uri) {
         try {
-            limparDownload();
+            // Mantemos o download registrado até a instalação terminar/ser recusada.
             Intent install = new Intent(Intent.ACTION_INSTALL_PACKAGE);
             install.setData(uri);
             install.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
