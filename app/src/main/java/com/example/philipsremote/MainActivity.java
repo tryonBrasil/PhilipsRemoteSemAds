@@ -518,6 +518,33 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         d.show();
     }
 
+    private void abrirSmartIrMarca(String marca){
+        Toast.makeText(this,"⏳ Buscando modelos de "+marca+"...",Toast.LENGTH_SHORT).show();
+        new Thread(()->{
+            try{
+                java.util.List<SmartIrDatabase.Model> models=SmartIrDatabase.listarModelos(marca);
+                runOnUiThread(()->{
+                    if(models.isEmpty()){
+                        Toast.makeText(this,"Nenhum modelo SmartIR encontrado para "+marca+". Use o banco online ou outro perfil.",Toast.LENGTH_LONG).show();
+                        return;
+                    }
+                    String[] nomes=new String[models.size()];
+                    for(int i=0;i<models.size();i++){
+                        SmartIrDatabase.Model m=models.get(i);
+                        nomes[i]=m.manufacturer+" • "+m.model;
+                    }
+                    escolher("AR-CONDICIONADO • "+marca+" ("+models.size()+")",
+                            "Escolha o modelo do aparelho. O código completo será carregado do SmartIR.",
+                            nomes,idx->abrirSmartIrClimate(models.get(idx)),null);
+                });
+            }catch(Exception e){
+                runOnUiThread(()->Toast.makeText(this,
+                        e.getMessage()==null?"Não foi possível acessar o banco SmartIR.":e.getMessage(),
+                        Toast.LENGTH_LONG).show());
+            }
+        }).start();
+    }
+
     private void abrirSmartIrClimate(SmartIrDatabase.Model model){
         Toast.makeText(this,"⏳ Carregando "+model.model+"...",Toast.LENGTH_SHORT).show();
         new Thread(()->{ try{
@@ -607,8 +634,18 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         Button back=botaoAcao("← VOLTAR",KEY_DARK,12); back.setOnClickListener(v->showSelector());
         root.addView(back,new LinearLayout.LayoutParams(-1,dp(48)));
         atualizarEstadoAc(state,mode[0],fan[0],swing[0],temp[0]);
-        menos.setOnClickListener(v->{temp[0]=Math.max(climate.minTemp,temp[0]-climate.precision);tv.setText(temp[0]+" °C");});
-        mais.setOnClickListener(v->{temp[0]=Math.min(climate.maxTemp,temp[0]+climate.precision);tv.setText(temp[0]+" °C");});
+        menos.setOnClickListener(v->{
+            temp[0]=Math.max(climate.minTemp,temp[0]-climate.precision);
+            tv.setText(temp[0]+" °C");
+            atualizarEstadoAc(state,mode[0],fan[0],swing[0],temp[0]);
+            enviarEstadoAc(climate,mode[0],fan[0],swing[0],temp[0],state);
+        });
+        mais.setOnClickListener(v->{
+            temp[0]=Math.min(climate.maxTemp,temp[0]+climate.precision);
+            tv.setText(temp[0]+" °C");
+            atualizarEstadoAc(state,mode[0],fan[0],swing[0],temp[0]);
+            enviarEstadoAc(climate,mode[0],fan[0],swing[0],temp[0],state);
+        });
         sv.addView(root); mostrar(sv);
     }
 
@@ -885,6 +922,12 @@ private static final int CARD_2 = Color.rgb(31,31,36);
             itemBg.setColor(i==inicial?Color.rgb(48,30,32):CARD);
             item.setBackground(itemBg);
             item.setOnClickListener(v->{
+                // Para ar-condicionado, a marca do catálogo é apenas a porta de entrada.
+                // O controle real vem do SmartIR, que precisa do modelo/protocolo exato.
+                if("AC".equals(nomes[pos].contains("Ar-condicionado")?"AC":"")){
+                    abrirSmartIrMarca(marcas[pos]);
+                    return;
+                }
                 selecionado[0]=pos;
                 marcaSelecionada[0]=marcas[pos];
                 perfilSelecionado[0]=perfisMapa[pos];
