@@ -1177,7 +1177,7 @@ render[0]=()->{
 
                 LinearLayout editRow=row();
                 Button renomear=smallAction("RENOMEAR",Color.rgb(55,65,80));
-                Button excluir=smallAction("EXCLUIR",Color.rgb(95,48,48));
+                Button excluir=smallAction("🗑  EXCLUIR",Color.rgb(105,45,45));
                 editRow.addView(renomear,new LinearLayout.LayoutParams(0,dp(38),1));
                 editRow.addView(excluir,new LinearLayout.LayoutParams(0,dp(38),1));
                 card.addView(editRow);
