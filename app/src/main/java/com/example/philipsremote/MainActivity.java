@@ -487,15 +487,27 @@ private static final int CARD_2 = Color.rgb(31,31,36);
             buscar.setEnabled(false);
             new Thread(()->{
                 try{
-                    java.util.List<IrRemoteDatabase.RemoteFile> files=IrRemoteDatabase.listar(selectedCat[0],b);
-                    runOnUiThread(()->{
+            if("AC".equals(selectedCat[0])){
+                        java.util.List<SmartIrDatabase.Model> models=SmartIrDatabase.listarModelos(b);
+                        runOnUiThread(()->{
+                            buscar.setEnabled(true);
+                            if(models.isEmpty()){ status.setText("Nenhum modelo encontrado. Tente outra marca."); return; }
+                            String[] nomes=new String[models.size()];
+                            for(int i=0;i<models.size();i++) nomes[i]=models.get(i).manufacturer+" • "+models.get(i).model;
+                            escolher("AR-CONDICIONADO • MODELOS ("+models.size()+")","Escolha o modelo exato sempre que possível.",nomes,w->abrirSmartIrClimate(models.get(w)));
+                            status.setText("✓ "+models.size()+" modelo(s) encontrado(s).");
+                        });
+                    }else{
+                        java.util.List<IrRemoteDatabase.RemoteFile> files=IrRemoteDatabase.listar(selectedCat[0],b);
+                        runOnUiThread(()->{
                         buscar.setEnabled(true);
                         if(files.isEmpty()){ status.setText("Nenhum modelo encontrado. Tente outra marca."); return; }
                         final String[] nomes=new String[files.size()];
                         for(int i=0;i<files.size();i++) nomes[i]=files.get(i).model;
                         escolher("MODELOS ENCONTRADOS ("+files.size()+")","Toque em um modelo para carregar os códigos.",nomes,w->abrirRemoteOnline(files.get(w)));
                         status.setText("✓ "+files.size()+" modelo(s) encontrado(s).");
-                    });
+                        });
+                    }
                 }catch(Exception e){
                     runOnUiThread(()->{ buscar.setEnabled(true); status.setText("✕ Não foi possível acessar o banco online."); Toast.makeText(this,e.getMessage()==null?"Erro de conexão":e.getMessage(),Toast.LENGTH_LONG).show(); });
                 }
@@ -504,6 +516,102 @@ private static final int CARD_2 = Color.rgb(31,31,36);
 
         d.show();
     }
+
+    private void abrirSmartIrClimate(SmartIrDatabase.Model model){
+        Toast.makeText(this,"⏳ Carregando "+model.model+"...",Toast.LENGTH_SHORT).show();
+        new Thread(()->{ try{
+            SmartIrDatabase.Climate climate=SmartIrDatabase.carregar(model);
+            runOnUiThread(()->showAcRemote(climate,model,null));
+        }catch(Exception e){ runOnUiThread(()->Toast.makeText(this,e.getMessage()==null?"Falha ao carregar.":e.getMessage(),Toast.LENGTH_LONG).show()); } }).start();
+    }
+
+    private void abrirSmartIrSalvo(ControleStorage.Controle controle){
+        if(controle==null || controle.descricao==null || !controle.descricao.startsWith("SMARTIR|")){ build(); return; }
+        String url=controle.descricao.substring("SMARTIR|".length());
+        new Thread(()->{ try{
+            SmartIrDatabase.Climate climate=SmartIrDatabase.carregarPorUrl(url);
+            SmartIrDatabase.Model model=new SmartIrDatabase.Model(controle.marca,extrairCodigoSmartIr(url),controle.modelo);
+            runOnUiThread(()->showAcRemote(climate,model,controle));
+        }catch(Exception e){ runOnUiThread(()->new android.app.AlertDialog.Builder(this).setTitle("CONTROLE NÃO CARREGADO").setMessage("Não foi possível atualizar os códigos deste ar-condicionado. Verifique a internet.").setPositiveButton("TENTAR", (d,w)->abrirSmartIrSalvo(controle)).setNegativeButton("VOLTAR",null).show()); } }).start();
+    }
+
+    private String extrairCodigoSmartIr(String url){
+        int a=url.lastIndexOf('/'), b=url.lastIndexOf('.');
+        return a>=0&&b>a?url.substring(a+1,b):"";
+    }
+
+    private void showAcRemote(SmartIrDatabase.Climate climate, SmartIrDatabase.Model model, ControleStorage.Controle existing){
+        showingSelector=false; fanMode=false;
+        final String[] mode={climate.modes.isEmpty()?"cool":climate.modes.get(0)};
+        final String[] fan={climate.fans.isEmpty()?"auto":climate.fans.get(0)};
+        final int[] temp={climate.minTemp};
+        final ControleStorage.Controle[] saved={existing};
+
+        ScrollView sv=new ScrollView(this); sv.setFillViewport(true); sv.setBackgroundColor(BG);
+        LinearLayout root=new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL); root.setPadding(dp(14),dp(14),dp(14),dp(24));
+        TextView title=label("AR-CONDICIONADO",22); title.setTypeface(Typeface.DEFAULT,Typeface.BOLD); title.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
+        root.addView(title,new LinearLayout.LayoutParams(-1,dp(42)));
+        TextView sub=label(model.manufacturer+" • "+model.model,12); sub.setTextColor(GRAY); sub.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
+        root.addView(sub,new LinearLayout.LayoutParams(-1,dp(30)));
+        TextView state=label("",15); state.setTextColor(WHITE); state.setPadding(dp(8),dp(10),dp(8),dp(10));
+        GradientDrawable sb=new GradientDrawable(); sb.setColor(CARD); sb.setCornerRadius(dp(18)); sb.setStroke(dp(1),BORDER); state.setBackground(sb);
+        root.addView(state,new LinearLayout.LayoutParams(-1,dp(70)));
+
+        LinearLayout tr=row();
+        Button menos=botaoAcao("−",KEY_DARK,22), mais=botaoAcao("+",KEY_DARK,22);
+        TextView tv=label(temp[0]+" °C",30); tv.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
+        tr.addView(menos,lpFixa(70)); tr.addView(tv,new LinearLayout.LayoutParams(0,dp(62),1)); tr.addView(mais,lpFixa(70)); root.addView(tr,new LinearLayout.LayoutParams(-1,dp(72)));
+
+        section(root,"MODO");
+        LinearLayout mr=row();
+        for(String m:climate.modes){ Button b=botaoAcao(modoTexto(m),KEY,10); b.setOnClickListener(v->{mode[0]=m; atualizarEstadoAc(state,mode[0],fan[0],temp[0]); enviarEstadoAc(climate,mode[0],fan[0],temp[0],state);}); mr.addView(b,lpPeso()); }
+        root.addView(mr);
+
+        section(root,"VENTILAÇÃO");
+        LinearLayout fr=row();
+        for(String f:climate.fans){ Button b=botaoAcao(fanTexto(f),KEY,10); b.setOnClickListener(v->{fan[0]=f; atualizarEstadoAc(state,mode[0],fan[0],temp[0]); enviarEstadoAc(climate,mode[0],fan[0],temp[0],state);}); fr.addView(b,lpPeso()); }
+        root.addView(fr);
+
+        LinearLayout ar=row();
+        Button power=botaoAcao("⏻ DESLIGAR",Color.rgb(90,40,40),12);
+        power.setOnClickListener(v->{String b64=climate.offCommand(); if(b64.isEmpty()) Toast.makeText(this,"Código OFF indisponível.",Toast.LENGTH_SHORT).show(); else enviarBase64Smart(b64,state,"Desligado");});
+        ar.addView(power,lpPeso());
+        Button save=botaoAcao("💾 SALVAR",ACCENT,12);
+        save.setOnClickListener(v->{
+            if(saved[0]==null){
+                String url="https://raw.githubusercontent.com/smartHomeHub/SmartIR/master/codes/climate/"+model.code+".json";
+                long id=controleStorage.salvar(model.manufacturer+" "+model.model,"AR-CONDICIONADO",model.manufacturer,model.model,"AC SmartIR","SMARTIR|"+url,-1,38000);
+                if(id>0){saved[0]=controleStorage.buscar(id); controleAtivo=saved[0]; prefs.edit().putLong("active_control_id",id).apply();}
+            }
+            if(saved[0]!=null){
+                int[] p=smartRaw(climate.command(mode[0],fan[0],temp[0]));
+                if(p.length>0) controleStorage.salvarComandoRaw(saved[0],"ESTADO ATUAL",38000,p);
+                Toast.makeText(this,"✓ Controle salvo.",Toast.LENGTH_SHORT).show(); build();
+            }
+        });
+        ar.addView(save,lpPeso()); root.addView(ar);
+
+        Button back=botaoAcao("← VOLTAR",KEY_DARK,12); back.setOnClickListener(v->showSelector());
+        root.addView(back,new LinearLayout.LayoutParams(-1,dp(48)));
+        atualizarEstadoAc(state,mode[0],fan[0],temp[0]);
+        menos.setOnClickListener(v->{temp[0]=Math.max(climate.minTemp,temp[0]-climate.precision);tv.setText(temp[0]+" °C");});
+        mais.setOnClickListener(v->{temp[0]=Math.min(climate.maxTemp,temp[0]+climate.precision);tv.setText(temp[0]+" °C");});
+        sv.addView(root); mostrar(sv);
+    }
+
+    private void enviarEstadoAc(SmartIrDatabase.Climate c,String mode,String fan,int temp,TextView status){
+        String b64=c.command(mode,fan,temp);
+        if(b64.isEmpty()){Toast.makeText(this,"Estado não disponível para este modelo.",Toast.LENGTH_SHORT).show();return;}
+        enviarBase64Smart(b64,status,modoTexto(mode)+" • "+temp+" °C");
+    }
+    private void enviarBase64Smart(String b64,TextView status,String texto){
+        try{int[] p=SmartIrDatabase.decodeBase64(b64); if(p.length==0){status.setText("Código indisponível");return;} boolean ok=irPerfilTeste.transmitirRaw(38000,p); status.setText(ok?"✓ "+texto:"✕ Emissor IR indisponível");}
+        catch(Exception e){status.setText("✕ Código inválido");}
+    }
+    private int[] smartRaw(String b64){try{return SmartIrDatabase.decodeBase64(b64);}catch(Exception e){return new int[0];}}
+    private void atualizarEstadoAc(TextView v,String mode,String fan,int temp){v.setText("Pronto • "+modoTexto(mode)+" • "+temp+" °C • "+fanTexto(fan));}
+    private String modoTexto(String s){return s==null?"":s.replace("_"," ").toUpperCase(Locale.ROOT);}
+    private String fanTexto(String s){return s==null?"":s.replace("_"," ").toUpperCase(Locale.ROOT);}
 
     private void abrirRemoteOnline(IrRemoteDatabase.RemoteFile remote){
         Toast.makeText(this,"⏳ Carregando "+remote.model+"...",Toast.LENGTH_SHORT).show();
@@ -1582,7 +1690,7 @@ render[0]=()->{
 
     private void build(){
         fanMode=false;
-        if(controleAtivo!=null && "Ventilador Universal".equals(controleAtivo.perfil)){ showFanRemote(); return; }
+        if(controleAtivo!=null && "Ventilador Universal".equals(controleAtivo.perfil)){ showFanRemote(); return; }\n        if(controleAtivo!=null && "AC SmartIR".equals(controleAtivo.perfil)){ abrirSmartIrSalvo(controleAtivo); return; }
         ScrollView sv=new ScrollView(this); sv.setFillViewport(true);
         sv.setBackgroundColor(BG); sv.setClipToPadding(false);
 
