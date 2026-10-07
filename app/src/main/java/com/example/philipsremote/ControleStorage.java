@@ -26,11 +26,13 @@ public class ControleStorage {
         public long id;
         public String nome, categoria, marca, modelo, perfil, descricao;
         public int codigo, frequencia;
+        /** JSON raw do sinal: {freq:int,pattern:[int,...]} quando o comando veio de uma base raw. */
+        public String rawData;
         public JSONObject comandos;
 
         Controle(long id, String n, String c, String m, String mo, String p, String d, int code, int freq) {
             this.id = id; nome = n; categoria = c; marca = m; modelo = mo; perfil = p; descricao = d;
-            codigo = code; frequencia = freq; comandos = new JSONObject();
+            codigo = code; frequencia = freq; rawData = null; comandos = new JSONObject();
         }
     }
 
@@ -101,7 +103,7 @@ public class ControleStorage {
                     cv.put("funcao", funcao);
                     cv.put("codigo", item.optInt("codigo", -1));
                     cv.put("perfil", item.optString("perfil", ""));
-                    cv.put("frequencia", item.optInt("frequencia", 0));
+                    cv.put("frequencia", item.optInt("frequencia", 0));\n                if(item.has("raw_data")) cv.put("raw_data", item.optString("raw_data",""));
                     db.insertWithOnConflict("commands", null, cv, SQLiteDatabase.CONFLICT_REPLACE);
                 }
             }
@@ -142,12 +144,12 @@ public class ControleStorage {
             try {
                 while (c.moveToNext()) { Controle item = fromCursor(c); out.add(item); porId.put(item.id, item); }
             } finally { c.close(); }
-            Cursor k = db.query("commands", new String[]{"control_id", "funcao", "codigo", "perfil", "frequencia"},
+            Cursor k = db.query("commands", new String[]{"control_id", "funcao", "codigo", "perfil", "frequencia", "raw_data"},
                     null, null, null, null, null);
             try {
                 while (k.moveToNext()) {
                     Controle dono = porId.get(k.getLong(0));
-                    if (dono != null) colocarComando(dono, k.getString(1), k.getInt(2), k.getString(3), k.getInt(4));
+                    if (dono != null) colocarComando(dono, k.getString(1), k.getInt(2), k.getString(3), k.getInt(4), k.isNull(5) ? null : k.getString(5));
                 }
             } finally { k.close(); }
         } catch (Exception e) {
@@ -164,10 +166,10 @@ public class ControleStorage {
             try {
                 if (!c.moveToFirst()) return null;
                 Controle item = fromCursor(c);
-                Cursor k = db.query("commands", new String[]{"funcao", "codigo", "perfil", "frequencia"},
+                Cursor k = db.query("commands", new String[]{"funcao", "codigo", "perfil", "frequencia", "raw_data"},
                         "control_id=?", new String[]{String.valueOf(id)}, null, null, null);
                 try {
-                    while (k.moveToNext()) colocarComando(item, k.getString(0), k.getInt(1), k.getString(2), k.getInt(3));
+                    while (k.moveToNext()) colocarComando(item, k.getString(0), k.getInt(1), k.getString(2), k.getInt(3), k.isNull(4) ? null : k.getString(4));
                 } finally { k.close(); }
                 return item;
             } finally { c.close(); }
@@ -190,10 +192,10 @@ public class ControleStorage {
             c.getInt(c.getColumnIndexOrThrow("frequencia")));
     }
 
-    private static void colocarComando(Controle controle, String funcao, int codigo, String perfil, int frequencia) {
+    private static void colocarComando(Controle controle, String funcao, int codigo, String perfil, int frequencia, String rawData) {
         try {
             JSONObject item = new JSONObject();
-            item.put("codigo", codigo); item.put("perfil", s(perfil)); item.put("frequencia", frequencia);
+            item.put("codigo", codigo); item.put("perfil", s(perfil)); item.put("frequencia", frequencia);\n            if (rawData != null && !rawData.isEmpty()) item.put("raw_data", rawData);
             controle.comandos.put(funcao, item);
         } catch (Exception e) { Log.w(TAG, "Comando ignorado: " + funcao, e); }
     }
@@ -209,8 +211,59 @@ public class ControleStorage {
             v.put("perfil", perfil); v.put("frequencia", frequencia);
             db.insertWithOnConflict("commands", null, v, SQLiteDatabase.CONFLICT_REPLACE);
             tocar(db, controle.id);
-            colocarComando(controle, funcao, codigo, perfil, frequencia);
+            colocarComando(controle, funcao, codigo, perfil, frequencia, null);
         } catch (Exception e) { Log.e(TAG, "Falha ao salvar comando " + funcao, e); }
+    }
+
+    /** Salva um comando IR bruto em microssegundos. O código numérico fica -1; o sinal completo vai em raw_data. */
+    public void salvarComandoRaw(Controle controle, String funcao, int frequencia, int[] pattern) {
+        if (controle == null || funcao == null || funcao.trim().isEmpty() || frequencia <= 0 || pattern == null || pattern.length == 0) return;
+        funcao = funcao.trim();
+        if (funcao.length() > 80) funcao = funcao.substring(0, 80);
+        try {
+            JSONArray arr = new JSONArray();
+            for (int v : pattern) arr.put(Math.max(1, v));
+            JSONObject raw = new JSONObject();
+            raw.put("freq", frequencia);
+            raw.put("pattern", arr);
+            String rawData = raw.toString();
+            SQLiteDatabase db = helper.getWritableDatabase();
+            ContentValues v = new ContentValues();
+            v.put("control_id", controle.id);
+            v.put("funcao", funcao);
+            v.put("codigo", -1);
+            v.put("perfil", "RAW");
+            v.put("frequencia", frequencia);
+            v.put("raw_data", rawData);
+            db.insertWithOnConflict("commands", null, v, SQLiteDatabase.CONFLICT_REPLACE);
+            tocar(db, controle.id);
+            colocarComando(controle, funcao, -1, "RAW", frequencia, rawData);
+        } catch (Exception e) { Log.e(TAG, "Falha ao salvar comando RAW " + funcao, e); }
+    }
+
+    /** Retorna o sinal bruto salvo para uma função, ou null. */
+    public int[] padraoRawComando(Controle controle, String funcao) {
+        try {
+            JSONObject item = controle == null || controle.comandos == null ? null : controle.comandos.optJSONObject(funcao);
+            if (item == null) return null;
+            String raw = item.optString("raw_data", "");
+            if (raw.isEmpty()) return null;
+            JSONArray a = new JSONObject(raw).optJSONArray("pattern");
+            if (a == null || a.length() == 0) return null;
+            int[] out = new int[a.length()];
+            for (int i=0;i<a.length();i++) out[i] = a.optInt(i, 0);
+            return out;
+        } catch (Exception e) { return null; }
+    }
+
+    public int frequenciaRawComando(Controle controle, String funcao) {
+        try {
+            JSONObject item = controle == null || controle.comandos == null ? null : controle.comandos.optJSONObject(funcao);
+            if (item == null) return 0;
+            String raw = item.optString("raw_data", "");
+            if (!raw.isEmpty()) return new JSONObject(raw).optInt("freq", item.optInt("frequencia", 0));
+            return 0;
+        } catch (Exception e) { return 0; }
     }
 
     private void tocar(SQLiteDatabase db, long id) {
@@ -328,7 +381,7 @@ public class ControleStorage {
                         JSONObject cmd=new JSONObject();
                         cmd.put("funcao",funcao); cmd.put("codigo",item.optInt("codigo",-1));
                         cmd.put("perfil",item.optString("perfil",""));
-                        cmd.put("frequencia",Math.max(0,item.optInt("frequencia",0)));
+                        cmd.put("frequencia",Math.max(0,item.optInt("frequencia",0)));\n                        if(item.has("raw_data")) cmd.put("raw_data", item.optString("raw_data",""));
                         comandos.put(cmd);
                     }
                 }
