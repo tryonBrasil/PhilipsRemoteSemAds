@@ -320,7 +320,7 @@ public class UpdateManager {
                 new android.app.AlertDialog.Builder(activity)
                     .setTitle("Pronto para instalar")
                     .setMessage("A atualização já foi baixada. Só falta permitir que o IR Remote BR instale atualizações. Toque em CONFIGURAÇÕES e ative \"Permitir desta fonte\". Ao voltar, a instalação continuará automaticamente.")
-                    .setNegativeButton("CANCELAR", (d, w) -> esperandoPermissaoInstalacao = false)
+                    .setNegativeButton("CANCELAR", (d, w) -> { esperandoPermissaoInstalacao = false; limparDownload(); })
                     .setPositiveButton("CONFIGURAÇÕES", (d, w) -> {
                         Intent settings = new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES);
                         settings.setData(Uri.parse("package:" + activity.getPackageName()));
@@ -337,7 +337,9 @@ public class UpdateManager {
 
     private void abrirInstalador(Uri uri) {
         try {
-            // Mantemos o download registrado até a instalação terminar/ser recusada.
+            // Ao abrir o instalador, o download deixa de ser considerado pendente.
+            // Assim, cancelar a instalação não provoca um novo prompt em todo onResume.
+            limparDownload();
             Intent install = new Intent(Intent.ACTION_INSTALL_PACKAGE);
             install.setData(uri);
             install.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
@@ -350,7 +352,13 @@ public class UpdateManager {
     public void aoRetornarDoSistema() {
         if (esperandoPermissaoInstalacao) {
             esperandoPermissaoInstalacao = false;
-            activity.runOnUiThread(() -> verificarDownloadPendente(false));
+            activity.runOnUiThread(() -> {
+                if (Build.VERSION.SDK_INT >= 26 && !activity.getPackageManager().canRequestPackageInstalls()) {
+                    limparDownload();
+                } else {
+                    verificarDownloadPendente(false);
+                }
+            });
         }
     }
 
