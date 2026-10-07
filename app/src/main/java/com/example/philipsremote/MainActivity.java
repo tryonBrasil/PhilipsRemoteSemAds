@@ -17,6 +17,7 @@ import android.os.Build;
 import android.view.WindowInsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import org.json.JSONArray;
 import static com.example.philipsremote.RemoteKeys.*;
 
