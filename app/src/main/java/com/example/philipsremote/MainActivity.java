@@ -845,10 +845,14 @@ render[0]=()->{
                 Button abrir=smallAction("ABRIR",Color.rgb(55,110,65));
                 Button config=smallAction("CONFIGURAR",Color.rgb(65,65,72));
                 Button testar=smallAction("TESTAR",Color.rgb(55,65,80));
+                Button copiar=smallAction("DUPLICAR",Color.rgb(75,60,45));
                 actions.addView(abrir,new LinearLayout.LayoutParams(0,dp(42),1));
                 actions.addView(config,new LinearLayout.LayoutParams(0,dp(42),1));
                 actions.addView(testar,new LinearLayout.LayoutParams(0,dp(42),1));
                 card.addView(actions);
+                LinearLayout copyRow=row();
+                copyRow.addView(copiar,new LinearLayout.LayoutParams(-1,dp(38)));
+                card.addView(copyRow);
                 abrir.setOnClickListener(v->{controleAtivo=c;lgMode="LG".equalsIgnoreCase(c.marca);prefs.edit().putLong("active_control_id",c.id).putBoolean("lg_mode",lgMode).apply();showingSelector=false;build();Toast.makeText(this,"✓ "+c.nome+" está ativo",Toast.LENGTH_SHORT).show();});
                 config.setOnClickListener(v->{controleAtivo=c;lgMode="LG".equalsIgnoreCase(c.marca);prefs.edit().putLong("active_control_id",c.id).putBoolean("lg_mode",lgMode).apply();showAprenderComandos(c);});
                 testar.setOnClickListener(v->showComandosConfigurados(c));
