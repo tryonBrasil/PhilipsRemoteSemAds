@@ -42,7 +42,16 @@ public class IrPerfilTeste {
         selecionar("LG / NEC");
     }
 
-    public boolean hasEmitter() { return ir != null && ir.hasIrEmitter(); }
+    public boolean hasEmitter() { return ir != null && ir.hasIrEmitter(); }\n\n    /** Transmite um padrão RAW já convertido para marca/espaço em microssegundos. */
+    public boolean transmitirRaw(int frequencia, int[] padrao) {
+        if (!hasEmitter() || frequencia <= 0 || padrao == null || padrao.length == 0) return false;
+        try {
+            tx(frequencia, IrEncoder.raw(padrao));
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
 
     /** Usa a frequência pedida se o emissor suporta; senão, a suportada mais próxima. */
     private int freq(int desejada) {
