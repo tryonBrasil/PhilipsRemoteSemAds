@@ -116,6 +116,11 @@ private static final int CARD_2 = Color.rgb(31,31,36);
     private interface OnPick { void on(int i); }
 
     /** Lista de opções em botões. (AlertDialog.setMessage + setItems não exibe a lista no AOSP.) */
+    // Sobrecarga para telas que não precisam de uma ação específica de VOLTAR.
+    private void escolher(String titulo,String mensagem,String[] itens,OnPick ok){
+        escolher(titulo,mensagem,itens,ok,null);
+    }
+
     private void escolher(String titulo,String mensagem,String[] itens,OnPick ok,Runnable voltar){
         LinearLayout box=new LinearLayout(this); box.setOrientation(LinearLayout.VERTICAL); box.setPadding(dp(18),dp(6),dp(18),dp(6));
         if(mensagem!=null && !mensagem.isEmpty()){
