@@ -6,6 +6,7 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.json.JSONException;
 import java.util.ArrayList;
 import java.util.List;
 
