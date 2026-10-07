@@ -50,7 +50,7 @@ public class MonetizationManager {
         ad.setAdUnitId(BANNER_TEST_ID);
         int width = Math.max(1, (int)(activity.getResources().getDisplayMetrics().widthPixels /
                 activity.getResources().getDisplayMetrics().density));
-        ad.setAdSize(AdSize.getLargeAnchoredAdaptiveBannerAdSize(activity, width));
+        ad.setAdSize(AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(activity, width));
         box.addView(ad, new FrameLayout.LayoutParams(-1, -2));
         root.addView(box, new LinearLayout.LayoutParams(-1, -2));
         ad.loadAd(new AdRequest.Builder().build());
