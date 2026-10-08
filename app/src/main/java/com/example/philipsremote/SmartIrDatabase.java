@@ -269,7 +269,7 @@ public final class SmartIrDatabase {
                 i++;
             }
             if(raw<=0) continue;
-            int us=(int)Math.round(raw/BRDLINK_UNIT_US);
+            int us=(int)Math.ceil(raw/BRDLINK_UNIT_US);
             if(us>0 && us<=1000000) out.add(us);
         }
         int[] result=new int[out.size()];
