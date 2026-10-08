@@ -261,8 +261,11 @@ public final class SmartIrDatabase {
         Exception last=null;
         String[] urls={CODE_URL+file,CODE_URL_MAIN+file,CODE_URL_CDN+file,AGGREGATOR_CODE_URL+file};
         for(String url:urls){
-            try{return parse(getText(url));}
-            catch(Exception e){last=e;}
+            try{
+                Climate result=parse(getText(url));
+                if(result.commands.length()==0) throw new IllegalStateException("JSON sem comandos");
+                return result;
+            }catch(Exception e){last=e;}
         }
         throw new IllegalStateException("Código SmartIR "+model.code+" não pôde ser carregado."+
                 (last!=null && last.getMessage()!=null?" "+last.getMessage():""));
