@@ -597,7 +597,6 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         final java.util.List<Button> modeButtons=new ArrayList<>();
         final java.util.List<Button> fanButtons=new ArrayList<>();
         final java.util.List<Button> swingButtons=new ArrayList<>();
-
         ScrollView sv=new ScrollView(this); sv.setFillViewport(true); sv.setBackgroundColor(BG);
         LinearLayout root=new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL); root.setPadding(dp(14),dp(14),dp(14),dp(26));
         LinearLayout top=row();
@@ -1197,8 +1196,7 @@ private static final int CARD_2 = Color.rgb(31,31,36);
             public void beforeTextChanged(CharSequence s,int start,int count,int after){}
             public void onTextChanged(CharSequence s,int start,int before,int count){ aplicarFiltroMarcas.run(); }
             public void afterTextChanged(android.text.Editable s){}
-        });
-        View.OnClickListener aplicarCategoria=v->{
+        });        View.OnClickListener aplicarCategoria=v->{
             if(v==filtroTv) categoriaFiltro[0]="TV";
             else if(v==filtroAc) categoriaFiltro[0]="AC";
             else if(v==filtroFan) categoriaFiltro[0]="FAN";
@@ -1217,14 +1215,13 @@ private static final int CARD_2 = Color.rgb(31,31,36);
             .create();
 
         dialog.setOnShowListener(x->{
-            irPerfilTeste.selecionar(perfilSelecionado[0]); 
+            irPerfilTeste.selecionar(perfilSelecionado[0]);
             Button testar=testarProximoVisivel;
             Button salvar=funcionouSalvarVisivel;
             cancelarTeste.setOnClickListener(v->{
                 dialog.dismiss();
                 showMeusControles();
             });
-            salvar.setOnClickListener(v->{
             anterior.setOnClickListener(v->{
                 String resultado=irPerfilTeste.previous();
                 status.setText("●  "+resultado); status.setTextColor(GRAY);
@@ -1269,13 +1266,14 @@ private static final int CARD_2 = Color.rgb(31,31,36);
                         :"Não foi possível enviar este código. Verifique o emissor IR e tente novamente.");
                 },null);
             });
+            proximo.setOnClickListener(v->testar.performClick());
             testar.setOnClickListener(v->{
                 String resultado=irPerfilTeste.next();
                 status.setText("●  "+resultado); status.setTextColor(SUCCESS);
                 int atual=irPerfilTeste.position(); int total=irPerfilTeste.total();
                 progresso.setText("Candidato "+atual+" de "+total);
                 if(atual>=total) detalhe.setText("Fim dos candidatos. Escolha outro aparelho na lista ou cancele e tente novamente.");
-                else detalhe.setText("Código enviado.\nSe respondeu, toque em FUNCIONOU / SALVAR.");
+                else detalhe.setText("Código enviado.\\nSe respondeu, toque em FUNCIONOU / SALVAR.");
             });
             salvar.setOnClickListener(v->{
                 int codigo=irPerfilTeste.currentCode(); String perfil=irPerfilTeste.getPerfil();
@@ -1304,9 +1302,6 @@ private static final int CARD_2 = Color.rgb(31,31,36);
                 oferecerConfiguracaoAutomatica(controleAtivo);
             });
         });
-        dialog.show();
-    }
-
     private void oferecerConfiguracaoAutomatica(ControleStorage.Controle controle){
         if(controle==null){ showMeusControles(); return; }
 
@@ -1797,8 +1792,7 @@ render[0]=()->{
                 editRow.addView(renomear,new LinearLayout.LayoutParams(0,dp(38),1));
                 editRow.addView(excluir,new LinearLayout.LayoutParams(0,dp(38),1));
                 card.addView(editRow);
-                renomear.setOnClickListener(v->{
-                    final EditText campo=new EditText(this); campo.setSingleLine(true); campo.setText(c.nome); campo.setSelectAllOnFocus(true); campo.setHint("Nome do controle");
+                renomear.setOnClickListener(v->{                    final EditText campo=new EditText(this); campo.setSingleLine(true); campo.setText(c.nome); campo.setSelectAllOnFocus(true); campo.setHint("Nome do controle");
                     new android.app.AlertDialog.Builder(this).setTitle("Renomear controle").setView(campo)
                         .setNegativeButton("CANCELAR",null).setPositiveButton("SALVAR",(d,w)->{
                             String novoNome=campo.getText().toString().trim();
