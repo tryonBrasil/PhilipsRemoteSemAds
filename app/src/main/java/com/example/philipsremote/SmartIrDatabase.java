@@ -204,14 +204,111 @@ public final class SmartIrDatabase {
                 }
             }
         }
-        // Algumas marcas do catálogo local usam protocolos Midea compatíveis
-        // (Comfee, Kaysun, MrCool etc.). Se o índice remoto estiver incompleto,
-        // ainda oferecemos os códigos SmartIR Midea conhecidos para teste.
-        if(out.isEmpty() && isMideaFamily(marca)){
-            out.addAll(modelosMideaFallback());
+        // O índice remoto é a fonte principal. Se ele estiver incompleto/offline,
+        // usamos um catálogo mínimo local com códigos SmartIR conhecidos. Isso evita
+        // que marcas comuns simplesmente desapareçam da tela de seleção.
+        if(out.isEmpty()){
+            out.addAll(modelosFallback(marca));
         }
 
         Collections.sort(out,Comparator.comparing(x->x.model.toLowerCase(Locale.ROOT)));
+        return out;
+    }
+
+    private static List<Model> modelosFallback(String marca){
+        String m=normalizar(marca);
+        String[][] data;
+
+        if(m.equals("lg")){
+            data=new String[][]{
+                {"1060","R09AWN / R24AWN / E09EK"},
+                {"1062","LG InverterV P12RK / A06AWV"},
+                {"1063","LG Inverter P12EP1 / P12EU"},
+                {"1065","LG LA080EC / LAXXXEC"},
+                {"1066","LA090HYV / LA120HYV / LAN090HYV / LAN120HYV"},
+                {"1067","W12TCM"},
+                {"1068","AKB74295303"},
+                {"1069","AKB74295304"},
+                {"1070","PC09SQ NSJ"}
+            };
+        }else if(m.equals("elgin")){
+            data=new String[][]{
+                {"2800","HVQI18B2IA"},
+                {"2801","HVQI12B2FB"}
+            };
+        }else if(m.equals("midea") || isMideaFamily(marca)){
+            data=new String[][]{
+                {"1380","Midea / compatível • perfil 1380"},
+                {"1381","Midea / compatível • perfil 1381"},
+                {"1382","MSY-12HRDN1 / RG57A2-BGEF"},
+                {"1383","KFR-35G"},
+                {"1384","MSMACU-18HRFN1-QRD0GW"},
+                {"1385","R11HG/E"},
+                {"1386","KFR-32GW"},
+                {"1387","RG70E/BGEF"},
+                {"1388","42MAQA09S5"},
+                {"1389","MAP05R1WWT"},
+                {"1390","RG52C1/BGE / RG57H4-BGEF"},
+                {"1391","RG58E3/BGEF"},
+                {"1392","MPD-12CRN7"},
+                {"1393","Polario / MPPHB-09CRN7"},
+                {"1394","RG70C/BGEF"},
+                {"1395","RG10B(D1)/BGEFU1"},
+                {"4380","MCD-24HRN1-Q1 / RAS-10N3KVR-E"},
+                {"4381","RG70C1/BGEF"},
+                {"7386","KFR-32GW / ESPHome"}
+            };
+        }else if(m.equals("samsung")){
+            data=new String[][]{
+                {"1400","Samsung • perfil 1400"},
+                {"1401","AR##HSF/JFS##"},
+                {"1402","AR##TSHGAWK"},
+                {"1403","AR##TXHZ##"},
+                {"1404","AR##TSHZ##"},
+                {"1405","AR##TSHQBURN"},
+                {"1407","AR##NXWS###"},
+                {"1408","AR18HSFSAWKNEU"}
+            };
+        }else if(m.equals("hitachi")){
+            data=new String[][]{
+                {"1080","RAC-50HK1 / RAS-10KH2"},
+                {"1081","RAC-10EH1 / RAC-18EH1 / RAS-10EH1 / RAS-18EH1"},
+                {"1082","RAS-25YHA / RAS-35YHA"},
+                {"1083","RAS-32CNH2"},
+                {"1084","RAS-DX18HDK / RAK-35RPC"},
+                {"1085","RPA24B3BL"},
+                {"1086","RAC-36NK1 / RAC-28NK1"}
+            };
+        }else if(m.equals("springer")){
+            data=new String[][]{{"1360","Split Hi Wall Maxiflex"}};
+        }else if(m.equals("fisher")){
+            data=new String[][]{{"2640","FPR-91DE4-R / FPR-121DE4-R / FPR-141DE4-R"}};
+        }else if(m.equals("hyundai")){
+            data=new String[][]{
+                {"2660","HSE09PH5V"},
+                {"2661","HY6INV"},
+                {"2662","H-ARI22-09H"}
+            };
+        }else if(m.equals("bosch")){
+            data=new String[][]{{"2740","5000i"}};
+        }else if(m.equals("kolin")){
+            data=new String[][]{{"2700","RC-M7B1"}};
+        }else if(m.equals("xiaomi")){
+            data=new String[][]{{"2780","KFR-35G/F3C1"}};
+        }else if(m.equals("senville")){
+            data=new String[][]{
+                {"2860","SENA/12HF/IZ"},
+                {"2880","LNINVE052 / LNINVC052"}
+            };
+        }else if(m.equals("goodman")){
+            data=new String[][]{{"2900","MSH123E21AXAA / MST183E20ACAA"}};
+        }else{
+            data=new String[0][0];
+        }
+
+        List<Model> out=new ArrayList<>();
+        String fabricante=marca==null || marca.trim().isEmpty() ? "SmartIR" : marca.trim();
+        for(String[] x:data) out.add(new Model(fabricante,x[0],x[1]));
         return out;
     }
 
@@ -219,40 +316,11 @@ public final class SmartIrDatabase {
         if(marca==null) return false;
         String m=normalizar(marca);
         return m.equals("midea") || m.equals("comfee") || m.equals("kaysun") ||
-               m.equals("mrcool") || m.equals("mrcool") || m.equals("pioneer") ||
-               m.equals("lennox") || m.equals("keystone") || m.equals("consul") ||
-               m.equals("elgin") || m.equals("electrolux") || m.equals("philco") ||
-               m.equals("agratto") || m.equals("eos") || m.equals("gree") ||
-               m.equals("lg") || m.equals("samsung") || m.equals("tcl") ||
-               m.equals("daikin") || m.equals("fujitsu") || m.equals("mitsubishi") ||
-               m.equals("whirlpool");
-    }
-
-    private static List<Model> modelosMideaFallback(){
-        String[][] data={
-            {"1380","Midea / compatível • perfil 1380"},
-            {"1381","Midea / compatível • perfil 1381"},
-            {"1382","MSY-12HRDN1 / RG57A2-BGEF"},
-            {"1383","KFR-35G"},
-            {"1384","MSMACU-18HRFN1-QRD0GW"},
-            {"1385","R11HG/E"},
-            {"1386","KFR-32GW"},
-            {"1387","RG70E/BGEF"},
-            {"1388","42MAQA09S5"},
-            {"1389","MAP05R1WWT"},
-            {"1390","RG52C1/BGE / RG57H4-BGEF"},
-            {"1391","RG58E3/BGEF"},
-            {"1392","MPD-12CRN7"},
-            {"1393","Polario / MPPHB-09CRN7"},
-            {"1394","RG70C/BGEF"},
-            {"1395","RG10B(D1)/BGEFU1"},
-            {"4380","MCD-24HRN1-Q1 / RAS-10N3KVR-E"},
-            {"4381","RG70C1/BGEF"},
-            {"7386","KFR-32GW / ESPHome"}
-        };
-        List<Model> out=new ArrayList<>();
-        for(String[] x:data) out.add(new Model("Midea",x[0],x[1]));
-        return out;
+               m.equals("mrcool") || m.equals("pioneer") || m.equals("lennox") ||
+               m.equals("keystone") || m.equals("consul") || m.equals("electrolux") ||
+               m.equals("philco") || m.equals("agratto") || m.equals("eos") ||
+               m.equals("gree") || m.equals("tcl") || m.equals("daikin") ||
+               m.equals("fujitsu") || m.equals("mitsubishi") || m.equals("whirlpool");
     }
 
     public static Climate carregar(Model model) throws Exception {
