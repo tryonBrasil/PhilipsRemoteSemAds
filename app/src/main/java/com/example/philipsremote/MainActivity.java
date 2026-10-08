@@ -581,6 +581,19 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         final int[] temp={Math.max(climate.minTemp,Math.min(climate.maxTemp,24))};
         final boolean[] ligado={true};
         final ControleStorage.Controle[] saved={existing};
+        // v1.6.4: restaura o último estado usado do ar-condicionado salvo.
+        if(existing!=null){
+            String base="ac_state_"+existing.id+"_";
+            String sm=prefs.getString(base+"mode","");
+            String sf=prefs.getString(base+"fan","");
+            String ss=prefs.getString(base+"swing","");
+            if(!sm.isEmpty() && climate.modes.contains(sm)) mode[0]=sm;
+            if(!sf.isEmpty() && climate.fans.contains(sf)) fan[0]=sf;
+            if(!ss.isEmpty() && climate.swings.contains(ss)) swing[0]=ss;
+            int st=prefs.getInt(base+"temp",temp[0]);
+            temp[0]=Math.max(climate.minTemp,Math.min(climate.maxTemp,st));
+            ligado[0]=prefs.getBoolean(base+"on",true);
+        }
         final java.util.List<Button> modeButtons=new ArrayList<>();
         final java.util.List<Button> fanButtons=new ArrayList<>();
         final java.util.List<Button> swingButtons=new ArrayList<>();
@@ -627,6 +640,12 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         LinearLayout.LayoutParams tcp=new LinearLayout.LayoutParams(-1,dp(158)); tcp.setMargins(0,dp(8),0,dp(8)); root.addView(tempCard,tcp);
 
         Runnable refresh=()->{
+            if(saved[0]!=null){
+                String base="ac_state_"+saved[0].id+"_";
+                prefs.edit().putString(base+"mode",mode[0]).putString(base+"fan",fan[0])
+                    .putString(base+"swing",swing[0]==null?"":swing[0]).putInt(base+"temp",temp[0])
+                    .putBoolean(base+"on",ligado[0]).apply();
+            }
             tv.setText(temp[0]+"°");
             String st=(ligado[0]?"● LIGADO":"○ DESLIGADO")+"  •  "+modoTexto(mode[0])+"  •  "+temp[0]+" °C  •  "+fanTexto(fan[0]);
             if(swing[0]!=null) st+="  •  SWING "+modoTexto(swing[0]);
@@ -745,6 +764,10 @@ private static final int CARD_2 = Color.rgb(31,31,36);
             if(saved[0]!=null){
                 int[] p=smartRaw(climate.command(mode[0],fan[0],swing[0],temp[0]),climate.encoding);
                 if(p.length>0) controleStorage.salvarComandoRaw(saved[0],"ESTADO ATUAL",38000,p);
+                String base="ac_state_"+saved[0].id+"_";
+                prefs.edit().putString(base+"mode",mode[0]).putString(base+"fan",fan[0])
+                    .putString(base+"swing",swing[0]==null?"":swing[0]).putInt(base+"temp",temp[0])
+                    .putBoolean(base+"on",ligado[0]).apply();
                 Toast.makeText(this,"✓ Controle de ar-condicionado salvo.",Toast.LENGTH_SHORT).show();
                 build();
             }
