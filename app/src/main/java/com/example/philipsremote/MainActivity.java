@@ -799,7 +799,14 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         Button save=botaoAcao(saved[0]==null?"💾 SALVAR CONTROLE":"✓ CONTROLE SALVO",ACCENT,12);
         save.setOnClickListener(v->{
             if(saved[0]==null){
-                String url="https://raw.githubusercontent.com/smartHomeHub/SmartIR/master/codes/climate/"+model.code+".json";
+                if(!monetizacao.podeSalvarControle(controleStorage.listar().size())){
+                    Toast.makeText(this,"Limite gratuito atingido ("+monetizacao.limiteGratuito()+" controles). Desbloqueie o Premium para salvar ilimitados.",Toast.LENGTH_LONG).show();
+                    monetizacao.showPremiumDialog();
+                    return;
+                }
+                String url=climate.sourceUrl;
+                if(url==null || url.trim().isEmpty())
+                    url="https://raw.githubusercontent.com/smartHomeHub/SmartIR/main/codes/climate/"+model.code+".json";
                 long id=controleStorage.salvar(model.manufacturer+" "+model.model,"AR-CONDICIONADO",model.manufacturer,model.model,"AC SmartIR","SMARTIR|"+url,-1,38000);
                 if(id>0){saved[0]=controleStorage.buscar(id);}
             }
@@ -1164,6 +1171,7 @@ private static final int CARD_2 = Color.rgb(31,31,36);
 
         final TextView[] itens=new TextView[nomes.length];
         final int[] selecionado={-1};
+        final android.app.AlertDialog[] scannerDialog={null};
         int inicial=0;
         for(int i=0;i<perfisMapa.length;i++){
             if(perfisMapa[i].equals(perfilSelecionado[0])){ inicial=i; break; }
@@ -1186,6 +1194,7 @@ private static final int CARD_2 = Color.rgb(31,31,36);
                 // Para ar-condicionado, a marca do catálogo é apenas a porta de entrada.
                 // O controle real vem do SmartIR, que precisa do modelo/protocolo exato.
                 if("AC".equals(tipos[pos])){
+                    if(scannerDialog[0]!=null) scannerDialog[0].dismiss();
                     abrirSmartIrMarca(marcas[pos]);
                     return;
                 }
@@ -1257,6 +1266,7 @@ private static final int CARD_2 = Color.rgb(31,31,36);
             .setView(wrapScroll(box))
             .create();
 
+        scannerDialog[0]=dialog;
         dialog.setOnShowListener(x->{
             irPerfilTeste.selecionar(perfilSelecionado[0]);
             Button testar=testarProximoVisivel;
@@ -1888,13 +1898,17 @@ render[0]=()->{
                 int codigo=controleStorage.codigoComando(controle,funcao);
                 String perfil=controleStorage.perfilComando(controle,funcao);
                 int freq=controleStorage.frequenciaComando(controle,funcao);
-                if(codigo<0 || perfil.isEmpty()){
-                    Toast.makeText(this,"Código salvo inválido para "+funcao+".",Toast.LENGTH_SHORT).show();
-                    return;
+                boolean ok=false;
+                if("RAW".equalsIgnoreCase(perfil) || codigo<0){
+                    int[] raw=controleStorage.padraoRawComando(controle,funcao);
+                    int rawFreq=controleStorage.frequenciaRawComando(controle,funcao);
+                    if(raw!=null && raw.length>0)
+                        ok=irPerfilTeste.transmitirRaw(rawFreq>0?rawFreq:freq,raw);
+                }else if(!perfil.isEmpty()){
+                    irPerfilTeste.selecionar(perfil);
+                    ok=irPerfilTeste.transmitirSalvo(perfil,codigo,freq);
                 }
-                irPerfilTeste.selecionar(perfil);
-                boolean ok=irPerfilTeste.transmitirSalvo(perfil,codigo,freq);
-                Toast.makeText(this,ok?"✓ "+funcao+" enviado":"✕ Falha ao enviar "+funcao+" • "+freq+" Hz",Toast.LENGTH_SHORT).show();
+                Toast.makeText(this,ok?"✓ "+funcao+" enviado":"✕ Falha ao enviar "+funcao+(freq>0?" • "+freq+" Hz":""),Toast.LENGTH_SHORT).show();
             },null);
     }
 
@@ -2254,8 +2268,14 @@ render[0]=()->{
         if(controleAtivo==null || funcao.isEmpty()) return false;
         int codigo=controleStorage.codigoComando(controleAtivo,funcao);
         String perfil=controleStorage.perfilComando(controleAtivo,funcao);
-        if(codigo<0 || perfil.isEmpty()) return false;
-        return irPerfilTeste.transmitirSalvo(perfil,codigo,controleStorage.frequenciaComando(controleAtivo,funcao));
+        int freq=controleStorage.frequenciaComando(controleAtivo,funcao);
+        if("RAW".equalsIgnoreCase(perfil) || codigo<0){
+            int[] raw=controleStorage.padraoRawComando(controleAtivo,funcao);
+            int rawFreq=controleStorage.frequenciaRawComando(controleAtivo,funcao);
+            return raw!=null && raw.length>0 && irPerfilTeste.transmitirRaw(rawFreq>0?rawFreq:freq,raw);
+        }
+        if(perfil.isEmpty()) return false;
+        return irPerfilTeste.transmitirSalvo(perfil,codigo,freq);
     }
 
     /** Tecla n (1..5) do ventilador: usa o código aprendido para a função, ou o código padrão n. */
