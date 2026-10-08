@@ -198,7 +198,54 @@ public final class SmartIrDatabase {
                 }
             }
         }
+        // Algumas marcas do catálogo local usam protocolos Midea compatíveis
+        // (Comfee, Kaysun, MrCool etc.). Se o índice remoto estiver incompleto,
+        // ainda oferecemos os códigos SmartIR Midea conhecidos para teste.
+        if(out.isEmpty() && isMideaFamily(marca)){
+            out.addAll(modelosMideaFallback());
+        }
+
         Collections.sort(out,Comparator.comparing(x->x.model.toLowerCase(Locale.ROOT)));
+        return out;
+    }
+
+    private static boolean isMideaFamily(String marca){
+        if(marca==null) return false;
+        String m=normalizar(marca);
+        return m.equals("midea") || m.equals("comfee") || m.equals("kaysun") ||
+               m.equals("mrcool") || m.equals("mrcool") || m.equals("pioneer") ||
+               m.equals("lennox") || m.equals("keystone") || m.equals("consul") ||
+               m.equals("elgin") || m.equals("electrolux") || m.equals("philco") ||
+               m.equals("agratto") || m.equals("eos") || m.equals("gree") ||
+               m.equals("lg") || m.equals("samsung") || m.equals("tcl") ||
+               m.equals("daikin") || m.equals("fujitsu") || m.equals("mitsubishi") ||
+               m.equals("whirlpool");
+    }
+
+    private static List<Model> modelosMideaFallback(){
+        String[][] data={
+            {"1380","Midea / compatível • perfil 1380"},
+            {"1381","Midea / compatível • perfil 1381"},
+            {"1382","MSY-12HRDN1 / RG57A2-BGEF"},
+            {"1383","KFR-35G"},
+            {"1384","MSMACU-18HRFN1-QRD0GW"},
+            {"1385","R11HG/E"},
+            {"1386","KFR-32GW"},
+            {"1387","RG70E/BGEF"},
+            {"1388","42MAQA09S5"},
+            {"1389","MAP05R1WWT"},
+            {"1390","RG52C1/BGE / RG57H4-BGEF"},
+            {"1391","RG58E3/BGEF"},
+            {"1392","MPD-12CRN7"},
+            {"1393","Polario / MPPHB-09CRN7"},
+            {"1394","RG70C/BGEF"},
+            {"1395","RG10B(D1)/BGEFU1"},
+            {"4380","MCD-24HRN1-Q1 / RAS-10N3KVR-E"},
+            {"4381","RG70C1/BGEF"},
+            {"7386","KFR-32GW / ESPHome"}
+        };
+        List<Model> out=new ArrayList<>();
+        for(String[] x:data) out.add(new Model("Midea",x[0],x[1]));
         return out;
     }
 
