@@ -30,6 +30,10 @@ public final class SmartIrDatabase {
             "https://raw.githubusercontent.com/tonyperkins/smartir-code-aggregator/main/smartir_device_index.json";
     private static final String CODE_URL =
             "https://raw.githubusercontent.com/smartHomeHub/SmartIR/master/codes/climate/";
+    private static final String CODE_URL_MAIN =
+            "https://raw.githubusercontent.com/smartHomeHub/SmartIR/main/codes/climate/";
+    private static final String AGGREGATOR_CODE_URL =
+            "https://raw.githubusercontent.com/tonyperkins/smartir-code-aggregator/main/output/codes/climate/";
     private static final int TIMEOUT_MS = 12000;
     private static final double BRDLINK_UNIT_US = 269.0 / 8192.0;
 
@@ -49,39 +53,38 @@ public final class SmartIrDatabase {
         public final String manufacturer, code;
         public final List<String> models, modes, fans, swings;
         public final int minTemp, maxTemp, precision;
+        public final String encoding;
         private final JSONObject commands;
 
         Climate(String manufacturer,String code,List<String> models,List<String> modes,List<String> fans,List<String> swings,
-                int minTemp,int maxTemp,int precision,JSONObject commands){
+                int minTemp,int maxTemp,int precision,String encoding,JSONObject commands){
             this.manufacturer=manufacturer; this.code=code; this.models=models; this.modes=modes;
             this.fans=fans; this.swings=swings; this.minTemp=minTemp; this.maxTemp=maxTemp; this.precision=precision;
             this.commands=commands;
         }
 
-        public String offCommand(){ return commands.optString("off",""); }
+        public String offCommand(){ return extractCommand(commands.opt("off")); }
 
-        /** Procura o comando de estado mode -> fan -> temperature, tolerando pequenas variações de estrutura. */
+        /** Procura o estado mode -> fan -> swing -> temperature e também aceita wrappers JSON. */
         public String command(String mode,String fan,int temperature){ return command(mode,fan,swings.isEmpty()?null:swings.get(0),temperature); }
 
         public String command(String mode,String fan,String swing,int temperature){
             if(mode==null || mode.trim().isEmpty()) return offCommand();
-            JSONObject modeObj=commands.optJSONObject(mode);
-            if(modeObj==null) modeObj=findObjectIgnoreCase(commands,mode);
+            JSONObject modeObj=objectFor(commands,mode);
             if(modeObj==null) return "";
-            JSONObject fanObj=modeObj;
-            if(fan!=null && !fan.isEmpty()){
-                JSONObject candidate=modeObj.optJSONObject(fan);
-                if(candidate==null) candidate=findObjectIgnoreCase(modeObj,fan);
-                if(candidate!=null) fanObj=candidate;
-            }
+
+            JSONObject fanObj=fan!=null && !fan.isEmpty() ? objectFor(modeObj,fan) : modeObj;
+            if(fanObj==null) fanObj=modeObj;
+
             JSONObject tempObj=fanObj;
             if(swing!=null && !swing.isEmpty()){
-                JSONObject candidate=fanObj.optJSONObject(swing);
-                if(candidate==null) candidate=findObjectIgnoreCase(fanObj,swing);
+                JSONObject candidate=objectFor(fanObj,swing);
                 if(candidate!=null) tempObj=candidate;
             }
-            String exact=tempObj.optString(String.valueOf(temperature),"");
+
+            String exact=extractCommand(tempObj.opt(String.valueOf(temperature)));
             if(!exact.isEmpty()) return exact;
+
             String closest="";
             int best=Integer.MAX_VALUE;
             Iterator<String> it=tempObj.keys();
@@ -90,10 +93,51 @@ public final class SmartIrDatabase {
                 try{
                     int t=Integer.parseInt(k);
                     int d=Math.abs(t-temperature);
-                    if(d<best && tempObj.optString(k,"").length()>0){best=d;closest=tempObj.optString(k,"");}
+                    String value=extractCommand(tempObj.opt(k));
+                    if(d<best && !value.isEmpty()){best=d;closest=value;}
                 }catch(Exception ignored){}
             }
+
+            // Alguns códigos têm uma camada extra antes da temperatura.
+            if(closest.isEmpty()) closest=findCommandRecursively(tempObj,temperature);
             return closest;
+        }
+
+        private static JSONObject objectFor(JSONObject parent,String wanted){
+            if(parent==null || wanted==null) return null;
+            JSONObject direct=parent.optJSONObject(wanted);
+            if(direct!=null) return direct;
+            return findObjectIgnoreCase(parent,wanted);
+        }
+
+        private static String extractCommand(Object value){
+            if(value instanceof String) return ((String)value).trim();
+            if(value instanceof JSONObject){
+                JSONObject o=(JSONObject)value;
+                String[] keys={"ir_code_to_send","code","raw","data","value"};
+                for(String k:keys){
+                    String s=o.optString(k,"").trim();
+                    if(!s.isEmpty()) return s;
+                }
+            }
+            if(value instanceof JSONArray) return value.toString();
+            return "";
+        }
+
+        private static String findCommandRecursively(JSONObject o,int temperature){
+            Iterator<String> it=o.keys();
+            while(it.hasNext()){
+                String k=it.next();
+                Object v=o.opt(k);
+                if(v instanceof JSONObject){
+                    JSONObject n=(JSONObject)v;
+                    String direct=extractCommand(n.opt(String.valueOf(temperature)));
+                    if(!direct.isEmpty()) return direct;
+                    String nested=findCommandRecursively(n,temperature);
+                    if(!nested.isEmpty()) return nested;
+                }
+            }
+            return "";
         }
 
         private static JSONObject findObjectByTemperature(JSONObject o,int t){
@@ -159,8 +203,15 @@ public final class SmartIrDatabase {
 
     public static Climate carregar(Model model) throws Exception {
         if(model==null || model.code.isEmpty()) throw new IllegalArgumentException("Modelo inválido");
-        String url=CODE_URL+model.code+".json";
-        return parse(getText(url));
+        String file=model.code+".json";
+        Exception last=null;
+        String[] urls={CODE_URL+file,CODE_URL_MAIN+file,AGGREGATOR_CODE_URL+file};
+        for(String url:urls){
+            try{return parse(getText(url));}
+            catch(Exception e){last=e;}
+        }
+        throw new IllegalStateException("Código SmartIR "+model.code+" não pôde ser carregado."+
+                (last!=null && last.getMessage()!=null?" "+last.getMessage():""));
     }
 
     public static Climate carregarPorUrl(String url) throws Exception {
@@ -171,6 +222,7 @@ public final class SmartIrDatabase {
         JSONObject o=new JSONObject(json);
         String manufacturer=o.optString("manufacturer","Desconhecido");
         String code=o.optString("device_code","");
+        String encoding=o.optString("commandsEncoding","Base64");
         List<String> models=toList(o.optJSONArray("supportedModels"));
         List<String> modes=toList(o.optJSONArray("operationModes"));
         List<String> fans=toList(o.optJSONArray("fanModes"));
@@ -180,19 +232,30 @@ public final class SmartIrDatabase {
         int precision=(int)Math.round(o.optDouble("precision",1));
         JSONObject commands=o.optJSONObject("commands");
         if(commands==null) commands=new JSONObject();
-        return new Climate(manufacturer,code,models,modes,fans,swings,min,max,Math.max(1,precision),commands);
+        return new Climate(manufacturer,code,models,modes,fans,swings,min,max,Math.max(1,precision),encoding,commands);
     }
 
     /**
      * Converte o Base64 Broadlink usado pelo SmartIR em pulsos de microssegundos.
      * O formato usa unidade 269/8192 s e valores longos codificados com prefixo 0x00.
      */
+    public static int[] decodeCommand(String value,String encoding) throws Exception {
+        if(value==null || value.trim().isEmpty()) return new int[0];
+        if("Raw".equalsIgnoreCase(encoding)){
+            JSONArray a=new JSONArray(value);
+            int[] out=new int[a.length()];
+            for(int i=0;i<a.length();i++) out[i]=a.optInt(i,0);
+            return out;
+        }
+        return decodeBase64(value);
+    }
+
     public static int[] decodeBase64(String value) throws Exception {
         if(value==null || value.trim().isEmpty()) return new int[0];
         byte[] b=Base64.decode(value,Base64.DEFAULT);
         if(b.length<8) return new int[0];
         int payloadLength=(b[2]&255)|((b[3]&255)<<8);
-        int end=Math.min(b.length,4+payloadLength);
+        int end=payloadLength>0?Math.min(b.length,4+payloadLength):b.length;
         int i=4;
         List<Integer> out=new ArrayList<>();
         while(i<end){
