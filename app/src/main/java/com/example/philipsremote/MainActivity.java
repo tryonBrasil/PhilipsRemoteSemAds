@@ -1070,8 +1070,7 @@ private static final int CARD_2 = Color.rgb(31,31,36);
 
         // Começa na categoria do aparelho de entrada; TV, AR e ventilador ficam separados.
         final String categoriaInicial = categoriaForcada != null ? categoriaForcada :
-                ("Ventilador".equalsIgnoreCase(marca) ? "FAN" :
-                ("Universal".equalsIgnoreCase(marca) ? "" : "TV"));
+                ("Ventilador".equalsIgnoreCase(marca) ? "FAN" : "");
         final String[] categoriaFiltro={categoriaInicial};
         LinearLayout filtros=row();
         Button filtroTodos=botaoAcao("TODOS",KEY_DARK,11);
@@ -1096,7 +1095,7 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         perfilInfo.setTextColor(GRAY); perfilInfo.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
         box.addView(perfilInfo,new LinearLayout.LayoutParams(-1,dp(32)));
 
-        TextView status=label("●  Pronto para testar",15);
+        TextView status=label(irPerfilTeste.diagnosticoEmissor(),15);
         status.setTextColor(GRAY); status.setGravity(Gravity.CENTER_VERTICAL); status.setPadding(dp(14),0,dp(14),0);
         GradientDrawable statusBg=new GradientDrawable(); statusBg.setColor(CARD); statusBg.setCornerRadius(dp(14)); statusBg.setStroke(dp(1),BORDER); status.setBackground(statusBg);
         box.addView(status,new LinearLayout.LayoutParams(-1,dp(56)));
@@ -1181,8 +1180,8 @@ private static final int CARD_2 = Color.rgb(31,31,36);
                 perfilInfo.setText("Perfil: "+perfilSelecionado[0]);
                 irPerfilTeste.selecionar(perfilSelecionado[0]);
                 
-                status.setText("●  Pronto para testar");
-                status.setTextColor(GRAY);
+                status.setText(irPerfilTeste.diagnosticoEmissor());
+                status.setTextColor(irPerfilTeste.hasEmitter()?GRAY:ACCENT);
                 progresso.setText("Candidato 0");
                 detalhe.setText("Aponte o celular para o aparelho e toque em TESTAR PRÓXIMO.");
                 for(int j=0;j<itens.length;j++){
@@ -1214,8 +1213,8 @@ private static final int CARD_2 = Color.rgb(31,31,36);
                 status.setText("●  Nenhuma marca encontrada");
                 status.setTextColor(ACCENT);
             } else {
-                status.setText("●  Pronto para testar");
-                status.setTextColor(GRAY);
+                status.setText(irPerfilTeste.diagnosticoEmissor());
+                status.setTextColor(irPerfilTeste.hasEmitter()?GRAY:ACCENT);
             }
         };
         buscaMarca.addTextChangedListener(new android.text.TextWatcher(){
