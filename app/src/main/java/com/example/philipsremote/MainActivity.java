@@ -1076,6 +1076,19 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         GradientDrawable statusBg=new GradientDrawable(); statusBg.setColor(CARD); statusBg.setCornerRadius(dp(14)); statusBg.setStroke(dp(1),BORDER); status.setBackground(statusBg);
         box.addView(status,new LinearLayout.LayoutParams(-1,dp(56)));
 
+        // Ações principais sempre visíveis: não dependem da barra de botões do AlertDialog,
+        // que pode ficar escondida quando o conteúdo do testador é rolado.
+        LinearLayout acoesPrincipais=row();
+        Button cancelarTeste=botaoAcao("CANCELAR",KEY_DARK,11);
+        Button testarProximoVisivel=botaoAcao("TESTAR PRÓXIMO ▶",ACCENT,11);
+        Button funcionouSalvarVisivel=botaoAcao("✓ FUNCIONOU / SALVAR",Color.rgb(45,110,65),11);
+        acoesPrincipais.addView(cancelarTeste,lpPeso());
+        acoesPrincipais.addView(testarProximoVisivel,lpPeso());
+        acoesPrincipais.addView(funcionouSalvarVisivel,lpPeso());
+        LinearLayout.LayoutParams ap=new LinearLayout.LayoutParams(-1,dp(52));
+        ap.setMargins(0,dp(8),0,dp(6));
+        box.addView(acoesPrincipais,ap);
+
         LinearLayout navegacao=row();
         Button anterior=botaoAcao("◀ ANTERIOR",KEY_DARK,13);
         Button proximo=botaoAcao("PRÓXIMO ▶",KEY_DARK,13);
@@ -1201,16 +1214,17 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         android.app.AlertDialog dialog=new android.app.AlertDialog.Builder(this)
             .setTitle("TESTE UNIVERSAL")
             .setView(wrapScroll(box))
-            .setNegativeButton("CANCELAR",(d,w)->showMeusControles())
-            .setNeutralButton("TESTAR PRÓXIMO",null)
-            .setPositiveButton("FUNCIONOU / SALVAR",null)
             .create();
 
         dialog.setOnShowListener(x->{
             irPerfilTeste.selecionar(perfilSelecionado[0]); 
-            Button testar=dialog.getButton(android.app.AlertDialog.BUTTON_NEUTRAL);
-            Button salvar=dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE);
-            proximo.setOnClickListener(v->testar.performClick());
+            Button testar=testarProximoVisivel;
+            Button salvar=funcionouSalvarVisivel;
+            cancelarTeste.setOnClickListener(v->{
+                dialog.dismiss();
+                showMeusControles();
+            });
+            salvar.setOnClickListener(v->{
             anterior.setOnClickListener(v->{
                 String resultado=irPerfilTeste.previous();
                 status.setText("●  "+resultado); status.setTextColor(GRAY);
