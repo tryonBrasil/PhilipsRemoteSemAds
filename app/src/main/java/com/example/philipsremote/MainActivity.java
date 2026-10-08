@@ -578,95 +578,185 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         final String[] mode={climate.modes.isEmpty()?"cool":climate.modes.get(0)};
         final String[] fan={climate.fans.isEmpty()?"auto":climate.fans.get(0)};
         final String[] swing={climate.swings.isEmpty()?null:climate.swings.get(0)};
-        final int[] temp={climate.minTemp};
+        final int[] temp={Math.max(climate.minTemp,Math.min(climate.maxTemp,24))};
+        final boolean[] ligado={true};
         final ControleStorage.Controle[] saved={existing};
 
         ScrollView sv=new ScrollView(this); sv.setFillViewport(true); sv.setBackgroundColor(BG);
-        LinearLayout root=new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL); root.setPadding(dp(14),dp(14),dp(14),dp(24));
-        TextView title=label("AR-CONDICIONADO",22); title.setTypeface(Typeface.DEFAULT,Typeface.BOLD); title.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
-        root.addView(title,new LinearLayout.LayoutParams(-1,dp(42)));
-        TextView sub=label(model.manufacturer+" • "+model.model,12); sub.setTextColor(GRAY); sub.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
-        root.addView(sub,new LinearLayout.LayoutParams(-1,dp(30)));
-        TextView state=label("",15); state.setTextColor(WHITE); state.setPadding(dp(8),dp(10),dp(8),dp(10));
-        GradientDrawable sb=new GradientDrawable(); sb.setColor(CARD); sb.setCornerRadius(dp(18)); sb.setStroke(dp(1),BORDER); state.setBackground(sb);
-        root.addView(state,new LinearLayout.LayoutParams(-1,dp(70)));
+        LinearLayout root=new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL); root.setPadding(dp(14),dp(14),dp(14),dp(26));
 
+        LinearLayout top=row();
+        LinearLayout head=new LinearLayout(this); head.setOrientation(LinearLayout.VERTICAL);
+        TextView title=label("❄️  AR-CONDICIONADO",22); title.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
+        title.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
+        head.addView(title,new LinearLayout.LayoutParams(-1,dp(32)));
+        TextView sub=label(model.manufacturer+"  •  "+model.model,12); sub.setTextColor(GRAY);
+        sub.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
+        head.addView(sub,new LinearLayout.LayoutParams(-1,dp(24)));
+        top.addView(head,new LinearLayout.LayoutParams(0,dp(58),1));
+        TextView smart=badge("SMARTIR",Color.rgb(55,75,95));
+        top.addView(smart,new LinearLayout.LayoutParams(-2,dp(28)));
+        root.addView(top);
+
+        final TextView state=label("",13);
+        state.setTextColor(Color.rgb(105,190,125));
+        state.setGravity(Gravity.CENTER);
+        state.setPadding(dp(10),0,dp(10),0);
+        GradientDrawable stateBg=new GradientDrawable(); stateBg.setColor(Color.rgb(22,42,28)); stateBg.setCornerRadius(dp(14)); stateBg.setStroke(dp(1),Color.rgb(65,110,75));
+        state.setBackground(stateBg);
+        root.addView(state,new LinearLayout.LayoutParams(-1,dp(44)));
+
+        LinearLayout tempCard=new LinearLayout(this); tempCard.setOrientation(LinearLayout.VERTICAL); tempCard.setGravity(Gravity.CENTER);
+        tempCard.setPadding(dp(12),dp(12),dp(12),dp(12));
+        GradientDrawable tempBg=new GradientDrawable(); tempBg.setColor(CARD); tempBg.setCornerRadius(dp(24)); tempBg.setStroke(dp(1),BORDER);
+        tempCard.setBackground(tempBg);
+
+        TextView tempCaption=label("TEMPERATURA",11); tempCaption.setTextColor(GRAY);
+        tempCard.addView(tempCaption,new LinearLayout.LayoutParams(-1,dp(24)));
         LinearLayout tr=row();
-        Button menos=botaoAcao("−",KEY_DARK,22), mais=botaoAcao("+",KEY_DARK,22);
-        TextView tv=label(temp[0]+" °C",30); tv.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
-        tr.addView(menos,lpFixa(70)); tr.addView(tv,new LinearLayout.LayoutParams(0,dp(62),1)); tr.addView(mais,lpFixa(70)); root.addView(tr,new LinearLayout.LayoutParams(-1,dp(72)));
+        Button menos=botaoAcao("−",KEY_DARK,25);
+        Button mais=botaoAcao("+",KEY_DARK,25);
+        TextView tv=label(temp[0]+"°",40); tv.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
+        tr.addView(menos,lpFixa(72)); tr.addView(tv,new LinearLayout.LayoutParams(0,dp(72),1)); tr.addView(mais,lpFixa(72));
+        tempCard.addView(tr,new LinearLayout.LayoutParams(-1,dp(76)));
+        TextView limite=label(climate.minTemp+"°C  —  "+climate.maxTemp+"°C",11); limite.setTextColor(GRAY);
+        tempCard.addView(limite,new LinearLayout.LayoutParams(-1,dp(22)));
+        LinearLayout.LayoutParams tcp=new LinearLayout.LayoutParams(-1,dp(158)); tcp.setMargins(0,dp(8),0,dp(8)); root.addView(tempCard,tcp);
 
-        section(root,"MODO");
+        Runnable refresh=()->{
+            tv.setText(temp[0]+"°");
+            String st=(ligado[0]?"● LIGADO":"○ DESLIGADO")+"  •  "+modoTexto(mode[0])+"  •  "+temp[0]+" °C  •  "+fanTexto(fan[0]);
+            if(swing[0]!=null) st+="  •  SWING "+modoTexto(swing[0]);
+            state.setText(st);
+            state.setTextColor(ligado[0]?Color.rgb(105,190,125):GRAY);
+        };
+
+        Button powerOn=botaoAcao("⏻  LIGAR",Color.rgb(45,105,58),12);
+        Button powerOff=botaoAcao("⏻  DESLIGAR",Color.rgb(90,40,40),12);
+        powerOn.setOnClickListener(v->{
+            ligado[0]=true;
+            enviarEstadoAc(climate,mode[0],fan[0],swing[0],temp[0],state);
+            refresh.run();
+        });
+        powerOff.setOnClickListener(v->{
+            String cmd=climate.offCommand();
+            if(cmd.isEmpty()){Toast.makeText(this,"Este modelo não possui código OFF.",Toast.LENGTH_SHORT).show();return;}
+            ligado[0]=false;
+            enviarBase64Smart(cmd,climate,state,"Desligado");
+            refresh.run();
+        });
+        LinearLayout powerRow=row(); powerRow.addView(powerOn,lpPeso()); powerRow.addView(powerOff,lpPeso());
+        root.addView(powerRow,new LinearLayout.LayoutParams(-1,dp(50)));
+
+        section(root,"MODO DE OPERAÇÃO");
         LinearLayout mr=row();
-        for(String m:climate.modes){ Button b=botaoAcao(modoTexto(m),KEY,10); b.setOnClickListener(v->{mode[0]=m; atualizarEstadoAc(state,mode[0],fan[0],swing[0],temp[0]); enviarEstadoAc(climate,mode[0],fan[0],swing[0],temp[0],state);}); mr.addView(b,lpPeso()); }
-        root.addView(mr);
+        int mc=0;
+        for(String m:climate.modes){
+            final String value=m;
+            Button mb=botaoAcao(modoTexto(m),m.equals(mode[0])?ACCENT:KEY,10);
+            mb.setOnClickListener(v->{mode[0]=value;ligado[0]=true;enviarEstadoAc(climate,mode[0],fan[0],swing[0],temp[0],state);refresh.run();});
+            mr.addView(mb,lpPeso()); mc++;
+            if(mc%3==0 && mc<climate.modes.size()){root.addView(mr);mr=row();}
+        }
+        if(mc>0) root.addView(mr);
 
-        section(root,"VENTILAÇÃO");
+        section(root,"VELOCIDADE DO VENTILADOR");
         LinearLayout fr=row();
-        for(String f:climate.fans){ Button b=botaoAcao(fanTexto(f),KEY,10); b.setOnClickListener(v->{fan[0]=f; atualizarEstadoAc(state,mode[0],fan[0],swing[0],temp[0]); enviarEstadoAc(climate,mode[0],fan[0],swing[0],temp[0],state);}); fr.addView(b,lpPeso()); }
-        root.addView(fr);
+        int fc=0;
+        for(String f:climate.fans){
+            final String value=f;
+            Button fb=botaoAcao(fanTexto(f),f.equals(fan[0])?Color.rgb(65,85,105):KEY,10);
+            fb.setOnClickListener(v->{fan[0]=value;ligado[0]=true;enviarEstadoAc(climate,mode[0],fan[0],swing[0],temp[0],state);refresh.run();});
+            fr.addView(fb,lpPeso()); fc++;
+            if(fc%3==0 && fc<climate.fans.size()){root.addView(fr);fr=row();}
+        }
+        if(fc>0) root.addView(fr);
 
         if(!climate.swings.isEmpty()){
             section(root,"OSCILAÇÃO");
             LinearLayout sr=row();
-            for(String s:climate.swings){
-                Button b=botaoAcao(modoTexto(s),KEY,10);
-                b.setOnClickListener(v->{swing[0]=s; atualizarEstadoAc(state,mode[0],fan[0],swing[0],temp[0]); enviarEstadoAc(climate,mode[0],fan[0],swing[0],temp[0],state);});
-                sr.addView(b,lpPeso());
+            int sc=0;
+            for(String sw:climate.swings){
+                final String value=sw;
+                Button sb=botaoAcao(modoTexto(sw),sw.equals(swing[0])?Color.rgb(65,85,105):KEY,10);
+                sb.setOnClickListener(v->{swing[0]=value;ligado[0]=true;enviarEstadoAc(climate,mode[0],fan[0],swing[0],temp[0],state);refresh.run();});
+                sr.addView(sb,lpPeso()); sc++;
+                if(sc%3==0 && sc<climate.swings.size()){root.addView(sr);sr=row();}
             }
-            root.addView(sr);
+            if(sc>0) root.addView(sr);
         }
 
-        LinearLayout ar=row();
-        Button power=botaoAcao("⏻ DESLIGAR",Color.rgb(90,40,40),12);
-        power.setOnClickListener(v->{String b64=climate.offCommand(); if(b64.isEmpty()) Toast.makeText(this,"Código OFF indisponível.",Toast.LENGTH_SHORT).show(); else enviarBase64Smart(b64,state,"Desligado");});
-        ar.addView(power,lpPeso());
-        Button save=botaoAcao("💾 SALVAR",ACCENT,12);
+        section(root,"ATALHOS");
+        LinearLayout quick=row();
+        Button q24=botaoAcao("❄️ CONFORTO 24°",KEY_DARK,10);
+        Button q26=botaoAcao("🌿 ECONOMIA 26°",KEY_DARK,10);
+        Button qAuto=botaoAcao("AUTO",KEY_DARK,10);
+        quick.addView(q24,lpPeso()); quick.addView(q26,lpPeso()); quick.addView(qAuto,lpPeso());
+        root.addView(quick,new LinearLayout.LayoutParams(-1,dp(50)));
+        q24.setOnClickListener(v->{temp[0]=Math.max(climate.minTemp,Math.min(climate.maxTemp,24));ligado[0]=true;enviarEstadoAc(climate,mode[0],fan[0],swing[0],temp[0],state);refresh.run();});
+        q26.setOnClickListener(v->{temp[0]=Math.max(climate.minTemp,Math.min(climate.maxTemp,26));ligado[0]=true;enviarEstadoAc(climate,mode[0],fan[0],swing[0],temp[0],state);refresh.run();});
+        qAuto.setOnClickListener(v->{
+            for(String m:climate.modes) if("auto".equalsIgnoreCase(m)||"heat_cool".equalsIgnoreCase(m)){mode[0]=m;break;}
+            for(String f:climate.fans) if("auto".equalsIgnoreCase(f)){fan[0]=f;break;}
+            ligado[0]=true; enviarEstadoAc(climate,mode[0],fan[0],swing[0],temp[0],state); refresh.run();
+        });
+
+        LinearLayout actions=row();
+        Button save=botaoAcao(saved[0]==null?"💾 SALVAR CONTROLE":"✓ CONTROLE SALVO",ACCENT,12);
         save.setOnClickListener(v->{
             if(saved[0]==null){
                 String url="https://raw.githubusercontent.com/smartHomeHub/SmartIR/master/codes/climate/"+model.code+".json";
                 long id=controleStorage.salvar(model.manufacturer+" "+model.model,"AR-CONDICIONADO",model.manufacturer,model.model,"AC SmartIR","SMARTIR|"+url,-1,38000);
-                if(id>0){saved[0]=controleStorage.buscar(id); controleAtivo=saved[0]; prefs.edit().putLong("active_control_id",id).apply();}
+                if(id>0){saved[0]=controleStorage.buscar(id);controleAtivo=saved[0];prefs.edit().putLong("active_control_id",id).apply();}
             }
             if(saved[0]!=null){
-                int[] p=smartRaw(climate.command(mode[0],fan[0],swing[0],temp[0]));
+                int[] p=smartRaw(climate.command(mode[0],fan[0],swing[0],temp[0]),climate.encoding);
                 if(p.length>0) controleStorage.salvarComandoRaw(saved[0],"ESTADO ATUAL",38000,p);
-                Toast.makeText(this,"✓ Controle salvo.",Toast.LENGTH_SHORT).show(); build();
+                Toast.makeText(this,"✓ Controle de ar-condicionado salvo.",Toast.LENGTH_SHORT).show();
+                build();
             }
         });
-        ar.addView(save,lpPeso()); root.addView(ar);
+        actions.addView(save,lpPeso());
+        Button back=botaoAcao("← VOLTAR",KEY_DARK,12);
+        back.setOnClickListener(v->showSelector());
+        actions.addView(back,lpPeso());
+        root.addView(actions,new LinearLayout.LayoutParams(-1,dp(50)));
 
-        Button back=botaoAcao("← VOLTAR",KEY_DARK,12); back.setOnClickListener(v->showSelector());
-        root.addView(back,new LinearLayout.LayoutParams(-1,dp(48)));
-        atualizarEstadoAc(state,mode[0],fan[0],swing[0],temp[0]);
+        TextView foot=label("Banco SmartIR • "+climate.models.size()+" modelo(s) • "+climate.modes.size()+" modos • "+climate.fans.size()+" velocidades",11);
+        foot.setTextColor(GRAY); foot.setGravity(Gravity.CENTER);
+        root.addView(foot,new LinearLayout.LayoutParams(-1,dp(36)));
+
         menos.setOnClickListener(v->{
             temp[0]=Math.max(climate.minTemp,temp[0]-climate.precision);
-            tv.setText(temp[0]+" °C");
-            atualizarEstadoAc(state,mode[0],fan[0],swing[0],temp[0]);
-            enviarEstadoAc(climate,mode[0],fan[0],swing[0],temp[0],state);
+            ligado[0]=true; enviarEstadoAc(climate,mode[0],fan[0],swing[0],temp[0],state); refresh.run();
         });
         mais.setOnClickListener(v->{
             temp[0]=Math.min(climate.maxTemp,temp[0]+climate.precision);
-            tv.setText(temp[0]+" °C");
-            atualizarEstadoAc(state,mode[0],fan[0],swing[0],temp[0]);
-            enviarEstadoAc(climate,mode[0],fan[0],swing[0],temp[0],state);
+            ligado[0]=true; enviarEstadoAc(climate,mode[0],fan[0],swing[0],temp[0],state); refresh.run();
         });
+        refresh.run();
         sv.addView(root); mostrar(sv);
     }
 
     private void enviarEstadoAc(SmartIrDatabase.Climate c,String mode,String fan,String swing,int temp,TextView status){
-        String b64=c.command(mode,fan,swing,temp);
-        if(b64.isEmpty()){Toast.makeText(this,"Estado não disponível para este modelo.",Toast.LENGTH_SHORT).show();return;}
-        enviarBase64Smart(b64,status,modoTexto(mode)+" • "+temp+" °C");
+        String command=c.command(mode,fan,swing,temp);
+        if(command.isEmpty()){status.setText("✕ Estado não disponível para este modelo.");status.setTextColor(ACCENT);return;}
+        enviarBase64Smart(command,c,status,modoTexto(mode)+" • "+temp+" °C");
     }
-    private void enviarBase64Smart(String b64,TextView status,String texto){
-        try{int[] p=SmartIrDatabase.decodeBase64(b64); if(p.length==0){status.setText("Código indisponível");return;} boolean ok=irPerfilTeste.transmitirRaw(38000,p); status.setText(ok?"✓ "+texto:"✕ Emissor IR indisponível");}
-        catch(Exception e){status.setText("✕ Código inválido");}
+
+    private void enviarBase64Smart(String value,SmartIrDatabase.Climate climate,TextView status,String texto){
+        try{
+            int[] p=SmartIrDatabase.decodeCommand(value,climate.encoding);
+            if(p.length==0){status.setText("✕ Código indisponível");status.setTextColor(ACCENT);return;}
+            boolean ok=irPerfilTeste.transmitirRaw(38000,p);
+            status.setText(ok?"✓ "+texto:"✕ Emissor IR indisponível");
+            status.setTextColor(ok?Color.rgb(105,190,125):ACCENT);
+        }catch(Exception e){status.setText("✕ Código IR inválido");status.setTextColor(ACCENT);}
     }
-    private int[] smartRaw(String b64){try{return SmartIrDatabase.decodeBase64(b64);}catch(Exception e){return new int[0];}}
-    private void atualizarEstadoAc(TextView v,String mode,String fan,String swing,int temp){v.setText("Pronto • "+modoTexto(mode)+" • "+temp+" °C • "+fanTexto(fan)+(swing==null?"":" • SWING "+modoTexto(swing)));}
-    private String modoTexto(String s){return s==null?"":s.replace("_"," ").toUpperCase(Locale.ROOT);}
-    private String fanTexto(String s){return s==null?"":s.replace("_"," ").toUpperCase(Locale.ROOT);}
+
+    private int[] smartRaw(String value,String encoding){
+        try{return SmartIrDatabase.decodeCommand(value,encoding);}catch(Exception e){return new int[0];}
+    }
 
     private void abrirRemoteOnline(IrRemoteDatabase.RemoteFile remote){
         Toast.makeText(this,"⏳ Carregando "+remote.model+"...",Toast.LENGTH_SHORT).show();
