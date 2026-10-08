@@ -738,6 +738,30 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         sv.addView(root); mostrar(sv);
     }
 
+    private String modoTexto(String value){
+        if(value==null) return "";
+        String v=value.trim().toLowerCase(java.util.Locale.ROOT);
+        if(v.equals("cool")) return "❄️ FRIO";
+        if(v.equals("heat")) return "☀️ QUENTE";
+        if(v.equals("auto") || v.equals("heat_cool")) return "AUTO";
+        if(v.equals("dry")) return "💧 SECO";
+        if(v.equals("fan_only") || v.equals("fan")) return "🌀 VENT.";
+        if(v.equals("off")) return "DESL.";
+        return value.replace("_"," ").toUpperCase(java.util.Locale.ROOT);
+    }
+
+    private String fanTexto(String value){
+        if(value==null) return "";
+        String v=value.trim().toLowerCase(java.util.Locale.ROOT);
+        if(v.equals("auto")) return "AUTO";
+        if(v.equals("low") || v.equals("low-low")) return "BAIXA";
+        if(v.equals("medium") || v.equals("med")) return "MÉDIA";
+        if(v.equals("high")) return "ALTA";
+        if(v.equals("turbo") || v.equals("max")) return "TURBO";
+        if(v.equals("off")) return "OFF";
+        return value.replace("_"," ").toUpperCase(java.util.Locale.ROOT);
+    }
+
     private void enviarEstadoAc(SmartIrDatabase.Climate c,String mode,String fan,String swing,int temp,TextView status){
         String command=c.command(mode,fan,swing,temp);
         if(command.isEmpty()){status.setText("✕ Estado não disponível para este modelo.");status.setTextColor(ACCENT);return;}
