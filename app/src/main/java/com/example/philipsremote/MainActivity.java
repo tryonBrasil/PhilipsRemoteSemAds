@@ -422,7 +422,7 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         universal.setText("🔎  CONTROLE UNIVERSAL");
         universal.setTextColor(WHITE); universal.setTextSize(15); universal.setAllCaps(false);
         GradientDrawable universalBg=new GradientDrawable(); universalBg.setColor(ACCENT); universalBg.setCornerRadius(dp(16)); universal.setBackground(universalBg); actionFeedback(universal);
-        universal.setOnClickListener(v->showUniversalScanner(lgMode?"LG":"Philips",lgMode?"32LB620B":"50PUG6513/7"));
+        universal.setOnClickListener(v->showUniversalScanner(lgMode?"LG":"Philips",lgMode?"32LB620B":"50PUG6513/7","TV"));
         LinearLayout.LayoutParams universalParams=new LinearLayout.LayoutParams(-1,dp(58));
         universalParams.setMargins(0,dp(10),0,dp(0)); root.addView(universal,universalParams);
         TextView universalInfo=label("TV • AR-CONDICIONADO • VENTILADOR  •  pesquise a marca, teste códigos e salve o que funcionar.",12);
@@ -908,7 +908,9 @@ private static final int CARD_2 = Color.rgb(31,31,36);
     }
 
     /** Teste fácil: reduz a configuração a aparelho → função → testar → funcionou. */
-    private void showUniversalScanner(String marca,String modelo){
+    private void showUniversalScanner(String marca,String modelo){ showUniversalScanner(marca,modelo,null); }
+
+    private void showUniversalScanner(String marca,String modelo,String categoriaForcada){
         final String[] perfis=irPerfilTeste.perfis();
         final IrCatalog catalog=new IrCatalog(this);
         final java.util.List<IrCatalog.Device> catalogDevices=catalog.all();
@@ -972,10 +974,9 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         box.addView(buscaMarca,new LinearLayout.LayoutParams(-1,dp(48)));
 
         // Começa na categoria do aparelho de entrada; TV, AR e ventilador ficam separados.
-        final String categoriaInicial =
-                "Ventilador".equalsIgnoreCase(marca) ? "FAN" :
-                ("Universal".equalsIgnoreCase(marca) ? "" :
-                (ehMarcaArCondicionado(marca) ? "AC" : "TV"));
+        final String categoriaInicial = categoriaForcada != null ? categoriaForcada :
+                ("Ventilador".equalsIgnoreCase(marca) ? "FAN" :
+                ("Universal".equalsIgnoreCase(marca) ? "" : "TV"));
         final String[] categoriaFiltro={categoriaInicial};
         LinearLayout filtros=row();
         Button filtroTodos=botaoAcao("TODOS",KEY_DARK,11);
@@ -1832,7 +1833,7 @@ render[0]=()->{
 
         Button testar=new Button(this); testar.setText("🔎  TESTAR / APRENDER CÓDIGOS"); testar.setTextColor(WHITE); testar.setTextSize(13); testar.setAllCaps(false);
         GradientDrawable tb=new GradientDrawable(); tb.setColor(ACCENT); tb.setCornerRadius(dp(15)); testar.setBackground(tb); actionFeedback(testar);
-        testar.setOnClickListener(v->showUniversalScanner("Ventilador","Universal"));
+        testar.setOnClickListener(v->showUniversalScanner("Ventilador","Universal","FAN"));
         LinearLayout.LayoutParams tp=new LinearLayout.LayoutParams(-1,dp(52)); tp.setMargins(0,dp(10),0,dp(6)); root.addView(testar,tp);
 
         Button meus=new Button(this); meus.setText("★  MEUS CONTROLES"); meus.setTextColor(WHITE); meus.setTextSize(13); meus.setAllCaps(false);
@@ -1919,7 +1920,7 @@ render[0]=()->{
     private void showTvSetup(String marca,String modelo){
         wizardDialog("3 de 3 • Teste IR","TV: "+marca+" "+modelo+"\n\n1. Aponte o celular para a TV.\n2. Toque em TESTAR PRÓXIMO.\n3. Quando a TV responder, toque em FUNCIONOU / SALVAR.\n\nO primeiro código confirmado será usado como base do controle.")
             .setNegativeButton("CANCELAR",(d,w)->showMeusControles())
-            .setPositiveButton("INICIAR TESTE",(d,w)->showUniversalScanner(marca,modelo)).show();
+            .setPositiveButton("INICIAR TESTE",(d,w)->showUniversalScanner(marca,modelo,"TV")).show();
     }
 
     private void build(){
