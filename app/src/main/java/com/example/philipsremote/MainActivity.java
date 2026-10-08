@@ -873,6 +873,11 @@ private static final int CARD_2 = Color.rgb(31,31,36);
             Button add=new Button(this); add.setText("ADICIONAR"); add.setTextSize(9); add.setAllCaps(false); add.setTextColor(WHITE);
             add.setOnClickListener(v->{
                 if(salvo[0]==null){
+                    if(!monetizacao.podeSalvarControle(controleStorage.listar().size())){
+                        Toast.makeText(this,"Limite gratuito atingido (3 controles). Desbloqueie o Premium para salvar ilimitados.",Toast.LENGTH_LONG).show();
+                        monetizacao.showPremiumDialog();
+                        return;
+                    }
                     long id=controleStorage.salvar(remote.model,remote.category,remote.brand,remote.model,"RAW","Importado do banco online", -1,s.frequency);
                     if(id<0){ Toast.makeText(this,"Não foi possível criar o controle.",Toast.LENGTH_SHORT).show(); return; }
                     salvo[0]=controleStorage.buscar(id);
@@ -890,7 +895,19 @@ private static final int CARD_2 = Color.rgb(31,31,36);
             .setView(wrapScroll(box))
             .setPositiveButton("ABRIR CONTROLE",null)
             .setNegativeButton("FECHAR",null).create();
-        d.setOnShowListener(x->d.getButton(android.app.AlertDialog.BUTTON_POSITIVE).setOnClickListener(v->{ if(salvo[0]!=null){ controleAtivo=controleStorage.buscar(salvo[0].id); d.dismiss(); build(); } else Toast.makeText(this,"Adicione pelo menos uma função primeiro.",Toast.LENGTH_SHORT).show(); }));
+        d.setOnShowListener(x->d.getButton(android.app.AlertDialog.BUTTON_POSITIVE).setOnClickListener(v->{
+            if(salvo[0]!=null){
+                controleAtivo=controleStorage.buscar(salvo[0].id);
+                if(controleAtivo!=null){
+                    lgMode="LG".equalsIgnoreCase(controleAtivo.marca);
+                    prefs.edit().putLong("active_control_id",controleAtivo.id).putBoolean("lg_mode",lgMode).apply();
+                }
+                d.dismiss();
+                build();
+            } else {
+                Toast.makeText(this,"Adicione pelo menos uma função primeiro.",Toast.LENGTH_SHORT).show();
+            }
+        }));
         d.show();
     }
 
