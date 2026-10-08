@@ -61,6 +61,7 @@ public final class SmartIrDatabase {
             this.manufacturer=manufacturer; this.code=code; this.models=models; this.modes=modes;
             this.fans=fans; this.swings=swings; this.minTemp=minTemp; this.maxTemp=maxTemp; this.precision=precision;
             this.commands=commands;
+            this.encoding=encoding;
         }
 
         public String offCommand(){ return extractCommand(commands.opt("off")); }
