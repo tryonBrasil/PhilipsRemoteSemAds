@@ -551,11 +551,37 @@ private static final int CARD_2 = Color.rgb(31,31,36);
     }
 
     private void abrirSmartIrClimate(SmartIrDatabase.Model model){
-        Toast.makeText(this,"⏳ Carregando "+model.model+"...",Toast.LENGTH_SHORT).show();
+        if(model==null){
+            Toast.makeText(this,"Modelo de ar-condicionado inválido.",Toast.LENGTH_LONG).show();
+            return;
+        }
+        final android.app.AlertDialog carregando=new android.app.AlertDialog.Builder(this)
+            .setTitle("❄️ AR-CONDICIONADO")
+            .setMessage("Carregando o controle de "+model.manufacturer+" • "+model.model+"...\\n\\nAguarde enquanto os códigos do modelo são preparados para teste.")
+            .setNegativeButton("CANCELAR",null)
+            .create();
+        carregando.setOnShowListener(v->{
+            Button cancelar=carregando.getButton(android.app.AlertDialog.BUTTON_NEGATIVE);
+            cancelar.setOnClickListener(x->carregando.dismiss());
+        });
+        carregando.show();
         new Thread(()->{ try{
             SmartIrDatabase.Climate climate=SmartIrDatabase.carregar(model);
-            runOnUiThread(()->showAcRemote(climate,model,null));
-        }catch(Exception e){ runOnUiThread(()->Toast.makeText(this,e.getMessage()==null?"Falha ao carregar.":e.getMessage(),Toast.LENGTH_LONG).show()); } }).start();
+            runOnUiThread(()->{
+                carregando.dismiss();
+                showAcRemote(climate,model,null);
+            });
+        }catch(Exception e){
+            runOnUiThread(()->{
+                carregando.dismiss();
+                new android.app.AlertDialog.Builder(this)
+                    .setTitle("NÃO FOI POSSÍVEL CARREGAR")
+                    .setMessage("O modelo foi selecionado, mas os códigos não puderam ser carregados.\\n\\n"+(e.getMessage()==null?"Verifique a internet e tente novamente.":e.getMessage()))
+                    .setNegativeButton("VOLTAR",null)
+                    .setPositiveButton("TENTAR NOVAMENTE",(d,w)->abrirSmartIrClimate(model))
+                    .show();
+            });
+        } }).start();
     }
 
     private void abrirSmartIrSalvo(ControleStorage.Controle controle){
