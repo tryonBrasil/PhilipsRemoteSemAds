@@ -35,6 +35,7 @@ public class IrPerfilTeste {
     private boolean rc5Toggle = false, rc6Toggle = false, varredura = false;
     private int manual = -1;
     private String descManual = "";
+    private String ultimoErro = "";
 
     public IrPerfilTeste(Context c) {
         ir = (ConsumerIrManager) c.getSystemService(Context.CONSUMER_IR_SERVICE);
@@ -43,6 +44,14 @@ public class IrPerfilTeste {
     }
 
     public boolean hasEmitter() { return ir != null && ir.hasIrEmitter(); }
+
+    public String diagnosticoEmissor() {
+        if (ir == null) return "Este aparelho não disponibilizou o emissor IR ao Android.";
+        try { return ir.hasIrEmitter() ? "Emissor IR detectado e pronto." : "Emissor IR não detectado neste aparelho."; }
+        catch (Exception e) { return "Falha ao consultar o emissor IR: " + e.getMessage(); }
+    }
+
+    public String ultimoErro() { return ultimoErro; }
 
     /** Transmite um padrão RAW já convertido para marca/espaço em microssegundos. */
     public boolean transmitirRaw(int frequencia, int[] padrao) {
@@ -74,7 +83,10 @@ public class IrPerfilTeste {
         } catch (Exception e) { return desejada; }
     }
 
-    private void tx(int desejada, int[] padrao) { ir.transmit(freq(desejada), padrao); }
+    private void tx(int desejada, int[] padrao) {
+        try { ir.transmit(freq(desejada), padrao); }
+        catch (Exception e) { ultimoErro = e.getClass().getSimpleName() + (e.getMessage()==null ? "" : ": " + e.getMessage()); throw e; }
+    }
 
     public String[] perfis() {
         return new String[]{"LG / NEC", "Samsung TV", "Sony TV", "Philips / RC5", "Philips / RC6", "Panasonic TV",
@@ -270,7 +282,7 @@ public class IrPerfilTeste {
             Sinal s = sinalItem(x);
             if (s != null) tx(s.freq, s.padrao);
             return String.format(Locale.US, "%s • %d/%d", x.nome, pos, itens.size());
-        } catch (Exception e) { return String.format(Locale.US, "ERRO %s: %s", x.nome, e.getMessage()); }
+        } catch (Exception e) { return String.format(Locale.US, "ERRO %s: %s", x.nome, ultimoErro.isEmpty()?e.getMessage():ultimoErro); }
     }
 
     /** Volta um candidato e o retransmite (assim o código "atual" é sempre o que acabou de ser enviado). */
