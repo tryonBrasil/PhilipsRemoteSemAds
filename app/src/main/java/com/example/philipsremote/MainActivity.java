@@ -1302,6 +1302,8 @@ private static final int CARD_2 = Color.rgb(31,31,36);
                 oferecerConfiguracaoAutomatica(controleAtivo);
             });
         });
+    }
+
     private void oferecerConfiguracaoAutomatica(ControleStorage.Controle controle){
         if(controle==null){ showMeusControles(); return; }
 
