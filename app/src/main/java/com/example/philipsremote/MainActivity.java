@@ -1345,6 +1345,9 @@ private static final int CARD_2 = Color.rgb(31,31,36);
                 oferecerConfiguracaoAutomatica(controleAtivo);
             });
         });
+
+        // O listener acima só configura os controles do diálogo. Sem show(), o AlertDialog nunca é exibido.
+        dialog.show();
     }
 
     private void oferecerConfiguracaoAutomatica(ControleStorage.Controle controle){
