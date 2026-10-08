@@ -758,7 +758,7 @@ private static final int CARD_2 = Color.rgb(31,31,36);
             if(saved[0]==null){
                 String url="https://raw.githubusercontent.com/smartHomeHub/SmartIR/master/codes/climate/"+model.code+".json";
                 long id=controleStorage.salvar(model.manufacturer+" "+model.model,"AR-CONDICIONADO",model.manufacturer,model.model,"AC SmartIR","SMARTIR|"+url,-1,38000);
-                if(id>0){saved[0]=controleStorage.buscar(id);controleAtivo=saved[0];prefs.edit().putLong("active_control_id",id).apply();}
+                if(id>0){saved[0]=controleStorage.buscar(id);}
             }
             if(saved[0]!=null){
                 int[] p=smartRaw(climate.command(mode[0],fan[0],swing[0],temp[0]),climate.encoding);
@@ -876,8 +876,6 @@ private static final int CARD_2 = Color.rgb(31,31,36);
                     long id=controleStorage.salvar(remote.model,remote.category,remote.brand,remote.model,"RAW","Importado do banco online", -1,s.frequency);
                     if(id<0){ Toast.makeText(this,"Não foi possível criar o controle.",Toast.LENGTH_SHORT).show(); return; }
                     salvo[0]=controleStorage.buscar(id);
-                    controleAtivo=salvo[0];
-                    prefs.edit().putLong("active_control_id",id).apply();
                 }
                 controleStorage.salvarComandoRaw(salvo[0],s.name,s.frequency,s.pattern);
                 salvo[0]=controleStorage.buscar(salvo[0].id);
