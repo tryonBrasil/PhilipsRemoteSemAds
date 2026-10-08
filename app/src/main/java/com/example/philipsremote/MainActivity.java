@@ -1755,27 +1755,73 @@ render[0]=()->{
     private void showFanRemote(){
         showingSelector=false; fanMode=true;
         ScrollView sv=new ScrollView(this); sv.setFillViewport(true); sv.setBackgroundColor(BG);
-        LinearLayout root=new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL); root.setPadding(dp(14),dp(14),dp(14),dp(24));
-        TextView title=label("VENTILADOR UNIVERSAL",22); title.setTypeface(Typeface.DEFAULT,Typeface.BOLD); title.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
-        root.addView(title,new LinearLayout.LayoutParams(-1,dp(42)));
-        TextView sub=label("Controle IR • 38 kHz • funções básicas",12); sub.setTextColor(GRAY); sub.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
-        root.addView(sub,new LinearLayout.LayoutParams(-1,dp(28)));
-        LinearLayout imageCard=new LinearLayout(this); imageCard.setGravity(Gravity.CENTER); imageCard.setPadding(dp(18),dp(12),dp(18),dp(12));
-        GradientDrawable imageBg=new GradientDrawable(); imageBg.setColor(CARD); imageBg.setCornerRadius(dp(18)); imageBg.setStroke(dp(1),BORDER); imageCard.setBackground(imageBg);
-        ImageView image=new ImageView(this); image.setImageResource(R.drawable.fan_remote); image.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
-        imageCard.addView(image,new LinearLayout.LayoutParams(-1,dp(210))); root.addView(imageCard,new LinearLayout.LayoutParams(-1,dp(238)));
-        TextView aviso=label("A imagem representa o controle universal. Os códigos são testados por função.",11); aviso.setTextColor(GRAY); aviso.setGravity(Gravity.CENTER);
-        root.addView(aviso,new LinearLayout.LayoutParams(-1,dp(38)));
-        LinearLayout r=row(); add(r,key("⏻\nLIGA / DESLIGA",1,64,Color.rgb(125,35,40),13)); add(r,key("🌀\nOSCILAÇÃO",2,64,KEY,13)); root.addView(r);
-        r=row(); add(r,key("＋\nVELOCIDADE",3,64,KEY,13)); add(r,key("⏱\nTIMER",4,64,KEY,13)); root.addView(r);
-        r=row(); add(r,key("🌙\nNOTURNO",5,64,KEY,13)); root.addView(r);
-        TextView info=label("⚠️ Compatibilidade varia conforme o modelo do ventilador. Se não responder, use CONTROLE UNIVERSAL para experimentar outros códigos.",11); info.setTextColor(Color.rgb(190,170,110)); info.setGravity(Gravity.CENTER); root.addView(info,new LinearLayout.LayoutParams(-1,dp(62)));
-        Button testar=new Button(this); testar.setText("🔎  TESTAR / SALVAR CONTROLE"); testar.setTextColor(WHITE); testar.setTextSize(13); testar.setAllCaps(false);
+        LinearLayout root=new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL); root.setPadding(dp(14),dp(14),dp(14),dp(26));
+
+        LinearLayout top=row();
+        LinearLayout head=new LinearLayout(this); head.setOrientation(LinearLayout.VERTICAL);
+        TextView title=label("🌀  VENTILADOR",24); title.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
+        title.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
+        head.addView(title,new LinearLayout.LayoutParams(-1,dp(34)));
+        TextView sub=label(controleAtivo!=null?controleAtivo.marca+" • "+controleAtivo.modelo:"Controle universal • 38 kHz",12);
+        sub.setTextColor(GRAY); sub.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
+        head.addView(sub,new LinearLayout.LayoutParams(-1,dp(24)));
+        top.addView(head,new LinearLayout.LayoutParams(0,dp(58),1));
+        TextView badge=badge(controleAtivo!=null?"SALVO":"UNIVERSAL",controleAtivo!=null?Color.rgb(55,110,65):Color.rgb(60,60,68));
+        top.addView(badge,new LinearLayout.LayoutParams(-2,dp(28)));
+        root.addView(top);
+
+        LinearLayout statusCard=new LinearLayout(this); statusCard.setGravity(Gravity.CENTER_VERTICAL); statusCard.setPadding(dp(14),0,dp(14),0);
+        GradientDrawable sb=new GradientDrawable(); sb.setColor(CARD); sb.setCornerRadius(dp(18)); sb.setStroke(dp(1),BORDER); statusCard.setBackground(sb);
+        TextView status=label("●  Pronto para enviar comandos",13); status.setTextColor(SUCCESS); status.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
+        statusCard.addView(status,new LinearLayout.LayoutParams(0,dp(48),1));
+        TextView freq=label("38 kHz",11); freq.setTextColor(GRAY); statusCard.addView(freq,new LinearLayout.LayoutParams(-2,dp(48)));
+        root.addView(statusCard,new LinearLayout.LayoutParams(-1,dp(52)));
+
+        LinearLayout powerCard=new LinearLayout(this); powerCard.setGravity(Gravity.CENTER); powerCard.setPadding(dp(12),dp(14),dp(12),dp(14));
+        GradientDrawable pc=new GradientDrawable(); pc.setColor(Color.rgb(27,27,30)); pc.setCornerRadius(dp(24)); pc.setStroke(dp(1),BORDER); powerCard.setBackground(pc);
+        Button power=new Button(this); power.setText("⏻"); power.setTextColor(WHITE); power.setTextSize(34); power.setGravity(Gravity.CENTER);
+        power.setAllCaps(false); power.setMinHeight(0); power.setMinWidth(0);
+        GradientDrawable pg=new GradientDrawable(); pg.setColor(Color.rgb(125,35,40)); pg.setCornerRadius(dp(48)); pg.setStroke(dp(1),Color.rgb(185,60,65)); power.setBackground(pg);
+        actionFeedback(power);
+        power.setOnClickListener(v->{enviarVentilador(1);status.setText("✓  Liga / desliga enviado");});
+        powerCard.addView(power,new LinearLayout.LayoutParams(dp(104),dp(104)));
+        LinearLayout.LayoutParams pcp=new LinearLayout.LayoutParams(-1,dp(132)); pcp.setMargins(0,dp(8),0,dp(8)); root.addView(powerCard,pcp);
+
+        section(root,"CONTROLE PRINCIPAL");
+        LinearLayout r=row();
+        Button osc=key("↕\nOSCILAÇÃO",2,70,KEY,13);
+        Button vel=key("≋\nVELOCIDADE",3,70,Color.rgb(55,65,80),13);
+        r.addView(osc); r.addView(vel); root.addView(r);
+        r=row();
+        Button timer=key("⏱\nTIMER",4,70,KEY,13);
+        Button sleep=key("☾\nNOTURNO",5,70,KEY,13);
+        r.addView(timer); r.addView(sleep); root.addView(r);
+
+        LinearLayout infoCard=new LinearLayout(this); infoCard.setOrientation(LinearLayout.VERTICAL); infoCard.setPadding(dp(14),dp(12),dp(14),dp(12));
+        GradientDrawable ib=new GradientDrawable(); ib.setColor(CARD); ib.setCornerRadius(dp(18)); ib.setStroke(dp(1),BORDER); infoCard.setBackground(ib);
+        TextView infoTitle=label("CONTROLE INTELIGENTE",13); infoTitle.setTypeface(Typeface.DEFAULT,Typeface.BOLD); infoTitle.setGravity(Gravity.LEFT);
+        infoCard.addView(infoTitle,new LinearLayout.LayoutParams(-1,dp(26)));
+        TextView info=label("Teste os códigos por função e salve somente os que realmente respondem ao seu ventilador. Assim o controle fica personalizado para o seu modelo.",11);
+        info.setTextColor(GRAY); info.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
+        infoCard.addView(info,new LinearLayout.LayoutParams(-1,dp(52)));
+        root.addView(infoCard,new LinearLayout.LayoutParams(-1,dp(96)));
+
+        Button testar=new Button(this); testar.setText("🔎  TESTAR / APRENDER CÓDIGOS"); testar.setTextColor(WHITE); testar.setTextSize(13); testar.setAllCaps(false);
         GradientDrawable tb=new GradientDrawable(); tb.setColor(ACCENT); tb.setCornerRadius(dp(15)); testar.setBackground(tb); actionFeedback(testar);
-        testar.setOnClickListener(v->showUniversalScanner("Ventilador","Universal")); root.addView(testar,new LinearLayout.LayoutParams(-1,dp(52)));
-        Button voltar=new Button(this); voltar.setText("VOLTAR"); voltar.setTextColor(WHITE); voltar.setAllCaps(false); voltar.setTextSize(13);
-        GradientDrawable vb=new GradientDrawable(); vb.setColor(CARD_2); vb.setCornerRadius(dp(15)); voltar.setBackground(vb); actionFeedback(voltar); voltar.setOnClickListener(v->showSelector());
+        testar.setOnClickListener(v->showUniversalScanner("Ventilador","Universal"));
+        LinearLayout.LayoutParams tp=new LinearLayout.LayoutParams(-1,dp(52)); tp.setMargins(0,dp(10),0,dp(6)); root.addView(testar,tp);
+
+        Button meus=new Button(this); meus.setText("★  MEUS CONTROLES"); meus.setTextColor(WHITE); meus.setTextSize(13); meus.setAllCaps(false);
+        GradientDrawable mb=new GradientDrawable(); mb.setColor(KEY_DARK); mb.setCornerRadius(dp(15)); meus.setBackground(mb); actionFeedback(meus);
+        meus.setOnClickListener(v->showMeusControles()); root.addView(meus,new LinearLayout.LayoutParams(-1,dp(48)));
+
+        TextView aviso=label("⚠️ Ventiladores variam bastante entre marcas e modelos. Se uma função não responder, não significa que o emissor do celular esteja com defeito.",11);
+        aviso.setTextColor(Color.rgb(190,170,110)); aviso.setGravity(Gravity.CENTER);
+        LinearLayout.LayoutParams ap=new LinearLayout.LayoutParams(-1,dp(58)); ap.setMargins(0,dp(8),0,dp(2)); root.addView(aviso,ap);
+
+        Button voltar=botaoAcao("← VOLTAR",KEY_DARK,12); voltar.setOnClickListener(v->showSelector());
         root.addView(voltar,new LinearLayout.LayoutParams(-1,dp(48)));
+
         sv.addView(root); mostrar(sv);
     }
     private void showSobre(){
