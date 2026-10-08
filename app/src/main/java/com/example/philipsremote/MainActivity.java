@@ -600,6 +600,8 @@ private static final int CARD_2 = Color.rgb(31,31,36);
 
         ScrollView sv=new ScrollView(this); sv.setFillViewport(true); sv.setBackgroundColor(BG);
         LinearLayout root=new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL); root.setPadding(dp(14),dp(14),dp(14),dp(26));
+        final int[] fanFunc={0};
+        final java.util.List<Button> fanActionButtons=new ArrayList<>();
 
         LinearLayout top=row();
         LinearLayout head=new LinearLayout(this); head.setOrientation(LinearLayout.VERTICAL);
@@ -1864,7 +1866,11 @@ render[0]=()->{
         power.setAllCaps(false); power.setMinHeight(0); power.setMinWidth(0);
         GradientDrawable pg=new GradientDrawable(); pg.setColor(Color.rgb(125,35,40)); pg.setCornerRadius(dp(48)); pg.setStroke(dp(1),Color.rgb(185,60,65)); power.setBackground(pg);
         actionFeedback(power);
-        power.setOnClickListener(v->{enviarVentilador(1);status.setText("✓  Liga / desliga enviado");});
+        power.setOnClickListener(v->{
+            enviarVentilador(1); fanFunc[0]=1; status.setText("✓  Liga / desliga enviado");
+            for(Button b:fanActionButtons){ b.setBackgroundColor(KEY); }
+            power.setAlpha(.95f);
+        });
         powerCard.addView(power,new LinearLayout.LayoutParams(dp(104),dp(104)));
         LinearLayout.LayoutParams pcp=new LinearLayout.LayoutParams(-1,dp(132)); pcp.setMargins(0,dp(8),0,dp(8)); root.addView(powerCard,pcp);
 
@@ -1872,20 +1878,37 @@ render[0]=()->{
         LinearLayout r=row();
         Button osc=key("↕\nOSCILAÇÃO",2,70,KEY,13);
         Button vel=key("≋\nVELOCIDADE",3,70,Color.rgb(55,65,80),13);
-        r.addView(osc); r.addView(vel); root.addView(r);
-        r=row();
         Button timer=key("⏱\nTIMER",4,70,KEY,13);
         Button sleep=key("☾\nNOTURNO",5,70,KEY,13);
+        fanActionButtons.add(osc); fanActionButtons.add(vel); fanActionButtons.add(timer); fanActionButtons.add(sleep);
+        r.addView(osc); r.addView(vel); root.addView(r);
+        r=row();
         r.addView(timer); r.addView(sleep); root.addView(r);
 
         LinearLayout infoCard=new LinearLayout(this); infoCard.setOrientation(LinearLayout.VERTICAL); infoCard.setPadding(dp(14),dp(12),dp(14),dp(12));
         GradientDrawable ib=new GradientDrawable(); ib.setColor(CARD); ib.setCornerRadius(dp(18)); ib.setStroke(dp(1),BORDER); infoCard.setBackground(ib);
         TextView infoTitle=label("CONTROLE INTELIGENTE",13); infoTitle.setTypeface(Typeface.DEFAULT,Typeface.BOLD); infoTitle.setGravity(Gravity.LEFT);
         infoCard.addView(infoTitle,new LinearLayout.LayoutParams(-1,dp(26)));
-        TextView info=label("Teste os códigos por função e salve somente os que realmente respondem ao seu ventilador. Assim o controle fica personalizado para o seu modelo.",11);
+        TextView info=label("Toque em uma função para enviar o comando. A função usada fica destacada e o status acima confirma o último envio. Para modelos diferentes, use TESTAR / APRENDER CÓDIGOS.",11);
         info.setTextColor(GRAY); info.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
         infoCard.addView(info,new LinearLayout.LayoutParams(-1,dp(52)));
         root.addView(infoCard,new LinearLayout.LayoutParams(-1,dp(96)));
+        View.OnClickListener fanClick=v->{
+            Button b=(Button)v;
+            int func=fanActionButtons.indexOf(b)+2;
+            if(func<2 || func>5) return;
+            enviarVentilador(func);
+            fanFunc[0]=func;
+            status.setText("✓  "+(func==2?"Oscilação":func==3?"Velocidade":func==4?"Timer":"Modo noturno")+" enviado");
+            for(Button x:fanActionButtons){
+                GradientDrawable g=new GradientDrawable();
+                g.setColor(x==b?Color.rgb(65,85,105):KEY);
+                g.setCornerRadius(dp(16)); g.setStroke(dp(1),BORDER);
+                x.setBackground(g);
+            }
+        };
+        osc.setOnClickListener(fanClick); vel.setOnClickListener(fanClick);
+        timer.setOnClickListener(fanClick); sleep.setOnClickListener(fanClick);
 
         Button testar=new Button(this); testar.setText("🔎  TESTAR / APRENDER CÓDIGOS"); testar.setTextColor(WHITE); testar.setTextSize(13); testar.setAllCaps(false);
         GradientDrawable tb=new GradientDrawable(); tb.setColor(ACCENT); tb.setCornerRadius(dp(15)); testar.setBackground(tb); actionFeedback(testar);
