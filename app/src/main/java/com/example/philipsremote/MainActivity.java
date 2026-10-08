@@ -581,6 +581,9 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         final int[] temp={Math.max(climate.minTemp,Math.min(climate.maxTemp,24))};
         final boolean[] ligado={true};
         final ControleStorage.Controle[] saved={existing};
+        final java.util.List<Button> modeButtons=new ArrayList<>();
+        final java.util.List<Button> fanButtons=new ArrayList<>();
+        final java.util.List<Button> swingButtons=new ArrayList<>();
 
         ScrollView sv=new ScrollView(this); sv.setFillViewport(true); sv.setBackgroundColor(BG);
         LinearLayout root=new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL); root.setPadding(dp(14),dp(14),dp(14),dp(26));
@@ -629,6 +632,30 @@ private static final int CARD_2 = Color.rgb(31,31,36);
             if(swing[0]!=null) st+="  •  SWING "+modoTexto(swing[0]);
             state.setText(st);
             state.setTextColor(ligado[0]?Color.rgb(105,190,125):GRAY);
+            for(Button b:modeButtons){
+                String v=String.valueOf(b.getTag());
+                GradientDrawable g=new GradientDrawable();
+                g.setColor(v.equals(mode[0])?ACCENT:KEY);
+                g.setCornerRadius(dp(14));
+                g.setStroke(dp(1),BORDER);
+                b.setBackground(g);
+            }
+            for(Button b:fanButtons){
+                String v=String.valueOf(b.getTag());
+                GradientDrawable g=new GradientDrawable();
+                g.setColor(v.equals(fan[0])?Color.rgb(65,85,105):KEY);
+                g.setCornerRadius(dp(14));
+                g.setStroke(dp(1),BORDER);
+                b.setBackground(g);
+            }
+            for(Button b:swingButtons){
+                String v=String.valueOf(b.getTag());
+                GradientDrawable g=new GradientDrawable();
+                g.setColor(v.equals(swing[0])?Color.rgb(65,85,105):KEY);
+                g.setCornerRadius(dp(14));
+                g.setStroke(dp(1),BORDER);
+                b.setBackground(g);
+            }
         };
 
         Button powerOn=botaoAcao("⏻  LIGAR",Color.rgb(45,105,58),12);
@@ -654,6 +681,8 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         for(String m:climate.modes){
             final String value=m;
             Button mb=botaoAcao(modoTexto(m),m.equals(mode[0])?ACCENT:KEY,10);
+            mb.setTag(value);
+            modeButtons.add(mb);
             mb.setOnClickListener(v->{mode[0]=value;ligado[0]=true;enviarEstadoAc(climate,mode[0],fan[0],swing[0],temp[0],state);refresh.run();});
             mr.addView(mb,lpPeso()); mc++;
             if(mc%3==0 && mc<climate.modes.size()){root.addView(mr);mr=row();}
@@ -666,6 +695,8 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         for(String f:climate.fans){
             final String value=f;
             Button fb=botaoAcao(fanTexto(f),f.equals(fan[0])?Color.rgb(65,85,105):KEY,10);
+            fb.setTag(value);
+            fanButtons.add(fb);
             fb.setOnClickListener(v->{fan[0]=value;ligado[0]=true;enviarEstadoAc(climate,mode[0],fan[0],swing[0],temp[0],state);refresh.run();});
             fr.addView(fb,lpPeso()); fc++;
             if(fc%3==0 && fc<climate.fans.size()){root.addView(fr);fr=row();}
@@ -679,6 +710,8 @@ private static final int CARD_2 = Color.rgb(31,31,36);
             for(String sw:climate.swings){
                 final String value=sw;
                 Button sb=botaoAcao(modoTexto(sw),sw.equals(swing[0])?Color.rgb(65,85,105):KEY,10);
+                sb.setTag(value);
+                swingButtons.add(sb);
                 sb.setOnClickListener(v->{swing[0]=value;ligado[0]=true;enviarEstadoAc(climate,mode[0],fan[0],swing[0],temp[0],state);refresh.run();});
                 sr.addView(sb,lpPeso()); sc++;
                 if(sc%3==0 && sc<climate.swings.size()){root.addView(sr);sr=row();}
@@ -1767,8 +1800,8 @@ render[0]=()->{
                     return;
                 }
                 irPerfilTeste.selecionar(perfil);
-                boolean ok=irPerfilTeste.transmitManual("0x"+Integer.toHexString(codigo));
-                Toast.makeText(this,ok?"✓ "+funcao+" enviado":"✕ Falha ao enviar "+funcao,Toast.LENGTH_SHORT).show();
+                boolean ok=irPerfilTeste.transmitirSalvo(perfil,codigo,freq);
+                Toast.makeText(this,ok?"✓ "+funcao+" enviado":"✕ Falha ao enviar "+funcao+" • "+freq+" Hz",Toast.LENGTH_SHORT).show();
             },null);
     }
 
