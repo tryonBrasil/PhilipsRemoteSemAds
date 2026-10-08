@@ -58,14 +58,16 @@ public final class SmartIrDatabase {
         public final List<String> models, modes, fans, swings;
         public final int minTemp, maxTemp, precision;
         public final String encoding;
+        public final String sourceUrl;
         private final JSONObject commands;
 
         Climate(String manufacturer,String code,List<String> models,List<String> modes,List<String> fans,List<String> swings,
-                int minTemp,int maxTemp,int precision,String encoding,JSONObject commands){
+                int minTemp,int maxTemp,int precision,String encoding,JSONObject commands,String sourceUrl){
             this.manufacturer=manufacturer; this.code=code; this.models=models; this.modes=modes;
             this.fans=fans; this.swings=swings; this.minTemp=minTemp; this.maxTemp=maxTemp; this.precision=precision;
             this.commands=commands;
             this.encoding=encoding;
+            this.sourceUrl=sourceUrl==null?"":sourceUrl;
         }
 
         public String offCommand(){ return extractCommand(commands.opt("off")); }
@@ -332,7 +334,8 @@ public final class SmartIrDatabase {
             try{
                 Climate result=parse(getText(url));
                 if(result.commands.length()==0) throw new IllegalStateException("JSON sem comandos");
-                return result;
+                return new Climate(result.manufacturer,result.code,result.models,result.modes,result.fans,result.swings,
+                        result.minTemp,result.maxTemp,result.precision,result.encoding,result.commands,url);
             }catch(Exception e){last=e;}
         }
         throw new IllegalStateException("Código SmartIR "+model.code+" não pôde ser carregado."+
@@ -340,7 +343,10 @@ public final class SmartIrDatabase {
     }
 
     public static Climate carregarPorUrl(String url) throws Exception {
-        return parse(getText(url));
+        Climate result=parse(getText(url));
+        if(result.commands.length()==0) throw new IllegalStateException("JSON sem comandos");
+        return new Climate(result.manufacturer,result.code,result.models,result.modes,result.fans,result.swings,
+                result.minTemp,result.maxTemp,result.precision,result.encoding,result.commands,url);
     }
 
     public static Climate parse(String json) throws Exception {
@@ -357,7 +363,7 @@ public final class SmartIrDatabase {
         int precision=(int)Math.round(o.optDouble("precision",1));
         JSONObject commands=o.optJSONObject("commands");
         if(commands==null) commands=new JSONObject();
-        return new Climate(manufacturer,code,models,modes,fans,swings,min,max,Math.max(1,precision),encoding,commands);
+        return new Climate(manufacturer,code,models,modes,fans,swings,min,max,Math.max(1,precision),encoding,commands,"");
     }
 
     /**
