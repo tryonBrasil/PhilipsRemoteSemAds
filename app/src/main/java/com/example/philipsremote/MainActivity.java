@@ -600,9 +600,6 @@ private static final int CARD_2 = Color.rgb(31,31,36);
 
         ScrollView sv=new ScrollView(this); sv.setFillViewport(true); sv.setBackgroundColor(BG);
         LinearLayout root=new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL); root.setPadding(dp(14),dp(14),dp(14),dp(26));
-        final int[] fanFunc={0};
-        final java.util.List<Button> fanActionButtons=new ArrayList<>();
-
         LinearLayout top=row();
         LinearLayout head=new LinearLayout(this); head.setOrientation(LinearLayout.VERTICAL);
         TextView title=label("❄️  AR-CONDICIONADO",22); title.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
@@ -1839,6 +1836,8 @@ render[0]=()->{
         showingSelector=false; fanMode=true;
         ScrollView sv=new ScrollView(this); sv.setFillViewport(true); sv.setBackgroundColor(BG);
         LinearLayout root=new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL); root.setPadding(dp(14),dp(14),dp(14),dp(26));
+        final int[] fanFunc={0};
+        final java.util.List<Button> fanActionButtons=new ArrayList<>();
 
         LinearLayout top=row();
         LinearLayout head=new LinearLayout(this); head.setOrientation(LinearLayout.VERTICAL);
