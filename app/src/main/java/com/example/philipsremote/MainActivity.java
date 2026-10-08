@@ -422,7 +422,7 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         universal.setText("🔎  CONTROLE UNIVERSAL");
         universal.setTextColor(WHITE); universal.setTextSize(15); universal.setAllCaps(false);
         GradientDrawable universalBg=new GradientDrawable(); universalBg.setColor(ACCENT); universalBg.setCornerRadius(dp(16)); universal.setBackground(universalBg); actionFeedback(universal);
-        universal.setOnClickListener(v->showUniversalScanner(lgMode?"LG":"Philips",lgMode?"32LB620B":"50PUG6513/7","TV"));
+        universal.setOnClickListener(v->{\n            try{\n                showingSelector=false;\n                String marcaAtual=controleAtivo!=null?controleAtivo.marca:(lgMode?"LG":"Philips");\n                String modeloAtual=controleAtivo!=null?controleAtivo.modelo:(lgMode?"32LB620B":"50PUG6513/7");\n                showUniversalScanner(marcaAtual,modeloAtual,null);\n            }catch(Exception e){\n                showingSelector=true;\n                Toast.makeText(this,"Não foi possível abrir o Controle Universal: "+(e.getMessage()==null?e.getClass().getSimpleName():e.getMessage()),Toast.LENGTH_LONG).show();\n            }\n        });
         LinearLayout.LayoutParams universalParams=new LinearLayout.LayoutParams(-1,dp(58));
         universalParams.setMargins(0,dp(10),0,dp(0)); root.addView(universal,universalParams);
         TextView universalInfo=label("TV • AR-CONDICIONADO • VENTILADOR  •  pesquise a marca, teste códigos e salve o que funcionar.",12);
