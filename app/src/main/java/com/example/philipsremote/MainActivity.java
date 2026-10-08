@@ -422,16 +422,24 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         universal.setText("🔎  CONTROLE UNIVERSAL");
         universal.setTextColor(WHITE); universal.setTextSize(15); universal.setAllCaps(false);
         GradientDrawable universalBg=new GradientDrawable(); universalBg.setColor(ACCENT); universalBg.setCornerRadius(dp(16)); universal.setBackground(universalBg); actionFeedback(universal);
+        universal.setEnabled(true);
+        universal.setClickable(true);
+        universal.setFocusable(true);
         universal.setOnClickListener(v->{
-            try{
-                showingSelector=false;
-                String marcaAtual=controleAtivo!=null?controleAtivo.marca:(lgMode?"LG":"Philips");
-                String modeloAtual=controleAtivo!=null?controleAtivo.modelo:(lgMode?"32LB620B":"50PUG6513/7");
-                showUniversalScanner(marcaAtual,modeloAtual,null);
-            }catch(Exception ex){
-                showingSelector=true;
-                Toast.makeText(this,"Não foi possível abrir o Controle Universal: "+(ex.getMessage()==null?ex.getClass().getSimpleName():ex.getMessage()),Toast.LENGTH_LONG).show();
-            }
+            v.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP);
+            v.post(()->{
+                try{
+                    Toast.makeText(this,"Abrindo Controle Universal...",Toast.LENGTH_SHORT).show();
+                    showingSelector=false;
+                    // Não depende do controle ativo: o Universal deve sempre abrir seu próprio seletor.
+                    showUniversalScanner("Universal","Universal",null);
+                }catch(Throwable ex){
+                    showingSelector=true;
+                    String msg=ex.getMessage()==null?ex.getClass().getSimpleName():ex.getMessage();
+                    Toast.makeText(this,"Erro no Controle Universal: "+msg,Toast.LENGTH_LONG).show();
+                    android.util.Log.e("IR_REMOTE","Falha ao abrir Controle Universal",ex);
+                }
+            });
         });
         LinearLayout.LayoutParams universalParams=new LinearLayout.LayoutParams(-1,dp(58));
         universalParams.setMargins(0,dp(10),0,dp(0)); root.addView(universal,universalParams);
