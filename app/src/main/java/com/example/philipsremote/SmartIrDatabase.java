@@ -32,6 +32,10 @@ public final class SmartIrDatabase {
             "https://raw.githubusercontent.com/smartHomeHub/SmartIR/master/codes/climate/";
     private static final String CODE_URL_MAIN =
             "https://raw.githubusercontent.com/smartHomeHub/SmartIR/main/codes/climate/";
+    private static final String CODE_URL_CDN =
+            "https://cdn.jsdelivr.net/gh/smartHomeHub/SmartIR@master/codes/climate/";
+    private static final String INDEX_URL_CDN =
+            "https://cdn.jsdelivr.net/gh/tonyperkins/smartir-code-aggregator@main/smartir_device_index.json";
     private static final String AGGREGATOR_CODE_URL =
             "https://raw.githubusercontent.com/tonyperkins/smartir-code-aggregator/main/output/codes/climate/";
     private static final int TIMEOUT_MS = 12000;
@@ -168,7 +172,9 @@ public final class SmartIrDatabase {
     }
 
     public static List<Model> listarModelos(String marca) throws Exception {
-        JSONObject root=getJson(INDEX_URL);
+        JSONObject root;
+        try { root=getJson(INDEX_URL); }
+        catch(Exception primary){ root=getJson(INDEX_URL_CDN); }
         JSONObject climate=root.optJSONObject("platforms");
         if(climate==null) return Collections.emptyList();
         JSONObject manufacturers=climate.optJSONObject("manufacturers");
@@ -253,7 +259,7 @@ public final class SmartIrDatabase {
         if(model==null || model.code.isEmpty()) throw new IllegalArgumentException("Modelo inválido");
         String file=model.code+".json";
         Exception last=null;
-        String[] urls={CODE_URL+file,CODE_URL_MAIN+file,AGGREGATOR_CODE_URL+file};
+        String[] urls={CODE_URL+file,CODE_URL_MAIN+file,CODE_URL_CDN+file,AGGREGATOR_CODE_URL+file};
         for(String url:urls){
             try{return parse(getText(url));}
             catch(Exception e){last=e;}
