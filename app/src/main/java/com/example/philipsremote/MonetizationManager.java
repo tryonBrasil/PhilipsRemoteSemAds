@@ -408,4 +408,4 @@ public class MonetizationManager {
         consultaEmAndamento = false;
         compraEmAndamento = false;
     }
-
+}
