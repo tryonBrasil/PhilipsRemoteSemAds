@@ -394,7 +394,6 @@ public class MonetizationManager {
                     Toast.LENGTH_LONG).show();
         }
     }
-}
     /** Libera todos os banners e encerra a conexão do Google Play. */
     public void destroy() {
         for (AdView ad : new java.util.ArrayList<>(banners)) {
@@ -409,3 +408,4 @@ public class MonetizationManager {
         consultaEmAndamento = false;
         compraEmAndamento = false;
     }
+
