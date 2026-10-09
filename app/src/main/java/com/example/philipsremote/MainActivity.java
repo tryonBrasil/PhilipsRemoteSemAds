@@ -1,7 +1,6 @@
 package com.example.philipsremote;
 
 import android.app.Activity;
-import android.app.AlertDialog;
 import android.os.Bundle;
 import android.hardware.ConsumerIrManager;
 import android.graphics.Color;
@@ -31,8 +30,9 @@ public class MainActivity extends Activity {
     private SharedPreferences prefs;
     private ControleStorage controleStorage;
     private ControleStorage.Controle controleAtivo;
-    private Updater updateManager;
     private MonetizationManager monetizacao;
+    private Updater updater;
+    private static final String PRIVACY_URL="https://github.com/tryonBrasil/PhilipsRemoteSemAds/blob/main/PRIVACY.md";
     private int aprenderFuncaoPos = 0;
     private static final int REQ_EXPORT_BACKUP = 4101;
     private static final int REQ_IMPORT_BACKUP = 4102;
@@ -71,10 +71,16 @@ private static final int CARD_2 = Color.rgb(31,31,36);
             lgMode="LG".equalsIgnoreCase(controleAtivo.marca);
             prefs.edit().putBoolean("lg_mode",lgMode).apply();
         }
-        updateManager=UpdaterFactory.criar(this);
+        updater=UpdaterFactory.criar(this);
         monetizacao=new MonetizationManager(this,()->showSelector());
+        registrarVoltar();
         if(!prefs.getBoolean("initial_screen_seen",false)) showInitialScreen();
         else showSelector();
+    }
+
+    /** Executa na thread de UI só se a tela ainda existe (evita crash ao abrir diálogo depois do onDestroy). */
+    private void ui(Runnable r){
+        runOnUiThread(()->{ if(!isFinishing()&&!isDestroyed()) r.run(); });
     }
 
     private int dp(float v){ return (int)(v*getResources().getDisplayMetrics().density+0.5f); }
@@ -201,78 +207,49 @@ private static final int CARD_2 = Color.rgb(31,31,36);
     }
 
     private void showInitialScreen() {
-        ScrollView sv=new ScrollView(this);
-        sv.setFillViewport(true);
-        sv.setBackgroundColor(BG);
-
         LinearLayout root=new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setGravity(Gravity.CENTER_HORIZONTAL);
-        root.setPadding(dp(24),dp(42),dp(24),dp(30));
+        root.setPadding(dp(24),dp(56),dp(24),dp(30));
 
-        Space top=new Space(this);
-        root.addView(top,new LinearLayout.LayoutParams(1,dp(28)));
-
-        TextView logo=label("IR",56);
+        TextView logo=label("IR",50);
         logo.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
-        logo.setTextColor(WHITE);
         GradientDrawable logoBg=new GradientDrawable();
         logoBg.setColor(ACCENT);
         logoBg.setCornerRadius(dp(28));
         logo.setBackground(logoBg);
-        logo.setGravity(Gravity.CENTER);
-        root.addView(logo,new LinearLayout.LayoutParams(dp(112),dp(112)));
+        root.addView(logo,new LinearLayout.LayoutParams(dp(104),dp(104)));
 
-        TextView brand=label("IR REMOTE BR",18);
+        TextView brand=label("IR Remote BR",16);
         brand.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
-        brand.setLetterSpacing(.12f);
+        brand.setLetterSpacing(.1f);
         brand.setTextColor(ACCENT);
-        LinearLayout.LayoutParams brandP=new LinearLayout.LayoutParams(-1,dp(34));
+        LinearLayout.LayoutParams brandP=new LinearLayout.LayoutParams(-1,-2);
         brandP.setMargins(0,dp(22),0,0);
         root.addView(brand,brandP);
 
-        TextView title=label("Controle seus aparelhos\nde um jeito simples",27);
+        TextView title=label("Controle seus aparelhos de um jeito simples",26);
         title.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
-        title.setGravity(Gravity.CENTER);
-        LinearLayout.LayoutParams titleP=new LinearLayout.LayoutParams(-1,dp(78));
-        titleP.setMargins(0,dp(8),0,0);
+        LinearLayout.LayoutParams titleP=new LinearLayout.LayoutParams(-1,-2);
+        titleP.setMargins(dp(8),dp(10),dp(8),0);
         root.addView(title,titleP);
 
-        TextView sub=label("Comece agora. Não é necessário criar uma conta para usar os recursos gratuitos.",14);
+        TextView sub=label("Comece agora. Não é preciso criar conta para usar os recursos gratuitos.",14);
         sub.setTextColor(GRAY);
-        sub.setGravity(Gravity.CENTER);
-        LinearLayout.LayoutParams subP=new LinearLayout.LayoutParams(-1,dp(60));
-        subP.setMargins(0,dp(4),0,dp(22));
+        LinearLayout.LayoutParams subP=new LinearLayout.LayoutParams(-1,-2);
+        subP.setMargins(dp(8),dp(8),dp(8),dp(28));
         root.addView(sub,subP);
 
-        Button comecar=botaoAcao("COMEÇAR",Color.rgb(190,24,32),18);
-        LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(-1,dp(58));
-        cp.setMargins(0,dp(4),0,dp(10));
-        root.addView(comecar,cp);
-        comecar.setOnClickListener(v->{
+        root.addView(botaoLargo(0,"Começar",58,ACCENT,v->{
             prefs.edit().putBoolean("initial_screen_seen",true).apply();
             showSelector();
-        });
+        }));
+        root.addView(botaoLargo(R.drawable.ic_settings,"Conta e privacidade",52,KEY_DARK,v->showPremiumAccountScreen()));
 
-        Button conta=new Button(this);
-        conta.setText("ENTRAR / CONTA PREMIUM");
-        conta.setTextColor(WHITE);
-        conta.setTextSize(14);
-        conta.setAllCaps(false);
-        GradientDrawable contaBg=new GradientDrawable();
-        contaBg.setColor(KEY_DARK);
-        contaBg.setCornerRadius(dp(16));
-        contaBg.setStroke(dp(1),BORDER);
-        conta.setBackground(contaBg);
-        actionFeedback(conta);
-        conta.setOnClickListener(v->showPremiumAccountScreen());
-        root.addView(conta,new LinearLayout.LayoutParams(-1,dp(52)));
-
-        TextView note=label("⭐ O Premium é vinculado à sua compra no Google Play.",12);
+        TextView note=label("O Premium (sem anúncios e controles ilimitados) é vinculado à sua conta do Google Play.",12);
         note.setTextColor(GRAY);
-        note.setGravity(Gravity.CENTER);
-        LinearLayout.LayoutParams np=new LinearLayout.LayoutParams(-1,dp(48));
-        np.setMargins(0,dp(16),0,dp(0));
+        LinearLayout.LayoutParams np=new LinearLayout.LayoutParams(-1,-2);
+        np.setMargins(dp(8),dp(16),dp(8),0);
         root.addView(note,np);
 
         TextView version=label("",11);
@@ -280,154 +257,96 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         try{
             version.setText("Versão "+getPackageManager().getPackageInfo(getPackageName(),0).versionName);
         }catch(Exception ignored){}
-        root.addView(version,new LinearLayout.LayoutParams(-1,dp(28)));
+        LinearLayout.LayoutParams vlp=new LinearLayout.LayoutParams(-1,-2); vlp.setMargins(0,dp(14),0,0);
+        root.addView(version,vlp);
 
-        sv.addView(root);
-        mostrar(sv);
+        mostrar(telaRolavel(root));
     }
 
     private void showPremiumAccountScreen(){
-        ScrollView sv=new ScrollView(this);
-        sv.setFillViewport(true);
-        sv.setBackgroundColor(BG);
         LinearLayout root=new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(dp(20),dp(28),dp(20),dp(30));
+        root.setPadding(dp(18),dp(20),dp(18),dp(30));
 
-        TextView title=label("CONTA E PREMIUM",26);
-        title.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
-        title.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
-        root.addView(title,new LinearLayout.LayoutParams(-1,dp(52)));
+        LinearLayout top=new LinearLayout(this); top.setOrientation(LinearLayout.HORIZONTAL); top.setGravity(Gravity.CENTER_VERTICAL);
+        top.addView(iconBtn(R.drawable.ic_back,46,24,CARD_2,true,"Voltar",v->{ if(prefs.getBoolean("initial_screen_seen",false)) showSelector(); else showInitialScreen(); }),new LinearLayout.LayoutParams(dp(46),dp(46)));
+        LinearLayout.LayoutParams tp=new LinearLayout.LayoutParams(0,-2,1); tp.setMargins(dp(12),0,0,0);
+        top.addView(textoEsq("Conta e Premium",22,WHITE,true),tp);
+        root.addView(top);
 
-        TextView info=label("A compra do Premium é associada à conta do Google Play usada na compra.\n\nVocê não precisa criar uma senha separada para usar o aplicativo.",14);
-        info.setTextColor(GRAY);
-        info.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
-        LinearLayout.LayoutParams ip=new LinearLayout.LayoutParams(-1,dp(92));
-        ip.setMargins(0,dp(8),0,dp(18));
+        TextView info=subtitulo("A compra do Premium é associada à conta do Google Play usada na compra. Você não precisa criar uma senha separada para usar o aplicativo.");
+        LinearLayout.LayoutParams ip=new LinearLayout.LayoutParams(-1,-2);
+        ip.setMargins(0,dp(14),0,dp(14));
         root.addView(info,ip);
 
-        TextView status=label(monetizacao.isPremium() ? "✓ PREMIUM ATIVO" : "○ PREMIUM NÃO ATIVO",16);
+        boolean ativo=monetizacao.isPremium();
+        TextView status=label(ativo ? "✓  Premium ativo" : "○  Premium não ativo",16);
         status.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
-        status.setTextColor(monetizacao.isPremium()?SUCCESS:WHITE);
+        status.setTextColor(ativo?SUCCESS:WHITE);
         GradientDrawable statusBg=new GradientDrawable();
-        statusBg.setColor(monetizacao.isPremium()?Color.rgb(38,70,48):CARD);
+        statusBg.setColor(ativo?Color.rgb(38,70,48):CARD);
         statusBg.setCornerRadius(dp(16));
         statusBg.setStroke(dp(1),BORDER);
         status.setBackground(statusBg);
-        status.setGravity(Gravity.CENTER);
-        root.addView(status,new LinearLayout.LayoutParams(-1,dp(54)));
+        status.setPadding(dp(12),dp(16),dp(12),dp(16));
+        root.addView(status,new LinearLayout.LayoutParams(-1,-2));
 
-        Button restaurar=botaoAcao("RESTAURAR / VERIFICAR PREMIUM",Color.rgb(55,55,62),14);
-        LinearLayout.LayoutParams rp=new LinearLayout.LayoutParams(-1,dp(52));
-        rp.setMargins(0,dp(12),0,dp(8));
-        root.addView(restaurar,rp);
-        restaurar.setOnClickListener(v->{
+        LinearLayout.LayoutParams espaco=new LinearLayout.LayoutParams(1,dp(8));
+        root.addView(new Space(this),espaco);
+
+        root.addView(botaoLargo(R.drawable.ic_auto,"Restaurar ou verificar Premium",52,Color.rgb(55,55,62),v->{
             monetizacao.restaurarCompra();
-            v.postDelayed(()->showPremiumAccountScreen(),1200L);
-        });
+            v.postDelayed(()->{ if(!isFinishing()&&!isDestroyed()) showPremiumAccountScreen(); },1200L);
+        }));
+        root.addView(botaoLargo(R.drawable.ic_star,ativo?"Premium ativo":"Conhecer o Premium",52,Color.rgb(70,55,20),v->monetizacao.showPremiumDialog()));
+        root.addView(botaoLargo(R.drawable.ic_info,"Política de privacidade",52,Color.rgb(55,55,62),v->{
+            try{ startActivity(new Intent(Intent.ACTION_VIEW,android.net.Uri.parse(PRIVACY_URL))); }
+            catch(Exception e){ Toast.makeText(this,"Não foi possível abrir o link.",Toast.LENGTH_SHORT).show(); }
+        }));
+        if(monetizacao.precisaOpcoesPrivacidade()){
+            root.addView(botaoLargo(R.drawable.ic_settings,"Opções de privacidade dos anúncios",52,Color.rgb(55,55,62),v->monetizacao.mostrarOpcoesPrivacidade()));
+        }
 
-        Button premium=botaoAcao(monetizacao.isPremium()?"PREMIUM ATIVO":"CONHECER O PREMIUM",Color.rgb(70,55,20),14);
-        root.addView(premium,new LinearLayout.LayoutParams(-1,dp(52)));
-        premium.setOnClickListener(v->monetizacao.showPremiumDialog());
-
-        Button voltar=botaoAcao("VOLTAR",KEY_DARK,14);
-        LinearLayout.LayoutParams vp=new LinearLayout.LayoutParams(-1,dp(48));
-        vp.setMargins(0,dp(18),0,dp(0));
-        root.addView(voltar,vp);
-        voltar.setOnClickListener(v->showInitialScreen());
-
-        sv.addView(root);
-        mostrar(sv);
+        mostrar(telaRolavel(root));
     }
 
     private void showSelector(){
         showingSelector=true; fanMode=false;
-        ScrollView sv=new ScrollView(this); sv.setFillViewport(true); sv.setBackgroundColor(BG);
         LinearLayout root=new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL);
-        root.setGravity(Gravity.CENTER_HORIZONTAL); root.setPadding(dp(18),dp(28),dp(18),dp(30));
-        TextView brand=label("IR REMOTE BR",13); brand.setTextColor(ACCENT);
-        brand.setTypeface(Typeface.DEFAULT,Typeface.BOLD); brand.setLetterSpacing(.14f);
-        root.addView(brand,new LinearLayout.LayoutParams(-1,dp(24)));
-        TextView title=label("Escolha seu controle",28); title.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
-        title.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
-        root.addView(title,new LinearLayout.LayoutParams(-1,dp(48)));
-        Button inicio=new Button(this);
-        inicio.setText("⌂  TELA INICIAL / CONTA");
-        inicio.setTextColor(WHITE);
-        inicio.setTextSize(13);
-        inicio.setAllCaps(false);
-        GradientDrawable inicioBg=new GradientDrawable();
-        inicioBg.setColor(KEY_DARK);
-        inicioBg.setCornerRadius(dp(16));
-        inicioBg.setStroke(dp(1),BORDER);
-        inicio.setBackground(inicioBg);
-        actionFeedback(inicio);
-        inicio.setOnClickListener(v->showInitialScreen());
-        LinearLayout.LayoutParams inicioP=new LinearLayout.LayoutParams(-1,dp(48));
-        inicioP.setMargins(0,dp(8),0,dp(6));
-        root.addView(inicio,inicioP);
+        root.setPadding(dp(16),dp(22),dp(16),dp(28));
 
-        TextView sub=label("Infravermelho • rápido • sem anúncios",14); sub.setTextColor(GRAY);
-        sub.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
-        root.addView(sub,new LinearLayout.LayoutParams(-1,dp(30)));
+        LinearLayout top=new LinearLayout(this); top.setOrientation(LinearLayout.HORIZONTAL); top.setGravity(Gravity.CENTER_VERTICAL);
+        LinearLayout head=new LinearLayout(this); head.setOrientation(LinearLayout.VERTICAL);
+        TextView brand=textoEsq("IR Remote BR",13,ACCENT,true); brand.setLetterSpacing(.1f);
+        head.addView(brand,new LinearLayout.LayoutParams(-1,-2));
+        LinearLayout.LayoutParams tlp=new LinearLayout.LayoutParams(-1,-2); tlp.setMargins(0,dp(2),0,0);
+        head.addView(textoEsq("Escolha seu controle",26,WHITE,true),tlp);
+        top.addView(head,new LinearLayout.LayoutParams(0,-2,1));
+        top.addView(iconBtn(R.drawable.ic_settings,48,24,CARD_2,true,"Conta e privacidade",v->showPremiumAccountScreen()),new LinearLayout.LayoutParams(dp(48),dp(48)));
+        root.addView(top);
+
+        TextView sub=subtitulo("Controle TV, ar-condicionado e ventilador por infravermelho.");
+        LinearLayout.LayoutParams slp=new LinearLayout.LayoutParams(-1,-2); slp.setMargins(0,dp(6),0,dp(10));
+        root.addView(sub,slp);
+
         List<ControleStorage.Controle> salvosHome=controleStorage.listar();
-        boolean temControlesSalvos=!salvosHome.isEmpty();
-        Button meusControlesHome=new Button(this);
-        meusControlesHome.setText("★  MEUS CONTROLES  •  "+salvosHome.size());
-        meusControlesHome.setTextColor(WHITE);
-        meusControlesHome.setTextSize(15);
-        meusControlesHome.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
-        meusControlesHome.setAllCaps(false);
-        GradientDrawable meusHomeBg=new GradientDrawable();
-        meusHomeBg.setColor(salvosHome.isEmpty()?Color.rgb(45,45,50):Color.rgb(55,75,60));
-        meusHomeBg.setCornerRadius(dp(17));
-        meusHomeBg.setStroke(dp(1),salvosHome.isEmpty()?BORDER:Color.rgb(85,145,95));
-        meusControlesHome.setBackground(meusHomeBg);
-        actionFeedback(meusControlesHome);
-        meusControlesHome.setOnClickListener(v->showMeusControles());
-        LinearLayout.LayoutParams meusHomeP=new LinearLayout.LayoutParams(-1,dp(58));
-        meusHomeP.setMargins(0,dp(10),0,dp(6));
-        root.addView(meusControlesHome,meusHomeP);
-
-        LinearLayout bancoCard=new LinearLayout(this); bancoCard.setOrientation(LinearLayout.HORIZONTAL); bancoCard.setGravity(Gravity.CENTER_VERTICAL);
-        bancoCard.setPadding(dp(14),0,dp(14),0);
-        GradientDrawable bancoBg=new GradientDrawable(); bancoBg.setColor(CARD); bancoBg.setCornerRadius(dp(15)); bancoBg.setStroke(dp(1),Color.rgb(55,55,60)); bancoCard.setBackground(bancoBg);
-        TextView bancoTitulo=label("●  BANCO LOCAL",12); bancoTitulo.setTextColor(Color.rgb(105,190,125)); bancoTitulo.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
-        bancoCard.addView(bancoTitulo,new LinearLayout.LayoutParams(0,dp(42),1));
-        TextView bancoQtd=label(salvosHome.size()+" "+(salvosHome.size()==1?"controle":"controles"),12); bancoQtd.setTextColor(GRAY);
-        bancoCard.addView(bancoQtd,new LinearLayout.LayoutParams(-2,dp(42)));
-        LinearLayout.LayoutParams bp=new LinearLayout.LayoutParams(-1,dp(44)); bp.setMargins(0,dp(4),0,dp(4)); root.addView(bancoCard,bp);
         if(controleAtivo!=null){
-            TextView ativo=label("CONTROLE ATIVO  •  "+controleAtivo.nome,13);
-            ativo.setTextColor(WHITE);
-            GradientDrawable ativoBg=new GradientDrawable(); ativoBg.setColor(Color.rgb(38,70,48)); ativoBg.setCornerRadius(dp(14)); ativo.setBackground(ativoBg);
-            ativo.setPadding(dp(14),0,dp(14),0);
-            root.addView(ativo,new LinearLayout.LayoutParams(-1,dp(42)));
-        }
-        if(controleAtivo==null){
-            LinearLayout philips=tvCard("PHILIPS","50PUG6513/7",!lgMode,v->{lgMode=false;});
-            LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(-1,dp(125)); cp.setMargins(0,dp(28),0,dp(10)); root.addView(philips,cp);
-            LinearLayout lg=tvCard("LG","32LB620B",lgMode,v->{lgMode=true;});
-            LinearLayout.LayoutParams cl=new LinearLayout.LayoutParams(-1,dp(125)); cl.setMargins(0,dp(10),0,dp(24)); root.addView(lg,cl);
-            TextView chosen=label(lgMode?"✓ LG 32LB620B":"✓ Philips 50PUG6513/7",15); chosen.setTextColor(Color.rgb(75,145,95));
-            root.addView(chosen,new LinearLayout.LayoutParams(-1,dp(38)));
+            root.addView(cartaoLinha(R.drawable.ic_check,"Controle ativo",controleAtivo.nome,Color.rgb(38,70,48),v->{ showingSelector=false; build(); }));
         } else {
-            TextView acesso=label("Há um controle ativo. Toque em CONTINUAR para abri-lo ou em MEUS CONTROLES para trocar.",14);
-            acesso.setTextColor(GRAY); acesso.setGravity(Gravity.CENTER);
-            LinearLayout.LayoutParams ap=new LinearLayout.LayoutParams(-1,dp(70)); ap.setMargins(0,dp(18),0,dp(4)); root.addView(acesso,ap);
+            section(root,"TVs prontas");
+            LinearLayout cards=row();
+            cards.addView(tvCard("Philips","50PUG6513/7",!lgMode,v->{lgMode=false;}));
+            cards.addView(tvCard("LG","32LB620B",lgMode,v->{lgMode=true;}));
+            root.addView(cards);
+            root.addView(botaoLargo(0,"Continuar",56,ACCENT,v->{prefs.edit().putBoolean("lg_mode",lgMode).apply();showingSelector=false;build();}));
         }
-        Button continueBtn=new Button(this); continueBtn.setText("CONTINUAR"); continueBtn.setTextColor(WHITE); continueBtn.setTextSize(17); continueBtn.setAllCaps(false);
-        GradientDrawable bg=new GradientDrawable(); bg.setColor(Color.rgb(190,24,32)); bg.setCornerRadius(dp(18)); continueBtn.setBackground(bg); continueBtn.setOnClickListener(v->{prefs.edit().putBoolean("lg_mode",lgMode).apply();showingSelector=false;build();});
-        root.addView(continueBtn,new LinearLayout.LayoutParams(-1,dp(58)));
-        Button universal=new Button(this);
-        universal.setText("🔎  CONTROLE UNIVERSAL");
-        universal.setTextColor(WHITE); universal.setTextSize(15); universal.setAllCaps(false);
-        GradientDrawable universalBg=new GradientDrawable(); universalBg.setColor(ACCENT); universalBg.setCornerRadius(dp(16)); universal.setBackground(universalBg); actionFeedback(universal);
-        universal.setEnabled(true);
-        universal.setClickable(true);
-        universal.setFocusable(true);
-        universal.setOnClickListener(v->{
-            v.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP);
+
+        root.addView(cartaoLinha(R.drawable.ic_star,"Meus controles",
+            salvosHome.isEmpty()?"Nenhum controle salvo ainda":salvosHome.size()+(salvosHome.size()==1?" controle salvo":" controles salvos"),
+            salvosHome.isEmpty()?CARD:Color.rgb(34,52,40),v->showMeusControles()));
+
+        root.addView(cartaoLinha(R.drawable.ic_search,"Controle universal",
+            "TV, ar-condicionado e ventilador: pesquise a marca, teste códigos e salve o que funcionar.",CARD,v->{
             v.post(()->{
                 try{
                     Toast.makeText(this,"Abrindo Controle Universal...",Toast.LENGTH_SHORT).show();
@@ -441,28 +360,19 @@ private static final int CARD_2 = Color.rgb(31,31,36);
                     android.util.Log.e("IR_REMOTE","Falha ao abrir Controle Universal",ex);
                 }
             });
-        });
-        LinearLayout.LayoutParams universalParams=new LinearLayout.LayoutParams(-1,dp(58));
-        universalParams.setMargins(0,dp(10),0,dp(0)); root.addView(universal,universalParams);
-        TextView universalInfo=label("TV • AR-CONDICIONADO • VENTILADOR  •  pesquise a marca, teste códigos e salve o que funcionar.",12);
-        universalInfo.setTextColor(GRAY); universalInfo.setGravity(Gravity.CENTER);
-        root.addView(universalInfo,new LinearLayout.LayoutParams(-1,dp(44)));
+        }));
 
-        Button premium=new Button(this);
-        premium.setText(monetizacao.isPremium()?"⭐  PREMIUM ATIVO":"⭐  IR REMOTE PREMIUM");
-        premium.setTextColor(WHITE); premium.setTextSize(13); premium.setAllCaps(false);
-        GradientDrawable premiumBg=new GradientDrawable();
-        premiumBg.setColor(monetizacao.isPremium()?Color.rgb(55,105,65):Color.rgb(70,55,20));
-        premiumBg.setCornerRadius(dp(16)); premium.setBackground(premiumBg); actionFeedback(premium);
-        premium.setOnClickListener(v->{ if(monetizacao.isPremium()) Toast.makeText(this,"⭐ Premium já está ativo neste aparelho.",Toast.LENGTH_SHORT).show(); else monetizacao.showPremiumDialog(); });
-        LinearLayout.LayoutParams premiumParams=new LinearLayout.LayoutParams(-1,dp(50));
-        premiumParams.setMargins(0,dp(8),0,0); root.addView(premium,premiumParams);
+        LinearLayout chips=new LinearLayout(this); chips.setOrientation(LinearLayout.HORIZONTAL);
+        chips.addView(chip(R.drawable.ic_star,monetizacao.isPremium()?"Premium ativo":"Premium",v->{
+            if(monetizacao.isPremium()) Toast.makeText(this,"⭐ Premium já está ativo neste aparelho.",Toast.LENGTH_SHORT).show();
+            else monetizacao.showPremiumDialog();
+        }));
+        if(BuildConfig.ATUALIZACAO_POR_APK) chips.addView(chip(R.drawable.ic_auto,"Atualizar",v->updater.verificarManualmente()));
+        LinearLayout.LayoutParams chp=new LinearLayout.LayoutParams(-1,-2); chp.setMargins(0,dp(10),0,0);
+        root.addView(chips,chp);
 
-        Button atualizar=new Button(this); atualizar.setText("↻  VERIFICAR ATUALIZAÇÃO"); atualizar.setTextColor(WHITE); atualizar.setTextSize(13); atualizar.setAllCaps(false);
-        GradientDrawable atualizarBg=new GradientDrawable(); atualizarBg.setColor(KEY_DARK); atualizarBg.setCornerRadius(dp(16)); atualizar.setBackground(atualizarBg); actionFeedback(atualizar); atualizar.setOnClickListener(v->updateManager.verificarManualmente());
-        LinearLayout.LayoutParams atualizarParams=new LinearLayout.LayoutParams(-1,dp(50)); atualizarParams.setMargins(0,dp(8),0,0); root.addView(atualizar,atualizarParams);
         monetizacao.addBanner(root);
-        sv.addView(root); mostrar(sv);
+        mostrar(telaRolavel(root));
     }
     /** Banco online: consulta modelos do Flipper-IRDB sob demanda e importa somente os sinais escolhidos. */
     private void showBancoOnline(String categoriaInicial, String marcaInicial){
@@ -514,7 +424,7 @@ private static final int CARD_2 = Color.rgb(31,31,36);
                 try{
             if("AC".equals(selectedCat[0])){
                         java.util.List<SmartIrDatabase.Model> models=SmartIrDatabase.listarModelos(b);
-                        runOnUiThread(()->{
+                        ui(()->{
                             buscar.setEnabled(true);
                             if(models.isEmpty()){ status.setText("Nenhum modelo encontrado. Tente outra marca."); return; }
                             String[] nomes=new String[models.size()];
@@ -524,7 +434,7 @@ private static final int CARD_2 = Color.rgb(31,31,36);
                         });
                     }else{
                         java.util.List<IrRemoteDatabase.RemoteFile> files=IrRemoteDatabase.listar(selectedCat[0],b);
-                        runOnUiThread(()->{
+                        ui(()->{
                         buscar.setEnabled(true);
                         if(files.isEmpty()){ status.setText("Nenhum modelo encontrado. Tente outra marca."); return; }
                         final String[] nomes=new String[files.size()];
@@ -534,7 +444,7 @@ private static final int CARD_2 = Color.rgb(31,31,36);
                         });
                     }
                 }catch(Exception e){
-                    runOnUiThread(()->{ buscar.setEnabled(true); status.setText("✕ Não foi possível acessar o banco online."); Toast.makeText(this,e.getMessage()==null?"Erro de conexão":e.getMessage(),Toast.LENGTH_LONG).show(); });
+                    ui(()->{ buscar.setEnabled(true); status.setText("✕ Não foi possível acessar o banco online."); Toast.makeText(this,e.getMessage()==null?"Erro de conexão":e.getMessage(),Toast.LENGTH_LONG).show(); });
                 }
             }).start();
         });
@@ -547,7 +457,7 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         new Thread(()->{
             try{
                 java.util.List<SmartIrDatabase.Model> models=SmartIrDatabase.listarModelos(marca);
-                runOnUiThread(()->{
+                ui(()->{
                     if(models.isEmpty()){
                         Toast.makeText(this,"Nenhum modelo SmartIR encontrado para "+marca+". Use o banco online ou outro perfil.",Toast.LENGTH_LONG).show();
                         return;
@@ -562,7 +472,7 @@ private static final int CARD_2 = Color.rgb(31,31,36);
                             nomes,idx->abrirSmartIrClimate(models.get(idx)),null);
                 });
             }catch(Exception e){
-                runOnUiThread(()->Toast.makeText(this,
+                ui(()->Toast.makeText(this,
                         e.getMessage()==null?"Não foi possível acessar o banco SmartIR.":e.getMessage(),
                         Toast.LENGTH_LONG).show());
             }
@@ -586,12 +496,12 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         carregando.show();
         new Thread(()->{ try{
             SmartIrDatabase.Climate climate=SmartIrDatabase.carregar(model);
-            runOnUiThread(()->{
+            ui(()->{
                 carregando.dismiss();
                 showAcRemote(climate,model,null);
             });
         }catch(Exception e){
-            runOnUiThread(()->{
+            ui(()->{
                 carregando.dismiss();
                 new android.app.AlertDialog.Builder(this)
                     .setTitle("NÃO FOI POSSÍVEL CARREGAR")
@@ -609,16 +519,14 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         new Thread(()->{ try{
             SmartIrDatabase.Climate climate=SmartIrDatabase.carregarPorUrl(url);
             SmartIrDatabase.Model model=new SmartIrDatabase.Model(controle.marca,extrairCodigoSmartIr(url),controle.modelo);
-            runOnUiThread(()->showAcRemote(climate,model,controle));
-        }catch(Exception e){ runOnUiThread(()->new android.app.AlertDialog.Builder(this).setTitle("CONTROLE NÃO CARREGADO").setMessage("Não foi possível atualizar os códigos deste ar-condicionado. Verifique a internet.").setPositiveButton("TENTAR", (d,w)->abrirSmartIrSalvo(controle)).setNegativeButton("VOLTAR",null).show()); } }).start();
+            ui(()->showAcRemote(climate,model,controle));
+        }catch(Exception e){ ui(()->new android.app.AlertDialog.Builder(this).setTitle("CONTROLE NÃO CARREGADO").setMessage("Não foi possível atualizar os códigos deste ar-condicionado. Verifique a internet.").setPositiveButton("TENTAR", (d,w)->abrirSmartIrSalvo(controle)).setNegativeButton("VOLTAR",null).show()); } }).start();
     }
 
     private String extrairCodigoSmartIr(String url){
         int a=url.lastIndexOf('/'), b=url.lastIndexOf('.');
         return a>=0&&b>a?url.substring(a+1,b):"";
     }
-
-    private int acTab = 0;
 
     private void showAcRemote(SmartIrDatabase.Climate climate, SmartIrDatabase.Model model, ControleStorage.Controle existing){
         showingSelector=false; fanMode=false;
@@ -628,7 +536,7 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         final int[] temp={Math.max(climate.minTemp,Math.min(climate.maxTemp,24))};
         final boolean[] ligado={true};
         final ControleStorage.Controle[] saved={existing};
-
+        // v1.6.4: restaura o último estado usado do ar-condicionado salvo.
         if(existing!=null){
             String base="ac_state_"+existing.id+"_";
             String sm=prefs.getString(base+"mode","");
@@ -637,295 +545,209 @@ private static final int CARD_2 = Color.rgb(31,31,36);
             if(!sm.isEmpty() && climate.modes.contains(sm)) mode[0]=sm;
             if(!sf.isEmpty() && climate.fans.contains(sf)) fan[0]=sf;
             if(!ss.isEmpty() && climate.swings.contains(ss)) swing[0]=ss;
-            int last=prefs.getInt(base+"temp",temp[0]);
-            temp[0]=Math.max(climate.minTemp,Math.min(climate.maxTemp,last));
+            int st=prefs.getInt(base+"temp",temp[0]);
+            temp[0]=Math.max(climate.minTemp,Math.min(climate.maxTemp,st));
             ligado[0]=prefs.getBoolean(base+"on",true);
         }
+        final java.util.List<View> modeButtons=new ArrayList<>();
+        final java.util.List<View> fanButtons=new ArrayList<>();
+        final java.util.List<View> swingButtons=new ArrayList<>();
+        final int verdeLigado=Color.rgb(45,105,58), cinzaDesligado=Color.rgb(72,72,78);
+        final int selecionado=Color.rgb(65,85,105);
 
-        final java.util.List<Button> modeButtons=new ArrayList<>();
-        final java.util.List<Button> fanButtons=new ArrayList<>();
-        final java.util.List<Button> swingButtons=new ArrayList<>();
+        LinearLayout root=new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL);
+        root.setPadding(dp(14),dp(12),dp(14),dp(26));
 
-        ScrollView sv=new ScrollView(this);
-        sv.setFillViewport(true);
-        sv.setBackgroundColor(Color.rgb(3,7,13));
-        LinearLayout root=new LinearLayout(this);
-        root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(dp(12),dp(10),dp(12),dp(24));
+        // Cabeçalho: título, modelo e liga/desliga.
+        LinearLayout top=new LinearLayout(this); top.setOrientation(LinearLayout.HORIZONTAL); top.setGravity(Gravity.CENTER_VERTICAL);
+        LinearLayout head=new LinearLayout(this); head.setOrientation(LinearLayout.VERTICAL);
+        head.addView(textoEsq("Ar-condicionado",22,WHITE,true),new LinearLayout.LayoutParams(-1,-2));
+        LinearLayout.LayoutParams sublp=new LinearLayout.LayoutParams(-1,-2); sublp.setMargins(0,dp(2),0,0);
+        head.addView(textoEsq(model.manufacturer+" · "+model.model,12,GRAY,false),sublp);
+        top.addView(head,new LinearLayout.LayoutParams(0,-2,1));
+        final ImageButton powerBtn=iconBtn(R.drawable.ic_power,58,28,verdeLigado,true,"Ligar ou desligar",null);
+        LinearLayout.LayoutParams pbp=new LinearLayout.LayoutParams(dp(58),dp(58)); pbp.setMargins(dp(10),0,0,0);
+        top.addView(powerBtn,pbp);
+        root.addView(top);
 
-        final TextView state=label("",11);
+        final TextView state=label("",13);
+        state.setTextColor(Color.rgb(105,190,125));
         state.setGravity(Gravity.CENTER);
-        state.setPadding(dp(8),0,dp(8),0);
+        state.setPadding(dp(12),dp(10),dp(12),dp(10));
+        GradientDrawable stateBg=new GradientDrawable(); stateBg.setColor(Color.rgb(22,42,28)); stateBg.setCornerRadius(dp(14)); stateBg.setStroke(dp(1),Color.rgb(65,110,75));
+        state.setBackground(stateBg);
+        LinearLayout.LayoutParams stp=new LinearLayout.LayoutParams(-1,-2); stp.setMargins(0,dp(12),0,0);
+        root.addView(state,stp);
 
-        // Cabeçalho do ar-condicionado.
-        LinearLayout header=new LinearLayout(this);
-        header.setOrientation(LinearLayout.HORIZONTAL);
-        header.setGravity(Gravity.CENTER_VERTICAL);
-        header.setPadding(dp(10),dp(10),dp(8),dp(10));
-        header.setBackground(remoteSurface(Color.rgb(7,19,32),22,Color.rgb(34,57,79)));
+        // Temperatura em destaque.
+        LinearLayout tempCard=new LinearLayout(this); tempCard.setOrientation(LinearLayout.VERTICAL); tempCard.setGravity(Gravity.CENTER);
+        tempCard.setPadding(dp(14),dp(14),dp(14),dp(14));
+        GradientDrawable tempBg=new GradientDrawable(); tempBg.setColor(CARD); tempBg.setCornerRadius(dp(28)); tempBg.setStroke(dp(1),BORDER);
+        tempCard.setBackground(tempBg);
+        TextView tempCaption=label("Temperatura",12); tempCaption.setTextColor(GRAY);
+        tempCard.addView(tempCaption,new LinearLayout.LayoutParams(-1,-2));
+        LinearLayout tr=new LinearLayout(this); tr.setOrientation(LinearLayout.HORIZONTAL); tr.setGravity(Gravity.CENTER_VERTICAL);
+        final ImageButton menos=iconBtn(R.drawable.ic_minus,68,32,KEY,true,"Diminuir temperatura",null);
+        final ImageButton mais=iconBtn(R.drawable.ic_plus,68,32,KEY,true,"Aumentar temperatura",null);
+        final TextView tv=label(temp[0]+"°",58); tv.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
+        tr.addView(menos,new LinearLayout.LayoutParams(dp(68),dp(68)));
+        tr.addView(tv,new LinearLayout.LayoutParams(0,-2,1));
+        tr.addView(mais,new LinearLayout.LayoutParams(dp(68),dp(68)));
+        LinearLayout.LayoutParams trp=new LinearLayout.LayoutParams(-1,-2); trp.setMargins(0,dp(8),0,dp(4));
+        tempCard.addView(tr,trp);
+        TextView limite=label(climate.minTemp+" °C a "+climate.maxTemp+" °C",11); limite.setTextColor(GRAY);
+        tempCard.addView(limite,new LinearLayout.LayoutParams(-1,-2));
+        LinearLayout.LayoutParams tcp=new LinearLayout.LayoutParams(-1,-2); tcp.setMargins(0,dp(10),0,dp(4)); root.addView(tempCard,tcp);
 
-        ImageView acIcon=new ImageView(this);
-        acIcon.setImageResource(com.example.philipsremote.R.drawable.ac_header);
-        acIcon.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
-        acIcon.setBackground(remoteSurface(Color.rgb(9,27,43),18,Color.rgb(30,105,160)));
-        acIcon.setContentDescription("Imagem de ar-condicionado");
-        header.addView(acIcon,new LinearLayout.LayoutParams(dp(76),dp(76)));
+        Runnable refresh=()->{
+            if(saved[0]!=null){
+                String base="ac_state_"+saved[0].id+"_";
+                prefs.edit().putString(base+"mode",mode[0]).putString(base+"fan",fan[0])
+                    .putString(base+"swing",swing[0]==null?"":swing[0]).putInt(base+"temp",temp[0])
+                    .putBoolean(base+"on",ligado[0]).apply();
+            }
+            tv.setText(temp[0]+"°");
+            String st=(ligado[0]?"● Ligado":"○ Desligado")+" · "+modoTexto(mode[0])+" · "+temp[0]+" °C · "+fanTexto(fan[0]);
+            if(swing[0]!=null) st+=" · Oscilação "+modoTexto(swing[0]);
+            state.setText(st);
+            state.setTextColor(ligado[0]?Color.rgb(105,190,125):GRAY);
+            powerBtn.setBackground(ripple(ligado[0]?verdeLigado:cinzaDesligado,true,false));
+            for(View b:modeButtons){ String v=String.valueOf(b.getTag()); pintar(b,v.equals(mode[0])?corModo(v):KEY); }
+            for(View b:fanButtons){ String v=String.valueOf(b.getTag()); pintar(b,v.equals(fan[0])?selecionado:KEY); }
+            for(View b:swingButtons){ String v=String.valueOf(b.getTag()); pintar(b,v.equals(swing[0])?selecionado:KEY); }
+        };
 
-        LinearLayout identity=new LinearLayout(this);
-        identity.setOrientation(LinearLayout.VERTICAL);
-        identity.setPadding(dp(10),0,0,0);
-        TextView title=label("Ar Condicionado",20);
-        title.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
-        identity.addView(title,new LinearLayout.LayoutParams(-1,dp(29)));
-        TextView sub=label(model.manufacturer+"  •  Ar Condicionado",13);
-        sub.setTextColor(Color.rgb(166,181,204));
-        identity.addView(sub,new LinearLayout.LayoutParams(-1,dp(23)));
-        TextView prof=label("♙  Perfil: "+(existing==null?"Padrão":"Salvo")+"  ⌄",12);
-        prof.setTextColor(Color.rgb(181,194,216));
-        prof.setOnClickListener(v->showSelector());
-        identity.addView(prof,new LinearLayout.LayoutParams(-1,dp(25)));
-        TextView irs=label("●  Emissor IR: "+(ir!=null&&ir.hasIrEmitter()?"Ativo":"Indisponível"),12);
-        irs.setTextColor(ir!=null&&ir.hasIrEmitter()?Color.rgb(45,220,100):Color.rgb(255,165,80));
-        identity.addView(irs,new LinearLayout.LayoutParams(-1,dp(25)));
-        header.addView(identity,new LinearLayout.LayoutParams(0,dp(98),1f));
-
-        LinearLayout actions=new LinearLayout(this);
-        actions.setOrientation(LinearLayout.VERTICAL);
-        actions.setGravity(Gravity.CENTER);
-        ImageButton power=new ImageButton(this);
-        power.setImageResource(com.example.philipsremote.R.drawable.power_button);
-        power.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
-        power.setPadding(0,0,0,0);
-        power.setBackground(remoteSurface(Color.rgb(30,11,19),50,Color.rgb(94,38,52)));
-        power.setContentDescription("Ligar ou desligar o ar-condicionado");
-        power.setOnClickListener(v->{
+        powerBtn.setOnClickListener(v->{
+            haptic(v);
             if(ligado[0]){
                 String cmd=climate.offCommand();
                 if(cmd.isEmpty()){Toast.makeText(this,"Este modelo não possui código OFF.",Toast.LENGTH_SHORT).show();return;}
-                ligado[0]=false; enviarBase64Smart(cmd,climate,state,"Desligado");
-            }else{
-                ligado[0]=true; enviarEstadoAc(climate,mode[0],fan[0],swing[0],temp[0],state);
+                ligado[0]=false;
+                enviarBase64Smart(cmd,climate,state,"Desligado");
+            } else {
+                ligado[0]=true;
+                enviarEstadoAc(climate,mode[0],fan[0],swing[0],temp[0],state);
             }
-            refreshAcState(state,climate,mode,fan,swing,temp,ligado,saved);
+            refresh.run();
         });
-        actions.addView(power,new LinearLayout.LayoutParams(dp(68),dp(68)));
-        TextView powerLabel=label("Power",10); powerLabel.setTextColor(Color.rgb(170,181,200));
-        actions.addView(powerLabel,new LinearLayout.LayoutParams(-1,dp(18)));
-        header.addView(actions,new LinearLayout.LayoutParams(dp(70),dp(88)));
 
-        Button change=botaoAcao("⇄\nTrocar",Color.rgb(15,26,42),11);
-        change.setOnClickListener(v->showSelector());
-        Button edit=botaoAcao("✎\nEditar",Color.rgb(15,26,42),11);
-        edit.setOnClickListener(v->{if(saved[0]!=null) showAprenderComandos(saved[0]); else showSelector();});
-        LinearLayout headBtns=new LinearLayout(this);
-        headBtns.setOrientation(LinearLayout.VERTICAL);
-        headBtns.addView(change,new LinearLayout.LayoutParams(dp(68),dp(45)));
-        headBtns.addView(edit,new LinearLayout.LayoutParams(dp(68),dp(45)));
-        header.addView(headBtns);
-        root.addView(header);
-
-        // Abas do novo controle.
-        LinearLayout tabs=new LinearLayout(this);
-        tabs.setOrientation(LinearLayout.HORIZONTAL);
-        tabs.setBackground(remoteSurface(Color.rgb(7,15,26),18,Color.rgb(24,46,67)));
-        String[] names={"❄\nPrincipal","▦\nModos","⚙\nFunções","⚙\nConfigurações"};
-        for(int i=0;i<4;i++){
-            final int idx=i;
-            Button tab=botaoAcao(names[i],i==acTab?ACCENT:Color.TRANSPARENT,11);
-            tab.setOnClickListener(v->{acTab=idx;showAcRemote(climate,model,saved[0]);});
-            tabs.addView(tab,new LinearLayout.LayoutParams(0,dp(58),1f));
+        section(root,"Modo");
+        LinearLayout mr=row();
+        int mc=0;
+        for(String m:climate.modes){
+            final String value=m;
+            LinearLayout mb=tile(modoIcone(m),modoTexto(m),66,KEY,v->{mode[0]=value;ligado[0]=true;enviarEstadoAc(climate,mode[0],fan[0],swing[0],temp[0],state);refresh.run();});
+            mb.setTag(value);
+            modeButtons.add(mb);
+            mr.addView(mb); mc++;
+            if(mc%3==0 && mc<climate.modes.size()){root.addView(mr);mr=row();}
         }
-        LinearLayout.LayoutParams tp=new LinearLayout.LayoutParams(-1,-2);
-        tp.setMargins(0,dp(10),0,dp(12));
-        root.addView(tabs,tp);
+        if(mc>0) root.addView(mr);
 
-        TextView refreshState=state;
-        Runnable refresh=()->refreshAcState(refreshState,climate,mode,fan,swing,temp,ligado,saved);
-
-        if(acTab==0){
-            LinearLayout quick=row();
-            Button modeBtn=botaoAcao("❄\nModo",ACCENT,13);
-            Button fanBtn=botaoAcao("✣\nVelocidade",KEY_DARK,13);
-            Button swingBtn=botaoAcao("☷\nSwing",KEY_DARK,13);
-            quick.addView(modeBtn,lpPeso()); quick.addView(fanBtn,lpPeso()); quick.addView(swingBtn,lpPeso());
-            root.addView(quick);
-
-            LinearLayout center=new LinearLayout(this);
-            center.setOrientation(LinearLayout.HORIZONTAL);
-            center.setGravity(Gravity.CENTER);
-            LinearLayout tempCol=new LinearLayout(this);
-            tempCol.setOrientation(LinearLayout.VERTICAL);
-            tempCol.setGravity(Gravity.CENTER);
-            tempCol.setBackground(remoteSurface(Color.rgb(11,24,40),34,Color.rgb(40,65,90)));
-            Button plus=remoteButton("+",0,48,25); plus.setOnClickListener(v->{temp[0]=Math.min(climate.maxTemp,temp[0]+climate.precision);ligado[0]=true;enviarEstadoAc(climate,mode[0],fan[0],swing[0],temp[0],state);refresh.run();});
-            Button minus=remoteButton("−",0,48,25); minus.setOnClickListener(v->{temp[0]=Math.max(climate.minTemp,temp[0]-climate.precision);ligado[0]=true;enviarEstadoAc(climate,mode[0],fan[0],swing[0],temp[0],state);refresh.run();});
-            TextView tempTv=label(temp[0]+"°C",34); tempTv.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
-            tempCol.addView(plus,new LinearLayout.LayoutParams(dp(76),dp(48)));
-            tempCol.addView(tempTv,new LinearLayout.LayoutParams(dp(110),dp(80)));
-            tempCol.addView(minus,new LinearLayout.LayoutParams(dp(76),dp(48)));
-            LinearLayout.LayoutParams tc=new LinearLayout.LayoutParams(dp(125),dp(190)); tc.setMargins(0,dp(8),dp(8),dp(8));
-            center.addView(tempCol,tc);
-
-            LinearLayout nav=new LinearLayout(this);
-            nav.setOrientation(LinearLayout.VERTICAL); nav.setGravity(Gravity.CENTER);
-            nav.setPadding(dp(8),dp(8),dp(8),dp(8));
-            nav.setBackground(remoteSurface(Color.rgb(9,20,34),100,Color.rgb(43,69,96)));
-            nav.addView(remoteButton("⌃",0,40,22),new LinearLayout.LayoutParams(dp(62),dp(40)));
-            LinearLayout nm=row();
-            nm.addView(remoteButton("−",0,50,22),new LinearLayout.LayoutParams(dp(50),dp(50)));
-            Button ok=remoteButton("OK",0,60,17); nm.addView(ok,new LinearLayout.LayoutParams(dp(60),dp(60)));
-            nm.addView(remoteButton("+",0,50,22),new LinearLayout.LayoutParams(dp(50),dp(50)));
-            nav.addView(nm);
-            nav.addView(remoteButton("⌄",0,40,22),new LinearLayout.LayoutParams(dp(62),dp(40)));
-            LinearLayout.LayoutParams np=new LinearLayout.LayoutParams(0,dp(190),1f); np.setMargins(dp(4),dp(8),0,dp(8));
-            center.addView(nav,np);
-
-            LinearLayout fanCol=new LinearLayout(this);
-            fanCol.setOrientation(LinearLayout.VERTICAL); fanCol.setGravity(Gravity.CENTER);
-            fanCol.setBackground(remoteSurface(Color.rgb(11,24,40),34,Color.rgb(40,65,90)));
-            fanCol.addView(remoteButton("⌃",0,45,22),new LinearLayout.LayoutParams(dp(76),dp(45)));
-            TextView fanIcon=label("✣",32); fanIcon.setTextColor(Color.WHITE); fanCol.addView(fanIcon,new LinearLayout.LayoutParams(dp(76),dp(48)));
-            TextView fanBars=label("▮▮\n▮▮",18); fanBars.setTextColor(ACCENT); fanBars.setGravity(Gravity.CENTER); fanCol.addView(fanBars,new LinearLayout.LayoutParams(dp(76),dp(58)));
-            fanCol.addView(remoteButton("⌄",0,45,22),new LinearLayout.LayoutParams(dp(76),dp(45)));
-            LinearLayout.LayoutParams fp=new LinearLayout.LayoutParams(dp(90),dp(190)); fp.setMargins(dp(8),dp(8),0,dp(8)); center.addView(fanCol,fp);
-            root.addView(center);
-
-            LinearLayout shortcuts=row();
-            Button eco=botaoAcao("♢\nECO",KEY_DARK,12);
-            Button sleep=botaoAcao("☾\nSono",KEY_DARK,12);
-            Button timer=botaoAcao("◷\nTimer",KEY_DARK,12);
-            Button display=botaoAcao("☼\nDisplay",KEY_DARK,12);
-            shortcuts.addView(eco,lpPeso()); shortcuts.addView(sleep,lpPeso()); shortcuts.addView(timer,lpPeso()); shortcuts.addView(display,lpPeso());
-            root.addView(shortcuts);
-            eco.setOnClickListener(v->{temp[0]=Math.min(climate.maxTemp,26);ligado[0]=true;enviarEstadoAc(climate,mode[0],fan[0],swing[0],temp[0],state);refresh.run();});
-            sleep.setOnClickListener(v->{temp[0]=Math.min(climate.maxTemp,24);ligado[0]=true;enviarEstadoAc(climate,mode[0],fan[0],swing[0],temp[0],state);refresh.run();});
-            timer.setOnClickListener(v->new AlertDialog.Builder(this).setTitle("TIMER").setMessage("O timer depende dos códigos disponíveis para este modelo.\n\nUse o controle original para programar o timer quando o banco não fornecer esse comando.").setPositiveButton("OK",null).show());
-            display.setOnClickListener(v->Toast.makeText(this,"Função Display depende do código disponível no modelo.",Toast.LENGTH_SHORT).show());
+        section(root,"Velocidade do ventilador");
+        LinearLayout fr=row();
+        int fc=0;
+        for(String f:climate.fans){
+            final String value=f;
+            LinearLayout fb=tile(0,fanTexto(f),48,KEY,v->{fan[0]=value;ligado[0]=true;enviarEstadoAc(climate,mode[0],fan[0],swing[0],temp[0],state);refresh.run();});
+            fb.setTag(value);
+            fanButtons.add(fb);
+            fr.addView(fb); fc++;
+            if(fc%3==0 && fc<climate.fans.size()){root.addView(fr);fr=row();}
         }
+        if(fc>0) root.addView(fr);
 
-        if(acTab==1 || acTab==0){
-            if(acTab==1){
-                section(root,"MODO DE OPERAÇÃO");
-                LinearLayout mr=row(); int count=0;
-                for(String mm:climate.modes){
-                    final String value=mm;
-                    Button b=botaoAcao(modoTexto(mm),mm.equals(mode[0])?ACCENT:KEY_DARK,10);
-                    b.setTag(value); modeButtons.add(b);
-                    b.setOnClickListener(v->{mode[0]=value;ligado[0]=true;enviarEstadoAc(climate,mode[0],fan[0],swing[0],temp[0],state);refresh.run();});
-                    mr.addView(b,lpPeso()); if(++count%2==0){root.addView(mr);mr=row();}
-                }
-                if(count%2!=0)root.addView(mr);
-                section(root,"VELOCIDADE DO VENTILADOR");
-                LinearLayout fr=row(); count=0;
-                for(String ff:climate.fans){
-                    final String value=ff;
-                    Button b=botaoAcao(fanTexto(ff),ff.equals(fan[0])?ACCENT:KEY_DARK,10);
-                    b.setTag(value); fanButtons.add(b);
-                    b.setOnClickListener(v->{fan[0]=value;ligado[0]=true;enviarEstadoAc(climate,mode[0],fan[0],swing[0],temp[0],state);refresh.run();});
-                    fr.addView(b,lpPeso()); if(++count%2==0){root.addView(fr);fr=row();}
-                }
-                if(count%2!=0)root.addView(fr);
-                if(!climate.swings.isEmpty()){
-                    section(root,"SWING");
-                    LinearLayout sr=row(); count=0;
-                    for(String ss:climate.swings){
-                        final String value=ss;
-                        Button b=botaoAcao(modoTexto(ss),ss.equals(swing[0])?ACCENT:KEY_DARK,10);
-                        b.setTag(value); swingButtons.add(b);
-                        b.setOnClickListener(v->{swing[0]=value;ligado[0]=true;enviarEstadoAc(climate,mode[0],fan[0],swing[0],temp[0],state);refresh.run();});
-                        sr.addView(b,lpPeso()); if(++count%2==0){root.addView(sr);sr=row();}
-                    }
-                    if(count%2!=0)root.addView(sr);
-                }
+        if(!climate.swings.isEmpty()){
+            section(root,"Oscilação");
+            LinearLayout sr=row();
+            int sc=0;
+            for(String sw:climate.swings){
+                final String value=sw;
+                LinearLayout sb=tile(0,modoTexto(sw),48,KEY,v->{swing[0]=value;ligado[0]=true;enviarEstadoAc(climate,mode[0],fan[0],swing[0],temp[0],state);refresh.run();});
+                sb.setTag(value);
+                swingButtons.add(sb);
+                sr.addView(sb); sc++;
+                if(sc%3==0 && sc<climate.swings.size()){root.addView(sr);sr=row();}
             }
+            if(sc>0) root.addView(sr);
         }
 
-        if(acTab==2){
-            section(root,"FUNÇÕES");
-            LinearLayout a=row(); Button eco=botaoAcao("♢\nECO",KEY_DARK,12); Button sleep=botaoAcao("☾\nSono",KEY_DARK,12); a.addView(eco,lpPeso());a.addView(sleep,lpPeso());root.addView(a);
-            LinearLayout b=row(); Button timer=botaoAcao("◷\nTimer",KEY_DARK,12); Button display=botaoAcao("☼\nDisplay",KEY_DARK,12); b.addView(timer,lpPeso());b.addView(display,lpPeso());root.addView(b);
-            eco.setOnClickListener(v->{temp[0]=Math.min(climate.maxTemp,26);ligado[0]=true;enviarEstadoAc(climate,mode[0],fan[0],swing[0],temp[0],state);refresh.run();});
-            sleep.setOnClickListener(v->{temp[0]=Math.min(climate.maxTemp,24);ligado[0]=true;enviarEstadoAc(climate,mode[0],fan[0],swing[0],temp[0],state);refresh.run();});
-            timer.setOnClickListener(v->new AlertDialog.Builder(this).setTitle("TIMER").setMessage("Timer depende dos códigos disponíveis neste modelo.").setPositiveButton("OK",null).show());
-            display.setOnClickListener(v->Toast.makeText(this,"Display depende do código disponível.",Toast.LENGTH_SHORT).show());
-        }
+        section(root,"Atalhos");
+        LinearLayout quick=row();
+        quick.addView(tile(0,"Conforto 24°",48,KEY_DARK,v->{temp[0]=Math.max(climate.minTemp,Math.min(climate.maxTemp,24));ligado[0]=true;enviarEstadoAc(climate,mode[0],fan[0],swing[0],temp[0],state);refresh.run();}));
+        quick.addView(tile(0,"Economia 26°",48,KEY_DARK,v->{temp[0]=Math.max(climate.minTemp,Math.min(climate.maxTemp,26));ligado[0]=true;enviarEstadoAc(climate,mode[0],fan[0],swing[0],temp[0],state);refresh.run();}));
+        quick.addView(tile(0,"Auto",48,KEY_DARK,v->{
+            for(String m:climate.modes) if("auto".equalsIgnoreCase(m)||"heat_cool".equalsIgnoreCase(m)){mode[0]=m;break;}
+            for(String f:climate.fans) if("auto".equalsIgnoreCase(f)){fan[0]=f;break;}
+            ligado[0]=true; enviarEstadoAc(climate,mode[0],fan[0],swing[0],temp[0],state); refresh.run();
+        }));
+        root.addView(quick);
 
-        if(acTab==3){
-            section(root,"CONFIGURAÇÕES DO CONTROLE");
-            TextView info=label("Modelo: "+model.manufacturer+" "+model.model+"\nBanco: SmartIR\nTemperatura: "+climate.minTemp+"°C — "+climate.maxTemp+"°C\nPasso: "+climate.precision+"°C",13);
-            info.setTextColor(Color.rgb(177,190,210));
-            info.setPadding(dp(14),dp(12),dp(14),dp(12));
-            info.setBackground(remoteSurface(Color.rgb(10,20,34),18,Color.rgb(38,59,80)));
-            root.addView(info,new LinearLayout.LayoutParams(-1,dp(105)));
-            Button reset=botaoAcao("↻  Restaurar interface",KEY_DARK,12);
-            reset.setOnClickListener(v->{acTab=0;showAcRemote(climate,model,saved[0]);});
-            root.addView(reset,new LinearLayout.LayoutParams(-1,dp(48)));
-        }
-
-        LinearLayout bottomActions=row();
-        Button save=botaoAcao(saved[0]==null?"★  SALVAR CONTROLE":"✓  CONTROLE SALVO",ACCENT,12);
-        save.setOnClickListener(v->{
+        LinearLayout actions=row();
+        actions.addView(tile(saved[0]==null?R.drawable.ic_star:R.drawable.ic_check,saved[0]==null?"Salvar controle":"Controle salvo",58,ACCENT,v->{
             if(saved[0]==null){
-                if(!monetizacao.podeSalvarControle(controleStorage.listar().size())){
-                    Toast.makeText(this,"Limite gratuito atingido ("+monetizacao.limiteGratuito()+" controles). Desbloqueie o Premium para salvar ilimitados.",Toast.LENGTH_LONG).show();
-                    monetizacao.showPremiumDialog(); return;
-                }
-                String url=climate.sourceUrl;
-                if(url==null||url.trim().isEmpty()) url="https://raw.githubusercontent.com/smartHomeHub/SmartIR/main/codes/climate/"+model.code+".json";
+                String url="https://raw.githubusercontent.com/smartHomeHub/SmartIR/master/codes/climate/"+model.code+".json";
                 long id=controleStorage.salvar(model.manufacturer+" "+model.model,"AR-CONDICIONADO",model.manufacturer,model.model,"AC SmartIR","SMARTIR|"+url,-1,38000);
-                if(id>0)saved[0]=controleStorage.buscar(id);
+                if(id>0){saved[0]=controleStorage.buscar(id);}
             }
             if(saved[0]!=null){
                 int[] p=smartRaw(climate.command(mode[0],fan[0],swing[0],temp[0]),climate.encoding);
-                if(p.length>0)controleStorage.salvarComandoRaw(saved[0],"ESTADO ATUAL",38000,p);
+                if(p.length>0) controleStorage.salvarComandoRaw(saved[0],"ESTADO ATUAL",38000,p);
                 String base="ac_state_"+saved[0].id+"_";
-                prefs.edit().putString(base+"mode",mode[0]).putString(base+"fan",fan[0]).putString(base+"swing",swing[0]==null?"":swing[0]).putInt(base+"temp",temp[0]).putBoolean(base+"on",ligado[0]).apply();
+                prefs.edit().putString(base+"mode",mode[0]).putString(base+"fan",fan[0])
+                    .putString(base+"swing",swing[0]==null?"":swing[0]).putInt(base+"temp",temp[0])
+                    .putBoolean(base+"on",ligado[0]).apply();
                 Toast.makeText(this,"✓ Controle de ar-condicionado salvo.",Toast.LENGTH_SHORT).show();
-                acTab=0; build();
+                build();
             }
+        }));
+        actions.addView(tile(R.drawable.ic_back,"Voltar",58,KEY_DARK,v->showSelector()));
+        LinearLayout.LayoutParams alp=new LinearLayout.LayoutParams(-1,-2); alp.setMargins(0,dp(14),0,0);
+        root.addView(actions,alp);
+
+        TextView foot=label("Banco SmartIR · "+climate.models.size()+" modelo(s) · "+climate.modes.size()+" modos · "+climate.fans.size()+" velocidades",11);
+        foot.setTextColor(GRAY); foot.setGravity(Gravity.CENTER);
+        LinearLayout.LayoutParams flp=new LinearLayout.LayoutParams(-1,-2); flp.setMargins(0,dp(14),0,0);
+        root.addView(foot,flp);
+
+        menos.setOnClickListener(v->{
+            haptic(v);
+            temp[0]=Math.max(climate.minTemp,temp[0]-climate.precision);
+            ligado[0]=true; enviarEstadoAc(climate,mode[0],fan[0],swing[0],temp[0],state); refresh.run();
         });
-        bottomActions.addView(save,lpPeso());
-        Button back=botaoAcao("← VOLTAR",KEY_DARK,12); back.setOnClickListener(v->showSelector()); bottomActions.addView(back,lpPeso());
-        root.addView(bottomActions,new LinearLayout.LayoutParams(-1,dp(50)));
-
-        state.setText((ligado[0]?"● LIGADO":"○ DESLIGADO")+"  •  "+modoTexto(mode[0])+"  •  "+temp[0]+" °C  •  "+fanTexto(fan[0]));
-        state.setTextColor(ligado[0]?Color.rgb(80,210,125):GRAY);
-        LinearLayout.LayoutParams sp=new LinearLayout.LayoutParams(-1,dp(36)); sp.setMargins(0,dp(8),0,0); root.addView(state,sp);
-        sv.addView(root); mostrar(sv);
+        mais.setOnClickListener(v->{
+            haptic(v);
+            temp[0]=Math.min(climate.maxTemp,temp[0]+climate.precision);
+            ligado[0]=true; enviarEstadoAc(climate,mode[0],fan[0],swing[0],temp[0],state); refresh.run();
+        });
+        refresh.run();
+        mostrar(telaRolavel(root));
     }
-
-    private void refreshAcState(TextView state, SmartIrDatabase.Climate climate, String[] mode, String[] fan, String[] swing, int[] temp, boolean[] ligado, ControleStorage.Controle[] saved){
-        if(saved[0]!=null){
-            String base="ac_state_"+saved[0].id+"_";
-            prefs.edit().putString(base+"mode",mode[0]).putString(base+"fan",fan[0]).putString(base+"swing",swing[0]==null?"":swing[0]).putInt(base+"temp",temp[0]).putBoolean(base+"on",ligado[0]).apply();
-        }
-        state.setText((ligado[0]?"● LIGADO":"○ DESLIGADO")+"  •  "+modoTexto(mode[0])+"  •  "+temp[0]+" °C  •  "+fanTexto(fan[0]));
-        state.setTextColor(ligado[0]?Color.rgb(80,210,125):GRAY);
-    }
-
 
     private String modoTexto(String value){
         if(value==null) return "";
         String v=value.trim().toLowerCase(java.util.Locale.ROOT);
-        if(v.equals("cool")) return "❄️ FRIO";
-        if(v.equals("heat")) return "☀️ QUENTE";
-        if(v.equals("auto") || v.equals("heat_cool")) return "AUTO";
-        if(v.equals("dry")) return "💧 SECO";
-        if(v.equals("fan_only") || v.equals("fan")) return "🌀 VENT.";
-        if(v.equals("off")) return "DESL.";
-        return value.replace("_"," ").toUpperCase(java.util.Locale.ROOT);
+        if(v.equals("cool")) return "Frio";
+        if(v.equals("heat")) return "Quente";
+        if(v.equals("auto") || v.equals("heat_cool")) return "Auto";
+        if(v.equals("dry")) return "Seco";
+        if(v.equals("fan_only") || v.equals("fan")) return "Ventilar";
+        if(v.equals("off")) return "Desligado";
+        String s=value.replace("_"," ").trim();
+        return s.isEmpty()?s:s.substring(0,1).toUpperCase(java.util.Locale.ROOT)+s.substring(1);
     }
 
     private String fanTexto(String value){
         if(value==null) return "";
         String v=value.trim().toLowerCase(java.util.Locale.ROOT);
-        if(v.equals("auto")) return "AUTO";
-        if(v.equals("low") || v.equals("low-low")) return "BAIXA";
-        if(v.equals("medium") || v.equals("med")) return "MÉDIA";
-        if(v.equals("high")) return "ALTA";
-        if(v.equals("turbo") || v.equals("max")) return "TURBO";
-        if(v.equals("off")) return "OFF";
-        return value.replace("_"," ").toUpperCase(java.util.Locale.ROOT);
+        if(v.equals("auto")) return "Auto";
+        if(v.equals("low") || v.equals("low-low")) return "Baixa";
+        if(v.equals("medium") || v.equals("med")) return "Média";
+        if(v.equals("high")) return "Alta";
+        if(v.equals("turbo") || v.equals("max")) return "Turbo";
+        if(v.equals("off")) return "Off";
+        String s=value.replace("_"," ").trim();
+        return s.isEmpty()?s:s.substring(0,1).toUpperCase(java.util.Locale.ROOT)+s.substring(1);
     }
 
     private void enviarEstadoAc(SmartIrDatabase.Climate c,String mode,String fan,String swing,int temp,TextView status){
@@ -953,9 +775,9 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         new Thread(()->{
             try{
                 java.util.List<IrRemoteDatabase.Signal> sinais=IrRemoteDatabase.baixarSinais(remote);
-                runOnUiThread(()->mostrarSinaisOnline(remote,sinais));
+                ui(()->mostrarSinaisOnline(remote,sinais));
             }catch(Exception e){
-                runOnUiThread(()->Toast.makeText(this,e.getMessage()==null?"Falha ao carregar o controle.":e.getMessage(),Toast.LENGTH_LONG).show());
+                ui(()->Toast.makeText(this,e.getMessage()==null?"Falha ao carregar o controle.":e.getMessage(),Toast.LENGTH_LONG).show());
             }
         }).start();
     }
@@ -1023,29 +845,53 @@ private static final int CARD_2 = Color.rgb(31,31,36);
     }
 
     private LinearLayout tvCard(String brand,String model,boolean selected,View.OnClickListener click){
-        LinearLayout card=new LinearLayout(this); card.setOrientation(LinearLayout.VERTICAL); card.setGravity(Gravity.CENTER_VERTICAL); card.setPadding(dp(20),dp(10),dp(20),dp(10));
-        GradientDrawable bg=new GradientDrawable(); bg.setColor(selected?Color.rgb(42,42,48):Color.rgb(27,27,30)); bg.setCornerRadius(dp(20)); bg.setStroke(dp(2),selected?Color.rgb(210,30,38):Color.rgb(55,55,58)); card.setBackground(bg);
-        TextView b=label(brand,18); b.setTypeface(Typeface.DEFAULT,Typeface.BOLD); card.addView(b,new LinearLayout.LayoutParams(-1,dp(34)));
-        TextView m=label(model,16); m.setTextColor(GRAY); card.addView(m,new LinearLayout.LayoutParams(-1,dp(30)));
-        TextView s=label(selected?"✓ SELECIONADA":"TOQUE PARA SELECIONAR",12); s.setTextColor(selected?Color.rgb(75,145,95):GRAY); card.addView(s,new LinearLayout.LayoutParams(-1,dp(28)));
-        card.setOnClickListener(v->{ click.onClick(v); showSelector(); });
+        LinearLayout card=new LinearLayout(this); card.setOrientation(LinearLayout.VERTICAL); card.setGravity(Gravity.CENTER_VERTICAL);
+        card.setPadding(dp(14),dp(12),dp(14),dp(12));
+        GradientDrawable bg=new GradientDrawable(); bg.setColor(selected?Color.rgb(42,42,48):Color.rgb(27,27,30)); bg.setCornerRadius(dp(18));
+        bg.setStroke(dp(2),selected?ACCENT:Color.rgb(55,55,58));
+        card.setBackground(new RippleDrawable(ColorStateList.valueOf(Color.rgb(85,85,90)),bg,null));
+        card.setClickable(true); card.setFocusable(true); card.setContentDescription(brand+" "+model+(selected?", selecionada":""));
+        card.addView(textoEsq(brand,18,WHITE,true),new LinearLayout.LayoutParams(-1,-2));
+        LinearLayout.LayoutParams mlp=new LinearLayout.LayoutParams(-1,-2); mlp.setMargins(0,dp(2),0,dp(8));
+        card.addView(textoEsq(model,13,GRAY,false),mlp);
+        LinearLayout st=new LinearLayout(this); st.setOrientation(LinearLayout.HORIZONTAL); st.setGravity(Gravity.CENTER_VERTICAL);
+        if(selected){
+            LinearLayout.LayoutParams ci=new LinearLayout.LayoutParams(dp(14),dp(14)); ci.setMargins(0,0,dp(6),0);
+            st.addView(icone(R.drawable.ic_check,14,SUCCESS),ci);
+        }
+        st.addView(textoEsq(selected?"Selecionada":"Toque para escolher",12,selected?SUCCESS:GRAY,false),new LinearLayout.LayoutParams(0,-2,1));
+        card.addView(st,new LinearLayout.LayoutParams(-1,-2));
+        card.setOnClickListener(v->{ haptic(v); click.onClick(v); showSelector(); });
+        LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,-2,1); p.setMargins(dp(3),dp(4),dp(3),dp(4));
+        card.setLayoutParams(p);
         return card;
     }
 
     @Override protected void onResume(){
         super.onResume();
         recarregarAtivo();
-        if(updateManager!=null){
-            updateManager.aoRetornarDoSistema();
-            updateManager.verificarAoAbrir();
+        if(updater!=null){
+            updater.aoRetornarDoSistema();
+            updater.verificarAoAbrir();
         }
     }
 
     @Override protected void onDestroy(){
-        if(updateManager!=null) updateManager.destroy();
+        if(updater!=null) updater.destroy();
+        if(monetizacao!=null) monetizacao.destroy();
         super.onDestroy();
     }
 
+    /** Android 13+ (obrigatório com targetSdk 36): voltar via OnBackInvokedCallback. */
+    private void registrarVoltar(){
+        if(Build.VERSION.SDK_INT>=33){
+            getOnBackInvokedDispatcher().registerOnBackInvokedCallback(
+                android.window.OnBackInvokedDispatcher.PRIORITY_DEFAULT,
+                ()->{ if(!showingSelector) showSelector(); else finish(); });
+        }
+    }
+
+    /** Android 12 e anteriores. */
     @Override public void onBackPressed(){
         if(!showingSelector){ showSelector(); } else { super.onBackPressed(); }
     }
@@ -1232,7 +1078,6 @@ private static final int CARD_2 = Color.rgb(31,31,36);
 
         final TextView[] itens=new TextView[nomes.length];
         final int[] selecionado={-1};
-        final android.app.AlertDialog[] scannerDialog={null};
         int inicial=0;
         for(int i=0;i<perfisMapa.length;i++){
             if(perfisMapa[i].equals(perfilSelecionado[0])){ inicial=i; break; }
@@ -1255,7 +1100,6 @@ private static final int CARD_2 = Color.rgb(31,31,36);
                 // Para ar-condicionado, a marca do catálogo é apenas a porta de entrada.
                 // O controle real vem do SmartIR, que precisa do modelo/protocolo exato.
                 if("AC".equals(tipos[pos])){
-                    if(scannerDialog[0]!=null) scannerDialog[0].dismiss();
                     abrirSmartIrMarca(marcas[pos]);
                     return;
                 }
@@ -1327,7 +1171,6 @@ private static final int CARD_2 = Color.rgb(31,31,36);
             .setView(wrapScroll(box))
             .create();
 
-        scannerDialog[0]=dialog;
         dialog.setOnShowListener(x->{
             irPerfilTeste.selecionar(perfilSelecionado[0]);
             Button testar=testarProximoVisivel;
@@ -1416,9 +1259,6 @@ private static final int CARD_2 = Color.rgb(31,31,36);
                 oferecerConfiguracaoAutomatica(controleAtivo);
             });
         });
-
-        // O listener acima só configura os controles do diálogo. Sem show(), o AlertDialog nunca é exibido.
-        dialog.show();
     }
 
     private void oferecerConfiguracaoAutomatica(ControleStorage.Controle controle){
@@ -1479,10 +1319,10 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         box.setOrientation(LinearLayout.VERTICAL);
         box.setPadding(dp(18),dp(4),dp(18),dp(4));
 
-        TextView intro=label("⚡ A configuração automática já preenche o que é conhecido. Use esta tela apenas para corrigir ou adicionar funções.",13);
+        TextView intro=label("A configuração automática já preenche o que é conhecido. Use esta tela para corrigir ou adicionar funções.",13);
         intro.setTextColor(GRAY);
         intro.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
-        box.addView(intro,new LinearLayout.LayoutParams(-1,dp(54)));
+        LinearLayout.LayoutParams introP=new LinearLayout.LayoutParams(-1,-2); introP.setMargins(0,0,0,dp(8)); box.addView(intro,introP);
 
         LinearLayout device=row();
         TextView deviceName=label(controle.nome,18);
@@ -1498,9 +1338,15 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         progress.setTextColor(Color.rgb(105,175,115));
         progress.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
         progressRow.addView(progress,new LinearLayout.LayoutParams(0,dp(30),1));
-        Button proximoNaoConfigurado=smallAction("PRÓXIMO PENDENTE",Color.rgb(55,65,80));
+        Button proximoNaoConfigurado=smallAction("Próximo pendente",Color.rgb(55,65,80));
         progressRow.addView(proximoNaoConfigurado,new LinearLayout.LayoutParams(dp(132),dp(32)));
         box.addView(progressRow,new LinearLayout.LayoutParams(-1,dp(34)));
+        final ProgressBar barraProgresso=new ProgressBar(this,null,android.R.attr.progressBarStyleHorizontal);
+        barraProgresso.setMax(100);
+        barraProgresso.setProgressTintList(ColorStateList.valueOf(Color.rgb(105,190,125)));
+        barraProgresso.setProgressBackgroundTintList(ColorStateList.valueOf(Color.rgb(48,48,54)));
+        LinearLayout.LayoutParams barraP=new LinearLayout.LayoutParams(-1,dp(6)); barraP.setMargins(0,0,0,dp(10));
+        box.addView(barraProgresso,barraP);
 
         TextView selectedTitle=label("",16);
         selectedTitle.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
@@ -1516,10 +1362,10 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         statusBg.setCornerRadius(dp(12));
         statusBg.setStroke(dp(1),BORDER);
         status.setBackground(statusBg);
-        status.setPadding(dp(12),0,dp(12),0);
-        box.addView(status,new LinearLayout.LayoutParams(-1,dp(44)));
+        status.setPadding(dp(12),dp(10),dp(12),dp(10));
+        box.addView(status,new LinearLayout.LayoutParams(-1,-2));
 
-        TextView listaTitulo=label("BOTÕES DO CONTROLE",11);
+        TextView listaTitulo=label("Botões do controle",12);
         listaTitulo.setTextColor(GRAY);
         listaTitulo.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
         listaTitulo.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
@@ -1532,7 +1378,7 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         LinearLayout lista=new LinearLayout(this);
         lista.setOrientation(LinearLayout.VERTICAL);
         listaScroll.addView(lista); permitirRolagemInterna(listaScroll);
-        LinearLayout.LayoutParams lsp=new LinearLayout.LayoutParams(-1,dp(260));
+        LinearLayout.LayoutParams lsp=new LinearLayout.LayoutParams(-1,Math.min(dp(300),(int)(getResources().getDisplayMetrics().heightPixels*0.34f)));
         lsp.setMargins(0,dp(2),0,dp(2));
         box.addView(listaScroll,lsp);
 
@@ -1541,7 +1387,7 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         hex.setHint("Ir direto a um código (hex, ex.: 0x5C)"); hex.setHintTextColor(Color.rgb(120,120,125));
         hex.setTextColor(WHITE); hex.setTextSize(13); hex.setSingleLine(true);
         hexRow.addView(hex,new LinearLayout.LayoutParams(0,dp(46),1));
-        final Button hexBtn=botaoAcao("TESTAR HEX",KEY_DARK,11);
+        final Button hexBtn=botaoAcao("Testar hex",KEY_DARK,12);
         hexRow.addView(hexBtn,lpFixa(96));
         box.addView(hexRow,new LinearLayout.LayoutParams(-1,dp(50)));
 
@@ -1551,7 +1397,8 @@ private static final int CARD_2 = Color.rgb(31,31,36);
             int qtd=controleStorage.quantidadeComandos(controle);
             int percentual=funcoes.length<=0?0:Math.min(100,(qtd*100)/funcoes.length);
             progress.setText(qtd+" de "+funcoes.length+" botões • "+percentual+"%");
-            proximoNaoConfigurado.setText(qtd>=funcoes.length?"✓ CONCLUÍDO":"PRÓXIMO PENDENTE");
+            barraProgresso.setProgress(percentual);
+            proximoNaoConfigurado.setText(qtd>=funcoes.length?"✓ Concluído":"Próximo pendente");
             selectedTitle.setText(qtd>=funcoes.length
                 ?"✓ Controle totalmente configurado"
                 :"Configurando: "+funcoes[pos[0]]);
@@ -1603,7 +1450,7 @@ private static final int CARD_2 = Color.rgb(31,31,36);
                 status.setTextColor(GRAY);
                 atualizarLista.run();
             });
-            LinearLayout.LayoutParams ip=new LinearLayout.LayoutParams(-1,dp(42));
+            LinearLayout.LayoutParams ip=new LinearLayout.LayoutParams(-1,dp(46));
             ip.setMargins(0,dp(2),0,dp(2));
             lista.addView(item,ip);
             botoes[i]=item;
@@ -1614,9 +1461,9 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         android.app.AlertDialog dialog=new android.app.AlertDialog.Builder(this)
             .setTitle("Configurar botões")
             .setView(wrapScroll(box))
-            .setNegativeButton("FECHAR",(d,w)->showMeusControles())
-            .setNeutralButton("TESTAR CÓDIGO",null)
-            .setPositiveButton("FUNCIONOU / SALVAR",null)
+            .setNegativeButton("Fechar",(d,w)->showMeusControles())
+            .setNeutralButton("Testar código",null)
+            .setPositiveButton("Funcionou, salvar",null)
             .create();
 
         dialog.setOnShowListener(x->{
@@ -1642,7 +1489,7 @@ private static final int CARD_2 = Color.rgb(31,31,36);
             hexBtn.setOnClickListener(v->{
                 preparar.run();
                 boolean ok=irPerfilTeste.transmitManual(hex.getText().toString());
-                status.setText(ok?"●  Código enviado • "+funcoes[pos[0]]+"  (se respondeu, toque em FUNCIONOU / SALVAR)":"●  Código inválido ou falha no emissor IR");
+                status.setText(ok?"●  Código enviado • "+funcoes[pos[0]]+"  (se respondeu, toque em Funcionou, salvar)":"●  Código inválido ou falha no emissor IR");
                 status.setTextColor(ok?Color.rgb(205,180,90):ACCENT);
             });
 
@@ -1742,58 +1589,44 @@ private static final int CARD_2 = Color.rgb(31,31,36);
     }
 
     private void showMeusControles(){
-        ScrollView sv=new ScrollView(this); sv.setFillViewport(true); sv.setBackgroundColor(BG);
         LinearLayout root=new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(dp(14),dp(16),dp(14),dp(28)); root.setBackgroundColor(BG);
+        root.setPadding(dp(14),dp(14),dp(14),dp(28));
 
-        LinearLayout top=row();
-        LinearLayout head=new LinearLayout(this); head.setOrientation(LinearLayout.VERTICAL); head.setGravity(Gravity.CENTER_VERTICAL);
-        TextView title=label("Meus controles",24); title.setTypeface(Typeface.DEFAULT,Typeface.BOLD); title.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
-        head.addView(title,new LinearLayout.LayoutParams(-1,dp(30)));
-        TextView headSub=label("Seus controles • salvos neste aparelho",12); headSub.setTextColor(GRAY); headSub.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
-        head.addView(headSub,new LinearLayout.LayoutParams(-1,dp(20)));
-        top.addView(head,new LinearLayout.LayoutParams(0,dp(52),1));
-        Button voltar=new Button(this); voltar.setText("VOLTAR"); voltar.setTextColor(WHITE); voltar.setTextSize(12); voltar.setAllCaps(false);
-        GradientDrawable vb=new GradientDrawable(); vb.setColor(CARD_2); vb.setCornerRadius(dp(14)); vb.setStroke(dp(1),Color.rgb(60,60,66)); voltar.setBackground(vb);
-        actionFeedback(voltar); voltar.setOnClickListener(v->showSelector()); top.addView(voltar,new LinearLayout.LayoutParams(dp(90),dp(44))); root.addView(top);
+        LinearLayout top=new LinearLayout(this); top.setOrientation(LinearLayout.HORIZONTAL); top.setGravity(Gravity.CENTER_VERTICAL);
+        top.addView(iconBtn(R.drawable.ic_back,46,24,CARD_2,true,"Voltar",v->showSelector()),new LinearLayout.LayoutParams(dp(46),dp(46)));
+        LinearLayout head=new LinearLayout(this); head.setOrientation(LinearLayout.VERTICAL);
+        head.addView(textoEsq("Meus controles",22,WHITE,true),new LinearLayout.LayoutParams(-1,-2));
+        LinearLayout.LayoutParams hs=new LinearLayout.LayoutParams(-1,-2); hs.setMargins(0,dp(2),0,0);
+        head.addView(textoEsq("Salvos neste aparelho",12,GRAY,false),hs);
+        LinearLayout.LayoutParams hp=new LinearLayout.LayoutParams(0,-2,1); hp.setMargins(dp(12),0,0,0);
+        top.addView(head,hp);
+        LinearLayout.LayoutParams topP=new LinearLayout.LayoutParams(-1,-2); topP.setMargins(0,0,0,dp(8));
+        root.addView(top,topP);
 
-        LinearLayout premiumCard=new LinearLayout(this); premiumCard.setOrientation(LinearLayout.HORIZONTAL); premiumCard.setGravity(Gravity.CENTER_VERTICAL); premiumCard.setPadding(dp(14),0,dp(10),0);
-        boolean premiumAtivo=monetizacao.isPremium();
-        GradientDrawable premiumCardBg=new GradientDrawable(); premiumCardBg.setColor(premiumAtivo?Color.rgb(28,55,36):Color.rgb(48,40,24)); premiumCardBg.setCornerRadius(dp(15)); premiumCardBg.setStroke(dp(1),premiumAtivo?Color.rgb(80,160,100):Color.rgb(100,78,40)); premiumCard.setBackground(premiumCardBg);
-        LinearLayout premiumInfo=new LinearLayout(this); premiumInfo.setOrientation(LinearLayout.VERTICAL); premiumInfo.setGravity(Gravity.CENTER_VERTICAL);
-        TextView premiumTitle=label(premiumAtivo?"⭐  PREMIUM ATIVO":"⭐  PLANO GRATUITO",14); premiumTitle.setTypeface(Typeface.DEFAULT,Typeface.BOLD); premiumTitle.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
-        premiumInfo.addView(premiumTitle,new LinearLayout.LayoutParams(-1,dp(24)));
-        TextView premiumSub=label(monetizacao.resumoLimite(controleStorage.quantidadeControles())+" • "+(premiumAtivo?"sem anúncios":"desbloqueie controles ilimitados"),11); premiumSub.setTextColor(GRAY); premiumSub.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
-        premiumInfo.addView(premiumSub,new LinearLayout.LayoutParams(-1,dp(20)));
-        premiumCard.addView(premiumInfo,new LinearLayout.LayoutParams(0,dp(48),1));
-        Button premiumAction=new Button(this); premiumAction.setText(premiumAtivo?"VERIFICAR":"PREMIUM"); premiumAction.setTextColor(WHITE); premiumAction.setTextSize(11); premiumAction.setAllCaps(false); premiumAction.setMinHeight(0); premiumAction.setMinWidth(0); premiumAction.setPadding(dp(10),0,dp(10),0);
-        GradientDrawable premiumActionBg=new GradientDrawable(); premiumActionBg.setColor(premiumAtivo?Color.rgb(55,110,65):ACCENT); premiumActionBg.setCornerRadius(dp(11)); premiumAction.setBackground(premiumActionBg); actionFeedback(premiumAction);
-        premiumAction.setOnClickListener(v->monetizacao.showPremiumDialog());
-        premiumCard.addView(premiumAction,new LinearLayout.LayoutParams(dp(92),dp(40)));
-        LinearLayout.LayoutParams premiumCardP=new LinearLayout.LayoutParams(-1,dp(60)); premiumCardP.setMargins(0,dp(4),0,dp(8)); root.addView(premiumCard,premiumCardP);
-        LinearLayout backupRow=row();
-        Button exportar=smallAction("EXPORTAR BACKUP",Color.rgb(55,85,65));
-        Button importar=smallAction("IMPORTAR BACKUP",Color.rgb(65,70,90));
-        backupRow.addView(exportar,new LinearLayout.LayoutParams(0,dp(40),1));
-        backupRow.addView(importar,new LinearLayout.LayoutParams(0,dp(40),1));
-        exportar.setOnClickListener(v->exportarBackup());
-        importar.setOnClickListener(v->importarBackup());
-        LinearLayout.LayoutParams backupP=new LinearLayout.LayoutParams(-1,dp(48));
-        backupP.setMargins(0,0,0,dp(4)); root.addView(backupRow,backupP);
+        final boolean premiumAtivo=monetizacao.isPremium();
+        root.addView(cartaoLinha(R.drawable.ic_star,premiumAtivo?"Premium ativo":"Plano gratuito",
+            monetizacao.resumoLimite(controleStorage.quantidadeControles())+" · "+(premiumAtivo?"sem anúncios":"desbloqueie controles ilimitados"),
+            premiumAtivo?Color.rgb(28,55,36):Color.rgb(48,40,24),v->monetizacao.showPremiumDialog()));
 
+        LinearLayout backup=new LinearLayout(this); backup.setOrientation(LinearLayout.HORIZONTAL);
+        backup.addView(chip(R.drawable.ic_upload,"Exportar backup",v->exportarBackup()));
+        backup.addView(chip(R.drawable.ic_download,"Importar backup",v->importarBackup()));
+        LinearLayout.LayoutParams bkp=new LinearLayout.LayoutParams(-1,-2); bkp.setMargins(0,dp(6),0,dp(4));
+        root.addView(backup,bkp);
 
         final EditText busca=new EditText(this);
-        busca.setSingleLine(true); busca.setHint("🔎  Pesquisar marca, modelo ou nome...");
+        busca.setSingleLine(true); busca.setHint("Pesquisar marca, modelo ou nome");
         busca.setHintTextColor(Color.rgb(125,125,130)); busca.setTextColor(WHITE); busca.setTextSize(14); busca.setPadding(dp(14),0,dp(14),0);
         GradientDrawable searchBg=new GradientDrawable(); searchBg.setColor(CARD); searchBg.setCornerRadius(dp(15)); searchBg.setStroke(dp(1),BORDER); busca.setBackground(searchBg);
-        LinearLayout.LayoutParams searchP=new LinearLayout.LayoutParams(-1,dp(48)); searchP.setMargins(0,dp(10),0,dp(8)); root.addView(busca,searchP);
+        LinearLayout.LayoutParams searchP=new LinearLayout.LayoutParams(-1,dp(48)); searchP.setMargins(0,dp(8),0,dp(6)); root.addView(busca,searchP);
 
         final TextView resumo=label("",12); resumo.setTextColor(GRAY); resumo.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
-        root.addView(resumo,new LinearLayout.LayoutParams(-1,dp(30)));
+        LinearLayout.LayoutParams resP=new LinearLayout.LayoutParams(-1,-2); resP.setMargins(dp(4),dp(4),0,dp(4));
+        root.addView(resumo,resP);
         final LinearLayout listaBox=new LinearLayout(this); listaBox.setOrientation(LinearLayout.VERTICAL); root.addView(listaBox,new LinearLayout.LayoutParams(-1,-2));
 
         final Runnable[] render=new Runnable[1];
-render[0]=()->{
+        render[0]=()->{
             listaBox.removeAllViews();
             String filtro=busca.getText().toString().trim().toLowerCase(java.util.Locale.ROOT);
             List<ControleStorage.Controle> todos=controleStorage.listar();
@@ -1808,91 +1641,92 @@ render[0]=()->{
                     LinearLayout vazioBox=new LinearLayout(this);
                     vazioBox.setOrientation(LinearLayout.VERTICAL);
                     vazioBox.setGravity(Gravity.CENTER_HORIZONTAL);
-                    vazioBox.setPadding(dp(18),dp(22),dp(18),dp(22));
+                    vazioBox.setPadding(dp(18),dp(24),dp(18),dp(18));
                     GradientDrawable vazioBg=new GradientDrawable();
                     vazioBg.setColor(CARD);
                     vazioBg.setCornerRadius(dp(20));
                     vazioBg.setStroke(dp(1),BORDER);
                     vazioBox.setBackground(vazioBg);
 
-                    TextView emoji=label("📭",38);
-                    emoji.setGravity(Gravity.CENTER);
-                    vazioBox.addView(emoji,new LinearLayout.LayoutParams(-1,dp(48)));
+                    LinearLayout.LayoutParams iv=new LinearLayout.LayoutParams(dp(40),dp(40));
+                    vazioBox.addView(icone(R.drawable.ic_tv,40,GRAY),iv);
 
                     TextView tituloVazio=label("Nenhum controle salvo ainda",18);
                     tituloVazio.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
-                    tituloVazio.setGravity(Gravity.CENTER);
-                    tituloVazio.setTextColor(WHITE);
-                    vazioBox.addView(tituloVazio,new LinearLayout.LayoutParams(-1,dp(34)));
+                    LinearLayout.LayoutParams tv1=new LinearLayout.LayoutParams(-1,-2); tv1.setMargins(0,dp(12),0,dp(6));
+                    vazioBox.addView(tituloVazio,tv1);
 
-                    TextView textoVazio=label("🔎 Use o CONTROLE UNIVERSAL para encontrar seu aparelho, testar os códigos e salvar o controle que funcionar.",13);
+                    TextView textoVazio=label("Use o Controle universal para encontrar seu aparelho, testar os códigos e salvar o que funcionar. Depois de salvo, ele aparece aqui para acesso rápido.",13);
                     textoVazio.setTextColor(GRAY);
-                    textoVazio.setGravity(Gravity.CENTER);
-                    vazioBox.addView(textoVazio,new LinearLayout.LayoutParams(-1,dp(68)));
+                    LinearLayout.LayoutParams tv2=new LinearLayout.LayoutParams(-1,-2); tv2.setMargins(0,0,0,dp(14));
+                    vazioBox.addView(textoVazio,tv2);
 
-                    TextView dicaVazia=label("💡 Depois de salvar, ele aparecerá aqui para acesso rápido.",12);
-                    dicaVazia.setTextColor(Color.rgb(155,155,160));
-                    dicaVazia.setGravity(Gravity.CENTER);
-                    vazioBox.addView(dicaVazia,new LinearLayout.LayoutParams(-1,dp(42)));
+                    vazioBox.addView(botaoLargo(R.drawable.ic_search,"Encontrar meu controle",52,ACCENT,v->showUniversalScanner("Universal","Universal")));
 
-                    Button addVazio=new Button(this);
-                    addVazio.setText("🔎  ENCONTRAR MEU CONTROLE");
-                    addVazio.setTextColor(WHITE);
-                    addVazio.setTextSize(13);
-                    addVazio.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
-                    addVazio.setAllCaps(false);
-                    GradientDrawable av=new GradientDrawable();
-                    av.setColor(ACCENT);
-                    av.setCornerRadius(dp(15));
-                    addVazio.setBackground(av);
-                    actionFeedback(addVazio);
-                    addVazio.setOnClickListener(v->showUniversalScanner("Universal","Universal"));
-                    vazioBox.addView(addVazio,new LinearLayout.LayoutParams(-1,dp(52)));
-
-                    LinearLayout.LayoutParams vp=new LinearLayout.LayoutParams(-1,dp(296));
+                    LinearLayout.LayoutParams vp=new LinearLayout.LayoutParams(-1,-2);
                     vp.setMargins(0,dp(4),0,dp(8));
                     listaBox.addView(vazioBox,vp);
                 }else{
-                    TextView vazio=label("🔎 Nenhum controle encontrado para \""+filtro+"\".",15);
+                    TextView vazio=label("Nenhum controle encontrado para \""+filtro+"\".",15);
                     vazio.setTextColor(GRAY);
-                    vazio.setGravity(Gravity.CENTER);
-                    listaBox.addView(vazio,new LinearLayout.LayoutParams(-1,dp(100)));
+                    vazio.setPadding(0,dp(30),0,dp(30));
+                    listaBox.addView(vazio,new LinearLayout.LayoutParams(-1,-2));
                 }
                 return;
             }
             for(ControleStorage.Controle c:lista){
-                LinearLayout card=new LinearLayout(this); card.setOrientation(LinearLayout.VERTICAL); card.setPadding(dp(15),dp(12),dp(15),dp(12));
-                boolean ativoAtual=controleAtivo!=null&&controleAtivo.id==c.id;
-                GradientDrawable cb=new GradientDrawable(); cb.setColor(ativoAtual?Color.rgb(28,55,36):CARD); cb.setCornerRadius(dp(18)); cb.setStroke(dp(1),ativoAtual?Color.rgb(80,160,100):Color.rgb(55,55,60)); card.setBackground(cb);
+                final boolean ativoAtual=controleAtivo!=null&&controleAtivo.id==c.id;
+                LinearLayout card=new LinearLayout(this); card.setOrientation(LinearLayout.VERTICAL); card.setPadding(dp(14),dp(14),dp(14),dp(10));
+                GradientDrawable cb=new GradientDrawable(); cb.setColor(ativoAtual?Color.rgb(28,55,36):CARD); cb.setCornerRadius(dp(18));
+                cb.setStroke(dp(1),ativoAtual?Color.rgb(80,160,100):Color.rgb(55,55,60)); card.setBackground(cb);
 
-                LinearLayout line=row();
-                TextView n=label((ativoAtual?"✓  ":"")+c.nome,17); n.setTypeface(Typeface.DEFAULT,Typeface.BOLD); n.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
-                line.addView(n,new LinearLayout.LayoutParams(0,dp(32),1));
-                TextView badge=badge(ativoAtual?"ATIVO":"IR",ativoAtual?Color.rgb(55,110,65):Color.rgb(60,60,68));
-                line.addView(badge,new LinearLayout.LayoutParams(-2,dp(26))); card.addView(line);
+                // Cabeçalho: ícone da categoria, nome, marca/modelo e selo.
+                LinearLayout line=new LinearLayout(this); line.setOrientation(LinearLayout.HORIZONTAL); line.setGravity(Gravity.CENTER_VERTICAL);
+                int catIcon=IrPerfilTeste.PERFIL_VENTILADOR.equals(c.perfil)?R.drawable.ic_air:("AC SmartIR".equals(c.perfil)?R.drawable.ic_snow:R.drawable.ic_tv);
+                LinearLayout circulo=new LinearLayout(this); circulo.setGravity(Gravity.CENTER);
+                GradientDrawable cg=new GradientDrawable(); cg.setShape(GradientDrawable.OVAL); cg.setColor(KEY); circulo.setBackground(cg);
+                circulo.addView(icone(catIcon,22,WHITE),new LinearLayout.LayoutParams(dp(22),dp(22)));
+                line.addView(circulo,new LinearLayout.LayoutParams(dp(42),dp(42)));
+                LinearLayout nomes=new LinearLayout(this); nomes.setOrientation(LinearLayout.VERTICAL);
+                nomes.addView(textoEsq(c.nome,16,WHITE,true),new LinearLayout.LayoutParams(-1,-2));
+                LinearLayout.LayoutParams ml=new LinearLayout.LayoutParams(-1,-2); ml.setMargins(0,dp(2),0,0);
+                nomes.addView(textoEsq(c.marca+" · "+c.modelo,12,GRAY,false),ml);
+                LinearLayout.LayoutParams nl=new LinearLayout.LayoutParams(0,-2,1); nl.setMargins(dp(12),0,dp(8),0);
+                line.addView(nomes,nl);
+                line.addView(badge(ativoAtual?"Ativo":"IR",ativoAtual?Color.rgb(55,110,65):Color.rgb(60,60,68)),new LinearLayout.LayoutParams(-2,dp(26)));
+                card.addView(line);
 
+                // Progresso de configuração dos botões.
                 int qtd=controleStorage.quantidadeComandos(c);
                 int totalFuncoes=(IrPerfilTeste.PERFIL_VENTILADOR.equals(c.perfil)?RemoteKeys.FAN_FUNCOES.length:RemoteKeys.FUNCOES.length);
                 int percentual=totalFuncoes<=0?0:Math.min(100,(qtd*100)/totalFuncoes);
-                TextView detail=label(c.marca+"  •  "+c.modelo+"\n"+c.perfil+"  •  "+qtd+" de "+totalFuncoes+" botões configurados  •  "+percentual+"%",12);
-                detail.setTextColor(GRAY); detail.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL); card.addView(detail,new LinearLayout.LayoutParams(-1,dp(54)));
+                LinearLayout prog=new LinearLayout(this); prog.setOrientation(LinearLayout.HORIZONTAL); prog.setGravity(Gravity.CENTER_VERTICAL);
+                prog.addView(textoEsq((c.perfil==null?"":c.perfil)+" · "+qtd+" de "+totalFuncoes+" botões",12,GRAY,false),new LinearLayout.LayoutParams(0,-2,1));
+                prog.addView(textoEsq(percentual+"%",12,Color.rgb(105,190,125),true),new LinearLayout.LayoutParams(-2,-2));
+                LinearLayout.LayoutParams pgl=new LinearLayout.LayoutParams(-1,-2); pgl.setMargins(0,dp(12),0,dp(6));
+                card.addView(prog,pgl);
+                ProgressBar barra=new ProgressBar(this,null,android.R.attr.progressBarStyleHorizontal);
+                barra.setMax(100); barra.setProgress(percentual);
+                barra.setProgressTintList(ColorStateList.valueOf(Color.rgb(105,190,125)));
+                barra.setProgressBackgroundTintList(ColorStateList.valueOf(Color.rgb(48,48,54)));
+                card.addView(barra,new LinearLayout.LayoutParams(-1,dp(6)));
 
-                LinearLayout actions=row();
-                Button abrir=smallAction("ABRIR",Color.rgb(55,110,65));
-                Button config=smallAction("⚡ AUTOMÁTICO",Color.rgb(65,85,70));
-                Button testar=smallAction("TESTAR",Color.rgb(55,65,80));
-                Button copiar=smallAction("DUPLICAR",Color.rgb(75,60,45));
-                actions.addView(abrir,new LinearLayout.LayoutParams(0,dp(42),1));
-                actions.addView(config,new LinearLayout.LayoutParams(0,dp(42),1));
-                actions.addView(testar,new LinearLayout.LayoutParams(0,dp(42),1));
-                card.addView(actions);
-                LinearLayout copyRow=row();
-                copyRow.addView(copiar,new LinearLayout.LayoutParams(-1,dp(38)));
-                card.addView(copyRow);
-                abrir.setOnClickListener(v->{controleAtivo=c;lgMode="LG".equalsIgnoreCase(c.marca);prefs.edit().putLong("active_control_id",c.id).putBoolean("lg_mode",lgMode).apply();showingSelector=false;build();Toast.makeText(this,"✓ "+c.nome+" está ativo",Toast.LENGTH_SHORT).show();});
-                config.setOnClickListener(v->{controleAtivo=c;lgMode="LG".equalsIgnoreCase(c.marca);prefs.edit().putLong("active_control_id",c.id).putBoolean("lg_mode",lgMode).apply();oferecerConfiguracaoAutomatica(c);});
-                testar.setOnClickListener(v->showComandosConfigurados(c));
-                copiar.setOnClickListener(v->{
+                // Ação principal e ações secundárias.
+                card.addView(botaoLargo(R.drawable.ic_right,"Abrir",48,Color.rgb(55,110,65),v->{
+                    controleAtivo=c;lgMode="LG".equalsIgnoreCase(c.marca);
+                    prefs.edit().putLong("active_control_id",c.id).putBoolean("lg_mode",lgMode).apply();
+                    showingSelector=false;build();
+                    Toast.makeText(this,"✓ "+c.nome+" em uso",Toast.LENGTH_SHORT).show();
+                }));
+
+                LinearLayout acoes=row();
+                acoes.addView(tile(R.drawable.ic_auto,"Auto",54,KEY,v->{
+                    controleAtivo=c;lgMode="LG".equalsIgnoreCase(c.marca);
+                    prefs.edit().putLong("active_control_id",c.id).putBoolean("lg_mode",lgMode).apply();
+                    oferecerConfiguracaoAutomatica(c);
+                },11));
+                acoes.addView(tile(R.drawable.ic_play,"Testar",54,KEY,v->showComandosConfigurados(c),11));
+                acoes.addView(tile(R.drawable.ic_copy,"Duplicar",54,KEY,v->{
                     int totalAtual=controleStorage.listar().size();
                     if(!monetizacao.podeSalvarControle(totalAtual)){
                         Toast.makeText(this,"Limite gratuito de "+monetizacao.limiteGratuito()+" controles atingido.",Toast.LENGTH_LONG).show();
@@ -1903,26 +1737,21 @@ render[0]=()->{
                     if(novo!=null) Toast.makeText(this,"✓ Controle duplicado e salvo",Toast.LENGTH_SHORT).show();
                     else Toast.makeText(this,"Não foi possível duplicar o controle.",Toast.LENGTH_SHORT).show();
                     render[0].run();
-                });
-
-                LinearLayout editRow=row();
-                Button renomear=smallAction("RENOMEAR",Color.rgb(55,65,80));
-                Button excluir=smallAction("🗑  EXCLUIR",Color.rgb(105,45,45));
-                editRow.addView(renomear,new LinearLayout.LayoutParams(0,dp(38),1));
-                editRow.addView(excluir,new LinearLayout.LayoutParams(0,dp(38),1));
-                card.addView(editRow);
-                renomear.setOnClickListener(v->{                    final EditText campo=new EditText(this); campo.setSingleLine(true); campo.setText(c.nome); campo.setSelectAllOnFocus(true); campo.setHint("Nome do controle");
+                },11));
+                acoes.addView(tile(R.drawable.ic_edit,"Nome",54,KEY,v->{
+                    final EditText campo=new EditText(this); campo.setSingleLine(true); campo.setText(c.nome); campo.setSelectAllOnFocus(true); campo.setHint("Nome do controle");
                     new android.app.AlertDialog.Builder(this).setTitle("Renomear controle").setView(campo)
                         .setNegativeButton("CANCELAR",null).setPositiveButton("SALVAR",(d,w)->{
                             String novoNome=campo.getText().toString().trim();
                             if(!novoNome.isEmpty()){controleStorage.renomear(c,novoNome);if(controleAtivo!=null&&controleAtivo.id==c.id) controleAtivo.nome=c.nome;render[0].run();}
                         }).show();
-                });
-                excluir.setOnClickListener(v->new android.app.AlertDialog.Builder(this).setTitle("Excluir controle?")
+                },11));
+                acoes.addView(tile(R.drawable.ic_delete,"Excluir",54,Color.rgb(90,40,40),v->new android.app.AlertDialog.Builder(this).setTitle("Excluir controle?")
                     .setMessage("Remover \""+c.nome+"\" deste aparelho?").setNegativeButton("CANCELAR",null)
-                    .setPositiveButton("EXCLUIR",(d,w)->{controleStorage.excluir(c);if(controleAtivo!=null&&controleAtivo.id==c.id){controleAtivo=null;prefs.edit().remove("active_control_id").apply();}render[0].run();}).show());
+                    .setPositiveButton("EXCLUIR",(d,w)->{controleStorage.excluir(c);if(controleAtivo!=null&&controleAtivo.id==c.id){controleAtivo=null;prefs.edit().remove("active_control_id").apply();}render[0].run();}).show(),11));
+                card.addView(acoes);
 
-                LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(-1,dp(276)); cp.setMargins(0,dp(6),0,dp(6)); listaBox.addView(card,cp);
+                LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(-1,-2); cp.setMargins(0,dp(6),0,dp(6)); listaBox.addView(card,cp);
             }
         };
         busca.addTextChangedListener(new android.text.TextWatcher(){
@@ -1932,12 +1761,9 @@ render[0]=()->{
         });
         render[0].run();
 
-        Button add=new Button(this); add.setText("+  ADICIONAR OUTRO CONTROLE"); add.setTextColor(WHITE); add.setTextSize(13); add.setAllCaps(false);
-        GradientDrawable addBg=new GradientDrawable(); addBg.setColor(ACCENT); addBg.setCornerRadius(dp(16)); addBg.setStroke(dp(1),Color.rgb(240,70,76)); add.setBackground(addBg); actionFeedback(add); add.setOnClickListener(v->showAddControlWizard());
-        LinearLayout.LayoutParams addP=new LinearLayout.LayoutParams(-1,dp(52)); addP.setMargins(0,dp(12),0,dp(6)); root.addView(add,addP);
-        Button sobre=new Button(this); sobre.setText("ⓘ  SOBRE O APLICATIVO"); sobre.setTextColor(WHITE); sobre.setTextSize(13); sobre.setAllCaps(false);
-        GradientDrawable sobreBg=new GradientDrawable(); sobreBg.setColor(CARD_2); sobreBg.setCornerRadius(dp(16)); sobre.setBackground(sobreBg); actionFeedback(sobre); sobre.setOnClickListener(v->showSobre()); root.addView(sobre,new LinearLayout.LayoutParams(-1,dp(48)));
-        sv.addView(root); mostrar(sv);
+        root.addView(botaoLargo(R.drawable.ic_plus,"Adicionar outro controle",52,ACCENT,v->showAddControlWizard()));
+        root.addView(botaoLargo(R.drawable.ic_info,"Sobre o aplicativo",48,CARD_2,v->showSobre()));
+        mostrar(telaRolavel(root));
     }
 
     private void showComandosConfigurados(ControleStorage.Controle controle){
@@ -1959,17 +1785,13 @@ render[0]=()->{
                 int codigo=controleStorage.codigoComando(controle,funcao);
                 String perfil=controleStorage.perfilComando(controle,funcao);
                 int freq=controleStorage.frequenciaComando(controle,funcao);
-                boolean ok=false;
-                if("RAW".equalsIgnoreCase(perfil) || codigo<0){
-                    int[] raw=controleStorage.padraoRawComando(controle,funcao);
-                    int rawFreq=controleStorage.frequenciaRawComando(controle,funcao);
-                    if(raw!=null && raw.length>0)
-                        ok=irPerfilTeste.transmitirRaw(rawFreq>0?rawFreq:freq,raw);
-                }else if(!perfil.isEmpty()){
-                    irPerfilTeste.selecionar(perfil);
-                    ok=irPerfilTeste.transmitirSalvo(perfil,codigo,freq);
+                if(codigo<0 || perfil.isEmpty()){
+                    Toast.makeText(this,"Código salvo inválido para "+funcao+".",Toast.LENGTH_SHORT).show();
+                    return;
                 }
-                Toast.makeText(this,ok?"✓ "+funcao+" enviado":"✕ Falha ao enviar "+funcao+(freq>0?" • "+freq+" Hz":""),Toast.LENGTH_SHORT).show();
+                irPerfilTeste.selecionar(perfil);
+                boolean ok=irPerfilTeste.transmitirSalvo(perfil,codigo,freq);
+                Toast.makeText(this,ok?"✓ "+funcao+" enviado":"✕ Falha ao enviar "+funcao+" • "+freq+" Hz",Toast.LENGTH_SHORT).show();
             },null);
     }
 
@@ -1980,99 +1802,81 @@ render[0]=()->{
 
     private void showFanRemote(){
         showingSelector=false; fanMode=true;
-        ScrollView sv=new ScrollView(this); sv.setFillViewport(true); sv.setBackgroundColor(BG);
-        LinearLayout root=new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL); root.setPadding(dp(14),dp(14),dp(14),dp(26));
+        LinearLayout root=new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL);
+        root.setPadding(dp(14),dp(12),dp(14),dp(26));
         final int[] fanFunc={0};
-        final java.util.List<Button> fanActionButtons=new ArrayList<>();
+        final java.util.List<View> fanActionButtons=new ArrayList<>();
 
-        LinearLayout top=row();
+        LinearLayout top=new LinearLayout(this); top.setOrientation(LinearLayout.HORIZONTAL); top.setGravity(Gravity.CENTER_VERTICAL);
         LinearLayout head=new LinearLayout(this); head.setOrientation(LinearLayout.VERTICAL);
-        TextView title=label("🌀  VENTILADOR",24); title.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
-        title.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
-        head.addView(title,new LinearLayout.LayoutParams(-1,dp(34)));
-        TextView sub=label(controleAtivo!=null?controleAtivo.marca+" • "+controleAtivo.modelo:"Controle universal • 38 kHz",12);
-        sub.setTextColor(GRAY); sub.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
-        head.addView(sub,new LinearLayout.LayoutParams(-1,dp(24)));
-        top.addView(head,new LinearLayout.LayoutParams(0,dp(58),1));
-        TextView badge=badge(controleAtivo!=null?"SALVO":"UNIVERSAL",controleAtivo!=null?Color.rgb(55,110,65):Color.rgb(60,60,68));
-        top.addView(badge,new LinearLayout.LayoutParams(-2,dp(28)));
+        head.addView(textoEsq("Ventilador",24,WHITE,true),new LinearLayout.LayoutParams(-1,-2));
+        LinearLayout.LayoutParams sublp=new LinearLayout.LayoutParams(-1,-2); sublp.setMargins(0,dp(2),0,0);
+        head.addView(textoEsq(controleAtivo!=null?controleAtivo.marca+" · "+controleAtivo.modelo:"Controle universal · 38 kHz",12,GRAY,false),sublp);
+        top.addView(head,new LinearLayout.LayoutParams(0,-2,1));
+        TextView badge=badge(controleAtivo!=null?"Salvo":"Universal",controleAtivo!=null?Color.rgb(55,110,65):Color.rgb(60,60,68));
+        top.addView(badge,new LinearLayout.LayoutParams(-2,dp(26)));
         root.addView(top);
 
-        LinearLayout statusCard=new LinearLayout(this); statusCard.setGravity(Gravity.CENTER_VERTICAL); statusCard.setPadding(dp(14),0,dp(14),0);
+        LinearLayout statusCard=new LinearLayout(this); statusCard.setGravity(Gravity.CENTER_VERTICAL); statusCard.setPadding(dp(14),dp(12),dp(14),dp(12));
         GradientDrawable sb=new GradientDrawable(); sb.setColor(CARD); sb.setCornerRadius(dp(18)); sb.setStroke(dp(1),BORDER); statusCard.setBackground(sb);
-        TextView status=label("●  Pronto para enviar comandos",13); status.setTextColor(SUCCESS); status.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
-        statusCard.addView(status,new LinearLayout.LayoutParams(0,dp(48),1));
-        TextView freq=label("38 kHz",11); freq.setTextColor(GRAY); statusCard.addView(freq,new LinearLayout.LayoutParams(-2,dp(48)));
-        root.addView(statusCard,new LinearLayout.LayoutParams(-1,dp(52)));
+        final TextView status=textoEsq("● Pronto para enviar comandos",13,SUCCESS,false);
+        statusCard.addView(status,new LinearLayout.LayoutParams(0,-2,1));
+        TextView freq=label("38 kHz",11); freq.setTextColor(GRAY); statusCard.addView(freq,new LinearLayout.LayoutParams(-2,-2));
+        LinearLayout.LayoutParams scp=new LinearLayout.LayoutParams(-1,-2); scp.setMargins(0,dp(12),0,0);
+        root.addView(statusCard,scp);
 
-        LinearLayout powerCard=new LinearLayout(this); powerCard.setGravity(Gravity.CENTER); powerCard.setPadding(dp(12),dp(14),dp(12),dp(14));
-        GradientDrawable pc=new GradientDrawable(); pc.setColor(Color.rgb(27,27,30)); pc.setCornerRadius(dp(24)); pc.setStroke(dp(1),BORDER); powerCard.setBackground(pc);
-        Button power=new Button(this); power.setText("⏻"); power.setTextColor(WHITE); power.setTextSize(34); power.setGravity(Gravity.CENTER);
-        power.setAllCaps(false); power.setMinHeight(0); power.setMinWidth(0);
-        GradientDrawable pg=new GradientDrawable(); pg.setColor(Color.rgb(125,35,40)); pg.setCornerRadius(dp(48)); pg.setStroke(dp(1),Color.rgb(185,60,65)); power.setBackground(pg);
-        actionFeedback(power);
-        power.setOnClickListener(v->{
-            enviarVentilador(1); fanFunc[0]=1; status.setText("✓  Liga / desliga enviado");
-            for(Button b:fanActionButtons){ b.setBackgroundColor(KEY); }
-            power.setAlpha(.95f);
+        // Liga/desliga grande no centro.
+        ImageButton power=iconBtn(R.drawable.ic_power,112,54,Color.rgb(125,35,40),true,"Ligar ou desligar",v->{
+            enviarVentilador(1); fanFunc[0]=1; status.setText("✓ Liga/desliga enviado");
+            for(View b:fanActionButtons) pintar(b,KEY);
         });
-        powerCard.addView(power,new LinearLayout.LayoutParams(dp(104),dp(104)));
-        LinearLayout.LayoutParams pcp=new LinearLayout.LayoutParams(-1,dp(132)); pcp.setMargins(0,dp(8),0,dp(8)); root.addView(powerCard,pcp);
+        LinearLayout.LayoutParams pwp=new LinearLayout.LayoutParams(dp(112),dp(112)); pwp.gravity=Gravity.CENTER_HORIZONTAL; pwp.setMargins(0,dp(18),0,dp(10));
+        root.addView(power,pwp);
+        TextView pwl=label("Liga / desliga",12); pwl.setTextColor(GRAY);
+        root.addView(pwl,new LinearLayout.LayoutParams(-1,-2));
 
-        section(root,"CONTROLE PRINCIPAL");
-        LinearLayout r=row();
-        Button osc=key("↕\nOSCILAÇÃO",2,70,KEY,13);
-        Button vel=key("≋\nVELOCIDADE",3,70,Color.rgb(55,65,80),13);
-        Button timer=key("⏱\nTIMER",4,70,KEY,13);
-        Button sleep=key("☾\nNOTURNO",5,70,KEY,13);
-        fanActionButtons.add(osc); fanActionButtons.add(vel); fanActionButtons.add(timer); fanActionButtons.add(sleep);
-        r.addView(osc); r.addView(vel); root.addView(r);
-        r=row();
-        r.addView(timer); r.addView(sleep); root.addView(r);
+        section(root,"Funções");
+        String[] nomes={"Oscilação","Velocidade","Timer","Noturno"};
+        int[] icones={R.drawable.ic_swap_vert,R.drawable.ic_air,R.drawable.ic_timer,R.drawable.ic_moon};
+        LinearLayout fr=row();
+        for(int i=0;i<4;i++){
+            final int func=i+2;
+            final String nome=nomes[i];
+            final LinearLayout[] self=new LinearLayout[1];
+            self[0]=tile(icones[i],nome,88,KEY,v->{
+                enviarVentilador(func);
+                fanFunc[0]=func;
+                status.setText("✓ "+nome+" enviado");
+                for(View x:fanActionButtons) pintar(x,x==self[0]?Color.rgb(65,85,105):KEY);
+            });
+            fanActionButtons.add(self[0]);
+            fr.addView(self[0]);
+            if(i==1){ root.addView(fr); fr=row(); }
+        }
+        root.addView(fr);
 
-        LinearLayout infoCard=new LinearLayout(this); infoCard.setOrientation(LinearLayout.VERTICAL); infoCard.setPadding(dp(14),dp(12),dp(14),dp(12));
-        GradientDrawable ib=new GradientDrawable(); ib.setColor(CARD); ib.setCornerRadius(dp(18)); ib.setStroke(dp(1),BORDER); infoCard.setBackground(ib);
-        TextView infoTitle=label("CONTROLE INTELIGENTE",13); infoTitle.setTypeface(Typeface.DEFAULT,Typeface.BOLD); infoTitle.setGravity(Gravity.LEFT);
-        infoCard.addView(infoTitle,new LinearLayout.LayoutParams(-1,dp(26)));
-        TextView info=label("Toque em uma função para enviar o comando. A função usada fica destacada e o status acima confirma o último envio. Para modelos diferentes, use TESTAR / APRENDER CÓDIGOS.",11);
-        info.setTextColor(GRAY); info.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
-        infoCard.addView(info,new LinearLayout.LayoutParams(-1,dp(52)));
-        root.addView(infoCard,new LinearLayout.LayoutParams(-1,dp(96)));
-        View.OnClickListener fanClick=v->{
-            Button b=(Button)v;
-            int func=fanActionButtons.indexOf(b)+2;
-            if(func<2 || func>5) return;
-            enviarVentilador(func);
-            fanFunc[0]=func;
-            status.setText("✓  "+(func==2?"Oscilação":func==3?"Velocidade":func==4?"Timer":"Modo noturno")+" enviado");
-            for(Button x:fanActionButtons){
-                GradientDrawable g=new GradientDrawable();
-                g.setColor(x==b?Color.rgb(65,85,105):KEY);
-                g.setCornerRadius(dp(16)); g.setStroke(dp(1),BORDER);
-                x.setBackground(g);
-            }
-        };
-        osc.setOnClickListener(fanClick); vel.setOnClickListener(fanClick);
-        timer.setOnClickListener(fanClick); sleep.setOnClickListener(fanClick);
+        TextView dica=label("Toque numa função para enviar. Se o seu modelo não responder, use Testar e aprender códigos.",12);
+        dica.setTextColor(GRAY); dica.setGravity(Gravity.CENTER);
+        LinearLayout.LayoutParams dp1=new LinearLayout.LayoutParams(-1,-2); dp1.setMargins(dp(6),dp(10),dp(6),dp(4));
+        root.addView(dica,dp1);
 
-        Button testar=new Button(this); testar.setText("🔎  TESTAR / APRENDER CÓDIGOS"); testar.setTextColor(WHITE); testar.setTextSize(13); testar.setAllCaps(false);
-        GradientDrawable tb=new GradientDrawable(); tb.setColor(ACCENT); tb.setCornerRadius(dp(15)); testar.setBackground(tb); actionFeedback(testar);
-        testar.setOnClickListener(v->showUniversalScanner("Ventilador","Universal","FAN"));
-        LinearLayout.LayoutParams tp=new LinearLayout.LayoutParams(-1,dp(52)); tp.setMargins(0,dp(10),0,dp(6)); root.addView(testar,tp);
+        LinearLayout acoes=row();
+        acoes.addView(tile(R.drawable.ic_search,"Testar e aprender códigos",58,ACCENT,v->showUniversalScanner("Ventilador","Universal","FAN")));
+        LinearLayout.LayoutParams alp=new LinearLayout.LayoutParams(-1,-2); alp.setMargins(0,dp(10),0,0);
+        root.addView(acoes,alp);
+        LinearLayout acoes2=row();
+        acoes2.addView(tile(R.drawable.ic_star,"Meus controles",54,KEY_DARK,v->showMeusControles()));
+        acoes2.addView(tile(R.drawable.ic_back,"Voltar",54,KEY_DARK,v->showSelector()));
+        root.addView(acoes2);
 
-        Button meus=new Button(this); meus.setText("★  MEUS CONTROLES"); meus.setTextColor(WHITE); meus.setTextSize(13); meus.setAllCaps(false);
-        GradientDrawable mb=new GradientDrawable(); mb.setColor(KEY_DARK); mb.setCornerRadius(dp(15)); meus.setBackground(mb); actionFeedback(meus);
-        meus.setOnClickListener(v->showMeusControles()); root.addView(meus,new LinearLayout.LayoutParams(-1,dp(48)));
-
-        TextView aviso=label("⚠️ Ventiladores variam bastante entre marcas e modelos. Se uma função não responder, não significa que o emissor do celular esteja com defeito.",11);
+        TextView aviso=label("Ventiladores variam entre marcas e modelos. Se uma função não responder, não significa defeito no emissor do celular.",11);
         aviso.setTextColor(Color.rgb(190,170,110)); aviso.setGravity(Gravity.CENTER);
-        LinearLayout.LayoutParams ap=new LinearLayout.LayoutParams(-1,dp(58)); ap.setMargins(0,dp(8),0,dp(2)); root.addView(aviso,ap);
+        LinearLayout.LayoutParams avp=new LinearLayout.LayoutParams(-1,-2); avp.setMargins(dp(6),dp(12),dp(6),0);
+        root.addView(aviso,avp);
 
-        Button voltar=botaoAcao("← VOLTAR",KEY_DARK,12); voltar.setOnClickListener(v->showSelector());
-        root.addView(voltar,new LinearLayout.LayoutParams(-1,dp(48)));
-
-        sv.addView(root); mostrar(sv);
+        mostrar(telaRolavel(root));
     }
+
     private void showSobre(){
         String versao="?";
         try{
@@ -2147,312 +1951,397 @@ render[0]=()->{
             .setPositiveButton("INICIAR TESTE",(d,w)->showUniversalScanner(marca,modelo,"TV")).show();
     }
 
-    private int remoteTab = 0;
+    // ===== Componentes visuais v2: ícones vetoriais, botões e coluna central =====
 
-    private GradientDrawable remoteSurface(int color, int radius, int stroke) {
-        GradientDrawable d = new GradientDrawable();
-        d.setColor(color);
-        d.setCornerRadius(dp(radius));
-        d.setStroke(dp(1), stroke);
-        return d;
+    private RippleDrawable ripple(int cor,boolean oval,boolean borda){
+        GradientDrawable g=new GradientDrawable();
+        g.setShape(oval?GradientDrawable.OVAL:GradientDrawable.RECTANGLE);
+        g.setColor(cor);
+        if(!oval) g.setCornerRadius(dp(16));
+        if(borda) g.setStroke(dp(1),BORDER);
+        GradientDrawable mask=new GradientDrawable();
+        mask.setShape(oval?GradientDrawable.OVAL:GradientDrawable.RECTANGLE);
+        mask.setColor(Color.WHITE);
+        if(!oval) mask.setCornerRadius(dp(16));
+        return new RippleDrawable(ColorStateList.valueOf(Color.rgb(95,95,102)),g,mask);
     }
 
-    private Button remoteButton(String text, int command, int height, int textSize) {
-        Button b = new Button(this);
-        b.setText(text);
-        b.setTextColor(WHITE);
-        b.setTextSize(textSize);
-        b.setAllCaps(false);
-        b.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        b.setGravity(Gravity.CENTER);
-        b.setPadding(dp(3), dp(2), dp(3), dp(2));
-        b.setMinHeight(0);
-        b.setMinimumHeight(0);
-        b.setMinWidth(0);
-        b.setBackground(new RippleDrawable(
-                ColorStateList.valueOf(Color.rgb(72, 105, 155)),
-                remoteSurface(Color.rgb(17, 23, 35), 24, Color.rgb(39, 49, 68)), null));
-        b.setOnClickListener(v -> {
-            v.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP);
-            send(command);
-        });
-        LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(0, dp(height), 1f);
-        p.setMargins(dp(4), dp(4), dp(4), dp(4));
+    private void pintar(View v,int cor){ v.setBackground(ripple(cor,false,true)); }
+
+    private void haptic(View v){ v.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP); }
+
+    private ImageView icone(int res,int dpSize,int cor){
+        ImageView iv=new ImageView(this);
+        iv.setImageResource(res);
+        iv.setColorFilter(cor);
+        iv.setLayoutParams(new LinearLayout.LayoutParams(dp(dpSize),dp(dpSize)));
+        iv.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        return iv;
+    }
+
+    /** Botão só com ícone (redondo ou arredondado). viewDp = tamanho do botão; iconDp = tamanho do ícone. */
+    private ImageButton iconBtn(int res,int viewDp,int iconDp,int cor,boolean oval,String desc,View.OnClickListener acao){
+        ImageButton b=new ImageButton(this);
+        b.setImageResource(res);
+        b.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        int p=dp((viewDp-iconDp)/2f);
+        b.setPadding(p,p,p,p);
+        b.setBackground(ripple(cor,oval,cor!=Color.TRANSPARENT));
+        b.setContentDescription(desc);
+        b.setHapticFeedbackEnabled(true);
+        b.setOnClickListener(v->{ haptic(v); if(acao!=null) acao.onClick(v); });
+        return b;
+    }
+
+    /** Botão com ícone em cima e texto embaixo (texto vazio = só ícone). Ocupa uma fatia da linha. */
+    private LinearLayout tile(int icon,String texto,int hDp,int cor,View.OnClickListener acao){ return tile(icon,texto,hDp,cor,acao,12); }
+
+    private LinearLayout tile(int icon,String texto,int hDp,int cor,View.OnClickListener acao,int sp){
+        LinearLayout t=new LinearLayout(this);
+        t.setOrientation(LinearLayout.VERTICAL); t.setGravity(Gravity.CENTER);
+        t.setPadding(dp(4),dp(4),dp(4),dp(4));
+        t.setBackground(ripple(cor,false,true));
+        t.setClickable(true); t.setFocusable(true);
+        if(texto!=null && !texto.isEmpty()) t.setContentDescription(texto);
+        if(icon!=0) t.addView(icone(icon,hDp>=72?26:22,WHITE));
+        if(texto!=null && !texto.isEmpty()){
+            TextView tv=new TextView(this);
+            tv.setText(texto); tv.setTextColor(WHITE); tv.setTextSize(sp); tv.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
+            tv.setGravity(Gravity.CENTER); tv.setSingleLine(true); tv.setEllipsize(android.text.TextUtils.TruncateAt.END);
+            tv.setIncludeFontPadding(false);
+            LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-2,-2);
+            lp.setMargins(0,icon!=0?dp(4):0,0,0);
+            t.addView(tv,lp);
+        }
+        t.setOnClickListener(v->{ haptic(v); if(acao!=null) acao.onClick(v); });
+        LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,dp(hDp),1);
+        p.setMargins(dp(3),dp(3),dp(3),dp(3));
+        t.setLayoutParams(p);
+        return t;
+    }
+
+    private LinearLayout cmdTile(int icon,String texto,int cmd,int hDp){
+        return tile(icon,texto,hDp,KEY,v->send(cmd));
+    }
+
+    /** Botão pequeno (ícone + texto na mesma linha) para as ações do cabeçalho. */
+    private LinearLayout chip(int icon,String texto,View.OnClickListener acao){
+        LinearLayout c=new LinearLayout(this);
+        c.setOrientation(LinearLayout.HORIZONTAL); c.setGravity(Gravity.CENTER);
+        c.setPadding(dp(8),0,dp(8),0);
+        c.setBackground(ripple(CARD_2,false,true));
+        c.setClickable(true); c.setFocusable(true);
+        c.setContentDescription(texto);
+        c.addView(icone(icon,16,WHITE));
+        TextView tv=new TextView(this);
+        tv.setText(texto); tv.setTextColor(WHITE); tv.setTextSize(12); tv.setSingleLine(true);
+        tv.setEllipsize(android.text.TextUtils.TruncateAt.END); tv.setIncludeFontPadding(false);
+        LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-2,-2); lp.setMargins(dp(6),0,0,0);
+        c.addView(tv,lp);
+        c.setOnClickListener(v->{ haptic(v); if(acao!=null) acao.onClick(v); });
+        LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,dp(44),1);
+        p.setMargins(dp(3),0,dp(3),0);
+        c.setLayoutParams(p);
+        return c;
+    }
+
+    /** Coluna central com largura máxima de 420 dp (em telas largas o controle não estica). */
+    private ScrollView telaRolavel(LinearLayout root){
+        ScrollView sv=new ScrollView(this); sv.setFillViewport(true); sv.setBackgroundColor(BG); sv.setClipToPadding(false);
+        FrameLayout f=new FrameLayout(this);
+        int largura=Math.min(getResources().getDisplayMetrics().widthPixels,dp(420));
+        f.addView(root,new FrameLayout.LayoutParams(largura,-2,Gravity.CENTER_HORIZONTAL));
+        sv.addView(f);
+        return sv;
+    }
+
+    /** Botão largo (ícone + texto na mesma linha), ocupa a largura toda. */
+    private LinearLayout botaoLargo(int icon,String texto,int hDp,int cor,View.OnClickListener acao){
+        LinearLayout b=new LinearLayout(this); b.setOrientation(LinearLayout.HORIZONTAL); b.setGravity(Gravity.CENTER);
+        b.setPadding(dp(14),0,dp(14),0);
+        b.setBackground(ripple(cor,false,cor!=ACCENT));
+        b.setClickable(true); b.setFocusable(true); b.setContentDescription(texto);
+        if(icon!=0){
+            LinearLayout.LayoutParams ip=new LinearLayout.LayoutParams(dp(20),dp(20)); ip.setMargins(0,0,dp(10),0);
+            b.addView(icone(icon,20,WHITE),ip);
+        }
+        TextView tv=new TextView(this); tv.setText(texto); tv.setTextColor(WHITE); tv.setTextSize(15);
+        tv.setTypeface(Typeface.DEFAULT,Typeface.BOLD); tv.setSingleLine(true); tv.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        tv.setIncludeFontPadding(false);
+        b.addView(tv,new LinearLayout.LayoutParams(-2,-2));
+        b.setOnClickListener(v->{ haptic(v); if(acao!=null) acao.onClick(v); });
+        LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,dp(hDp)); p.setMargins(0,dp(5),0,dp(5));
         b.setLayoutParams(p);
         return b;
     }
+
+    /** Cartão em linha: ícone, título, detalhe e seta. */
+    private LinearLayout cartaoLinha(int icon,String titulo,String detalhe,int cor,View.OnClickListener acao){
+        LinearLayout c=new LinearLayout(this); c.setOrientation(LinearLayout.HORIZONTAL); c.setGravity(Gravity.CENTER_VERTICAL);
+        c.setPadding(dp(14),dp(12),dp(10),dp(12));
+        c.setBackground(ripple(cor,false,true));
+        c.setClickable(true); c.setFocusable(true); c.setContentDescription(titulo+". "+detalhe);
+        LinearLayout.LayoutParams ip=new LinearLayout.LayoutParams(dp(22),dp(22)); ip.setMargins(0,0,dp(12),0);
+        c.addView(icone(icon,22,WHITE),ip);
+        LinearLayout t=new LinearLayout(this); t.setOrientation(LinearLayout.VERTICAL);
+        t.addView(textoEsq(titulo,15,WHITE,true),new LinearLayout.LayoutParams(-1,-2));
+        TextView d=label(detalhe,12); d.setTextColor(GRAY); d.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
+        LinearLayout.LayoutParams dlp=new LinearLayout.LayoutParams(-1,-2); dlp.setMargins(0,dp(2),0,0);
+        t.addView(d,dlp);
+        c.addView(t,new LinearLayout.LayoutParams(0,-2,1));
+        c.addView(icone(R.drawable.ic_right,20,GRAY),new LinearLayout.LayoutParams(dp(20),dp(20)));
+        c.setOnClickListener(v->{ haptic(v); if(acao!=null) acao.onClick(v); });
+        LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,-2); p.setMargins(0,dp(5),0,dp(5));
+        c.setLayoutParams(p);
+        return c;
+    }
+
+    private TextView subtitulo(String s){
+        TextView t=label(s,13); t.setTextColor(GRAY); t.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
+        return t;
+    }
+
+    private TextView textoEsq(String s,int sp,int cor,boolean negrito){
+        TextView t=label(s,sp); t.setTextColor(cor); t.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
+        if(negrito) t.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
+        t.setSingleLine(true); t.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        return t;
+    }
+
+    private LinearLayout.LayoutParams lpChip(){
+        LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,dp(48),1);
+        p.setMargins(dp(3),dp(3),dp(3),dp(3)); return p;
+    }
+
+    private int modoIcone(String value){
+        if(value==null) return 0;
+        String v=value.trim().toLowerCase(java.util.Locale.ROOT);
+        if(v.equals("cool")) return R.drawable.ic_snow;
+        if(v.equals("heat")) return R.drawable.ic_sun;
+        if(v.equals("dry")) return R.drawable.ic_drop;
+        if(v.equals("fan_only")||v.equals("fan")) return R.drawable.ic_air;
+        if(v.equals("auto")||v.equals("heat_cool")) return R.drawable.ic_auto;
+        return 0;
+    }
+
+    private int corModo(String value){
+        String v=value==null?"":value.trim().toLowerCase(java.util.Locale.ROOT);
+        if(v.equals("cool")) return Color.rgb(36,98,168);
+        if(v.equals("heat")) return Color.rgb(184,92,28);
+        if(v.equals("dry")) return Color.rgb(36,124,118);
+        if(v.equals("fan_only")||v.equals("fan")) return Color.rgb(78,88,108);
+        if(v.equals("auto")||v.equals("heat_cool")) return Color.rgb(96,80,150);
+        return Color.rgb(65,85,105);
+    }
+
+    private int tvTab=0;
 
     private void build(){
         fanMode=false;
         if(controleAtivo!=null && "Ventilador Universal".equals(controleAtivo.perfil)){ showFanRemote(); return; }
         if(controleAtivo!=null && "AC SmartIR".equals(controleAtivo.perfil)){ abrirSmartIrSalvo(controleAtivo); return; }
 
-        final int blue = Color.rgb(28, 133, 255);
-        final int dark = Color.rgb(5, 8, 14);
-        final int panel = Color.rgb(12, 17, 27);
-        final int muted = Color.rgb(164, 174, 195);
-        ScrollView sv = new ScrollView(this);
-        sv.setFillViewport(true);
-        sv.setBackgroundColor(dark);
-        sv.setClipToPadding(false);
+        final boolean temEmissor=ir!=null&&ir.hasIrEmitter();
+        final String nome=controleAtivo!=null ? controleAtivo.nome : (lgMode?"LG 32LB620B":"Philips 50PUG6513/7");
+        final String perfil=controleAtivo!=null ? (controleAtivo.perfil==null?"":controleAtivo.perfil) : (lgMode?"LG / NEC":"Philips / RC6");
+        final int hz=controleAtivo!=null ? controleAtivo.frequencia : (lgMode?38000:36000);
+        final int botoes=controleAtivo!=null ? controleStorage.quantidadeComandos(controleAtivo) : 0;
+        final int salvos=controleStorage.listar().size();
 
-        LinearLayout root = new LinearLayout(this);
-        root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(dp(12), dp(10), dp(12), dp(24));
-        root.setBackgroundColor(dark);
+        LinearLayout root=new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL);
+        root.setPadding(dp(14),dp(12),dp(14),dp(24));
 
-        String tvName = controleAtivo != null ? controleAtivo.nome : (lgMode ? "LG" : "Samsung");
-        String tvBrand = controleAtivo != null ? controleAtivo.marca : (lgMode ? "LG" : "Samsung");
-        String profile = controleAtivo != null ? controleAtivo.perfil : (lgMode ? "LG / NEC" : "Samsung");
-        boolean available = ir != null && ir.hasIrEmitter();
+        // Cabeçalho único: nome, detalhes, status do emissor e liga/desliga.
+        LinearLayout head=new LinearLayout(this); head.setOrientation(LinearLayout.HORIZONTAL); head.setGravity(Gravity.CENTER_VERTICAL);
+        LinearLayout info=new LinearLayout(this); info.setOrientation(LinearLayout.VERTICAL);
+        info.addView(textoEsq(nome,17,WHITE,true),new LinearLayout.LayoutParams(-1,-2));
+        String det=controleAtivo!=null ? controleAtivo.marca+" · "+perfil+" · "+botoes+" botões configurados" : perfil+" · controle padrão";
+        LinearLayout.LayoutParams dlp=new LinearLayout.LayoutParams(-1,-2); dlp.setMargins(0,dp(2),0,0);
+        info.addView(textoEsq(det,12,GRAY,false),dlp);
+        String st=temEmissor ? "● Emissor IR detectado · "+(hz/1000)+" kHz" : "○ Emissor IR não detectado";
+        LinearLayout.LayoutParams slp=new LinearLayout.LayoutParams(-1,-2); slp.setMargins(0,dp(3),0,0);
+        info.addView(textoEsq(st,11,temEmissor?SUCCESS:GRAY,false),slp);
+        head.addView(info,new LinearLayout.LayoutParams(0,-2,1));
 
-        // Cabeçalho único com identidade do controle, perfil, estado IR e ações.
-        LinearLayout header = new LinearLayout(this);
-        header.setOrientation(LinearLayout.HORIZONTAL);
-        header.setGravity(Gravity.CENTER_VERTICAL);
-        header.setPadding(dp(12), dp(12), dp(8), dp(12));
-        header.setBackground(remoteSurface(panel, 22, Color.rgb(36, 45, 61)));
-
-        ImageView tvIcon = new ImageView(this);
-        tvIcon.setImageResource(com.example.philipsremote.R.drawable.tv_header);
-        tvIcon.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
-        tvIcon.setPadding(dp(5), dp(5), dp(5), dp(5));
-        tvIcon.setBackground(remoteSurface(Color.rgb(12, 21, 35), 18, Color.rgb(55, 67, 88)));
-        tvIcon.setContentDescription("Imagem de uma televisão");
-        LinearLayout.LayoutParams iconP = new LinearLayout.LayoutParams(dp(78), dp(78));
-        iconP.setMargins(0, 0, dp(10), 0);
-        header.addView(tvIcon, iconP);
-
-        LinearLayout identity = new LinearLayout(this);
-        identity.setOrientation(LinearLayout.VERTICAL);
-        identity.setGravity(Gravity.CENTER_VERTICAL);
-        TextView name = label(tvName, 20);
-        name.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        name.setGravity(Gravity.LEFT | Gravity.CENTER_VERTICAL);
-        identity.addView(name, new LinearLayout.LayoutParams(-1, dp(29)));
-        TextView brand = label("TV  •  " + tvBrand, 13);
-        brand.setTextColor(muted);
-        brand.setGravity(Gravity.LEFT | Gravity.CENTER_VERTICAL);
-        identity.addView(brand, new LinearLayout.LayoutParams(-1, dp(22)));
-
-        Button profileButton = new Button(this);
-        profileButton.setText("♙  Perfil: " + (controleAtivo != null ? "Salvo" : "Padrão") + "  ⌄");
-        profileButton.setTextColor(muted);
-        profileButton.setTextSize(11);
-        profileButton.setAllCaps(false);
-        profileButton.setGravity(Gravity.LEFT | Gravity.CENTER_VERTICAL);
-        profileButton.setPadding(0, 0, 0, 0);
-        profileButton.setBackgroundColor(Color.TRANSPARENT);
-        profileButton.setOnClickListener(v -> escolher("Perfil do controle",
-                "Perfil atual: " + profile + "\nOs códigos salvos continuam vinculados a este controle.",
-                new String[]{"Ver meus controles", "Editar funções / códigos", "Selecionar outro controle"},
-                i -> { if(i==0) showMeusControles(); else if(i==1 && controleAtivo!=null) showAprenderComandos(controleAtivo); else showSelector(); }));
-        identity.addView(profileButton, new LinearLayout.LayoutParams(-1, dp(30)));
-
-        TextView irStatus = label((available ? "●" : "○") + "  Emissor IR: " + (available ? "Ativo" : "Indisponível"), 12);
-        irStatus.setTextColor(available ? Color.rgb(45, 220, 100) : Color.rgb(255, 165, 80));
-        irStatus.setGravity(Gravity.LEFT | Gravity.CENTER_VERTICAL);
-        identity.addView(irStatus, new LinearLayout.LayoutParams(-1, dp(26)));
-        header.addView(identity, new LinearLayout.LayoutParams(0, dp(104), 1f));
-
-        LinearLayout actions = new LinearLayout(this);
-        actions.setOrientation(LinearLayout.VERTICAL);
-        actions.setGravity(Gravity.CENTER);
-        ImageButton power = new ImageButton(this);
-        power.setImageResource(com.example.philipsremote.R.drawable.power_button);
-        power.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
-        power.setPadding(0, 0, 0, 0);
-        power.setBackground(remoteSurface(Color.rgb(30, 11, 19), 50, Color.rgb(94, 38, 52)));
-        power.setColorFilter(null);
+        Button power=new Button(this); power.setText("");
+        power.setBackgroundResource(R.drawable.power_button); power.setPadding(0,0,0,0);
         power.setContentDescription("Ligar ou desligar a TV");
-        power.setOnClickListener(v -> send(POWER));
-        actions.addView(power, new LinearLayout.LayoutParams(dp(72), dp(72)));
-        TextView powerLabel = label("Ligar", 10);
-        powerLabel.setTextColor(muted);
-        actions.addView(powerLabel, new LinearLayout.LayoutParams(-1, dp(18)));
-        LinearLayout.LayoutParams actionsP = new LinearLayout.LayoutParams(dp(66), -2);
-        actionsP.setMargins(dp(4), 0, 0, 0);
-        header.addView(actions, actionsP);
-        root.addView(header, new LinearLayout.LayoutParams(-1, -2));
+        power.setHapticFeedbackEnabled(true);
+        power.setOnClickListener(v->{ haptic(v); send(POWER); });
+        LinearLayout.LayoutParams pwp=new LinearLayout.LayoutParams(dp(60),dp(60)); pwp.setMargins(dp(10),0,0,0);
+        head.addView(power,pwp);
+        root.addView(head);
 
-        LinearLayout actionRow = row();
-        Button change = botaoAcao("⇄\nTrocar", Color.rgb(18, 25, 39), 12);
-        change.setBackground(remoteSurface(Color.rgb(18,25,39), 18, Color.rgb(42,53,73)));
-        change.setOnClickListener(v -> showSelector());
-        Button edit = botaoAcao("✎\nEditar", Color.rgb(18, 25, 39), 12);
-        edit.setBackground(remoteSurface(Color.rgb(18,25,39), 18, Color.rgb(42,53,73)));
-        edit.setOnClickListener(v -> { if(controleAtivo!=null) showAprenderComandos(controleAtivo); else showMeusControles(); });
-        actionRow.addView(change, new LinearLayout.LayoutParams(0, dp(48), 1f));
-        actionRow.addView(edit, new LinearLayout.LayoutParams(0, dp(48), 1f));
-        LinearLayout.LayoutParams actionRowP = new LinearLayout.LayoutParams(-1, -2);
-        actionRowP.setMargins(0, dp(5), 0, dp(8));
-        root.addView(actionRow, actionRowP);
+        // Ações: trocar, editar (controle salvo) e meus controles.
+        LinearLayout chips=new LinearLayout(this); chips.setOrientation(LinearLayout.HORIZONTAL);
+        chips.addView(chip(R.drawable.ic_swap,"Trocar",v->showSelector()));
+        if(controleAtivo!=null) chips.addView(chip(R.drawable.ic_edit,"Editar",v->showAprenderComandos(controleAtivo)));
+        chips.addView(chip(R.drawable.ic_star,"Meus ("+salvos+")",v->showMeusControles()));
+        LinearLayout.LayoutParams clp=new LinearLayout.LayoutParams(-1,-2); clp.setMargins(0,dp(10),0,0);
+        root.addView(chips,clp);
 
-        // Abas fixas: Principal, Números e Mídia.
-        LinearLayout tabs = new LinearLayout(this);
-        tabs.setOrientation(LinearLayout.HORIZONTAL);
-        tabs.setBackground(remoteSurface(panel, 18, Color.rgb(29, 38, 53)));
-        String[] tabNames = {"▣\nPrincipal", "▦\nNúmeros", "▷\nMídia"};
-        for(int i=0;i<tabNames.length;i++){
-            final int index=i;
-            Button tab = new Button(this);
-            tab.setText(tabNames[i]);
-            tab.setTextSize(13);
-            tab.setAllCaps(false);
-            tab.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-            tab.setTextColor(remoteTab==i?blue:muted);
-            tab.setMinHeight(0);
-            tab.setPadding(0, dp(5), 0, dp(5));
-            tab.setBackground(remoteTab==i
-                    ? remoteSurface(Color.rgb(15, 27, 45), 15, blue)
-                    : remoteSurface(Color.TRANSPARENT, 15, Color.TRANSPARENT));
-            tab.setOnClickListener(v -> { remoteTab=index; build(); });
-            tabs.addView(tab, new LinearLayout.LayoutParams(0, dp(60), 1f));
-        }
-        LinearLayout.LayoutParams tabsP = new LinearLayout.LayoutParams(-1, -2);
-        tabsP.setMargins(0, 0, 0, dp(18));
-        root.addView(tabs, tabsP);
-
-        if(remoteTab==0){
-            LinearLayout topActions = row();
-            add(topActions, remoteButton("▣\nFonte", SOURCE, 70, 15));
-            add(topActions, remoteButton("⌂\nInício", HOME, 70, 15));
-            add(topActions, remoteButton("☰\nMenu", MENU, 70, 15));
-            root.addView(topActions);
-
-            LinearLayout mainControls = new LinearLayout(this);
-            mainControls.setOrientation(LinearLayout.HORIZONTAL);
-            mainControls.setGravity(Gravity.CENTER);
-            mainControls.setPadding(0, dp(8), 0, dp(8));
-
-            LinearLayout volume = new LinearLayout(this);
-            volume.setOrientation(LinearLayout.VERTICAL);
-            volume.setGravity(Gravity.CENTER);
-            volume.setBackground(remoteSurface(panel, 34, Color.rgb(39,49,68)));
-            Button volUp = remoteButton("+", VOL_UP, 65, 27);
-            Button mute = remoteButton("◖))", MUTE, 65, 18);
-            Button volDown = remoteButton("−", VOL_DOWN, 65, 27);
-            volume.addView(volUp, new LinearLayout.LayoutParams(dp(74), dp(65)));
-            volume.addView(mute, new LinearLayout.LayoutParams(dp(74), dp(65)));
-            volume.addView(volDown, new LinearLayout.LayoutParams(dp(74), dp(65)));
-            mainControls.addView(volume);
-
-            LinearLayout nav = new LinearLayout(this);
-            nav.setOrientation(LinearLayout.VERTICAL);
-            nav.setGravity(Gravity.CENTER);
-            nav.setBackground(remoteSurface(Color.rgb(14,20,32), 100, Color.rgb(47,59,80)));
-            nav.setPadding(dp(7), dp(7), dp(7), dp(7));
-            nav.addView(remoteButton("⌃", UP, 48, 23), new LinearLayout.LayoutParams(dp(68), dp(48)));
-            LinearLayout navMiddle = row();
-            navMiddle.addView(remoteButton("‹", LEFT, 54, 26), new LinearLayout.LayoutParams(dp(52), dp(54)));
-            navMiddle.addView(remoteButton("OK", OK, 64, 18), new LinearLayout.LayoutParams(dp(64), dp(64)));
-            navMiddle.addView(remoteButton("›", RIGHT, 54, 26), new LinearLayout.LayoutParams(dp(52), dp(54)));
-            nav.addView(navMiddle);
-            nav.addView(remoteButton("⌄", DOWN, 48, 23), new LinearLayout.LayoutParams(dp(68), dp(48)));
-            LinearLayout.LayoutParams navP = new LinearLayout.LayoutParams(0, -2, 1f);
-            navP.setMargins(dp(8), 0, dp(8), 0);
-            mainControls.addView(nav, navP);
-
-            LinearLayout channels = new LinearLayout(this);
-            channels.setOrientation(LinearLayout.VERTICAL);
-            channels.setGravity(Gravity.CENTER);
-            channels.setBackground(remoteSurface(panel, 34, Color.rgb(39,49,68)));
-            channels.addView(remoteButton("⌃", CH_UP, 65, 24), new LinearLayout.LayoutParams(dp(74), dp(65)));
-            channels.addView(remoteButton("▣", SOURCE, 65, 20), new LinearLayout.LayoutParams(dp(74), dp(65)));
-            channels.addView(remoteButton("⌄", CH_DOWN, 65, 24), new LinearLayout.LayoutParams(dp(74), dp(65)));
-            mainControls.addView(channels);
-            root.addView(mainControls);
-
-            LinearLayout bottom = row();
-            add(bottom, remoteButton("↶\nVoltar", BACK, 60, 14));
-            add(bottom, remoteButton("⇥\nSair", EXIT, 60, 14));
-            add(bottom, remoteButton("ⓘ\nInfo", INFO, 60, 14));
-            root.addView(bottom);
-
-            LinearLayout colors = row();
-            int[] colorValues = {Color.rgb(245,25,40), Color.rgb(0,190,75), Color.rgb(255,190,0), blue};
-            int[] colorCommands = {RED,GREEN,YELLOW,BLUE};
-            for(int i=0;i<4;i++){
-                final int cmd=colorCommands[i];
-                Button cb=new Button(this);
-                cb.setText("●");
-                cb.setTextSize(28);
-                cb.setTextColor(colorValues[i]);
-                cb.setBackgroundColor(Color.TRANSPARENT);
-                cb.setOnClickListener(v->send(cmd));
-                colors.addView(cb,new LinearLayout.LayoutParams(0,dp(58),1f));
-            }
-            LinearLayout.LayoutParams colorsP = new LinearLayout.LayoutParams(-1,-2);
-            colorsP.setMargins(dp(20), dp(10), dp(20), 0);
-            root.addView(colors, colorsP);
-        } else if(remoteTab==1){
-            TextView numberTitle = label("Teclado numérico", 18);
-            numberTitle.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-            root.addView(numberTitle, new LinearLayout.LayoutParams(-1,dp(42)));
-            int[][] numberCommands={{1,2,3},{4,5,6},{7,8,9},{0x3C,0,SUBTITLE}};
-            String[][] numberLabels={{"1","2 ABC","3 DEF"},{"4 GHI","5 JKL","6 MNO"},{"7 PQRS","8 TUV","9 WXYZ"},{"CC","0","SUB"}};
-            for(int i=0;i<numberCommands.length;i++){
-                LinearLayout nr=row();
-                for(int j=0;j<3;j++) add(nr,remoteButton(numberLabels[i][j],numberCommands[i][j],68,17));
-                root.addView(nr);
-            }
-            LinearLayout numberExtras=row();
-            add(numberExtras,remoteButton("Guia",GUIDE,54,14));
-            add(numberExtras,remoteButton("Info",INFO,54,14));
-            add(numberExtras,remoteButton("Menu",MENU,54,14));
-            root.addView(numberExtras);
-        } else {
-            TextView mediaTitle = label("Reprodução e mídia", 18);
-            mediaTitle.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-            root.addView(mediaTitle, new LinearLayout.LayoutParams(-1,dp(42)));
-            LinearLayout media1=row();
-            add(media1,remoteButton("⏪\nVoltar",REWIND,76,15));
-            add(media1,remoteButton("▶\nReproduzir",PLAY,76,15));
-            root.addView(media1);
-            LinearLayout media2=row();
-            add(media2,remoteButton("Ⅱ\nPausar",PAUSE,76,15));
-            add(media2,remoteButton("■\nParar",STOP,76,15));
-            root.addView(media2);
-            LinearLayout media3=row();
-            add(media3,remoteButton("⏩\nAvançar",FAST_FORWARD,76,15));
-            add(media3,remoteButton("NETFLIX / SMART",NETFLIX,76,13));
-            root.addView(media3);
-            LinearLayout media4=row();
-            add(media4,remoteButton("Guia",GUIDE,58,14));
-            add(media4,remoteButton("Configurações",SETTINGS,58,13));
-            add(media4,remoteButton("Legendas",SUBTITLE,58,13));
-            root.addView(media4);
+        if(!temEmissor){
+            TextView aviso=label("Este celular não tem emissor infravermelho. Os botões não vão enviar nada.",12);
+            aviso.setTextColor(Color.rgb(230,190,120)); aviso.setPadding(dp(12),dp(8),dp(12),dp(8));
+            GradientDrawable ab=new GradientDrawable(); ab.setColor(Color.rgb(48,40,24)); ab.setCornerRadius(dp(12)); aviso.setBackground(ab);
+            LinearLayout.LayoutParams alp=new LinearLayout.LayoutParams(-1,-2); alp.setMargins(dp(3),dp(10),dp(3),0);
+            root.addView(aviso,alp);
         }
 
-        TextView status = label(available
-                ? "●  Emissor IR detectado  •  " + profile + "  •  " + (controleAtivo!=null?controleAtivo.frequencia:(lgMode?38000:38000)) + " Hz"
-                : "○  Este celular não possui emissor IR disponível", 11);
-        status.setTextColor(available?Color.rgb(65,190,105):Color.rgb(255,165,80));
-        LinearLayout.LayoutParams statusP = new LinearLayout.LayoutParams(-1,dp(38));
-        statusP.setMargins(0,dp(8),0,0);
-        root.addView(status,statusP);
+        // Abas: principal, números e mídia.
+        LinearLayout tabs=new LinearLayout(this); tabs.setOrientation(LinearLayout.HORIZONTAL); tabs.setPadding(dp(3),dp(3),dp(3),dp(3));
+        GradientDrawable tabsBg=new GradientDrawable(); tabsBg.setColor(CARD); tabsBg.setCornerRadius(dp(16)); tabsBg.setStroke(dp(1),BORDER);
+        tabs.setBackground(tabsBg);
+        String[] nomesAbas={"Principal","Números","Mídia"};
+        for(int i=0;i<nomesAbas.length;i++){
+            final int idx=i;
+            TextView t=label(nomesAbas[i],13); t.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
+            t.setTextColor(i==tvTab?WHITE:GRAY);
+            t.setBackground(ripple(i==tvTab?KEY:Color.TRANSPARENT,false,false));
+            t.setClickable(true); t.setFocusable(true); t.setContentDescription(nomesAbas[i]);
+            t.setOnClickListener(v->{ haptic(v); tvTab=idx; build(); });
+            tabs.addView(t,new LinearLayout.LayoutParams(0,dp(42),1));
+        }
+        LinearLayout.LayoutParams tlp=new LinearLayout.LayoutParams(-1,-2); tlp.setMargins(dp(3),dp(12),dp(3),dp(4));
+        root.addView(tabs,tlp);
 
-        Button saved = botaoAcao("★  MEUS CONTROLES  •  " + controleStorage.listar().size(), Color.rgb(18,25,39), 13);
-        saved.setBackground(remoteSurface(Color.rgb(18,25,39), 16, Color.rgb(39,49,68)));
-        saved.setOnClickListener(v -> showMeusControles());
-        root.addView(saved,new LinearLayout.LayoutParams(-1,dp(48)));
+        if(tvTab==1) painelTvNumeros(root);
+        else if(tvTab==2) painelTvMidia(root);
+        else painelTvPrincipal(root);
 
-        sv.addView(root);
-        mostrar(sv);
+        mostrar(telaRolavel(root));
+    }
+
+    private void painelTvPrincipal(LinearLayout root){
+        LinearLayout r=row();
+        r.addView(cmdTile(R.drawable.ic_tv,"Fonte",SOURCE,56));
+        r.addView(cmdTile(R.drawable.ic_list,"Guia",GUIDE,56));
+        r.addView(cmdTile(R.drawable.ic_home,"Home",HOME,56));
+        r.addView(cmdTile(R.drawable.ic_settings,"Ajustes",SETTINGS,56));
+        root.addView(r);
+
+        // D-pad circular com OK no centro.
+        FrameLayout pad=new FrameLayout(this);
+        GradientDrawable padBg=new GradientDrawable(); padBg.setShape(GradientDrawable.OVAL);
+        padBg.setColor(Color.rgb(26,26,28)); padBg.setStroke(dp(1),Color.rgb(55,55,58));
+        pad.setBackground(padBg);
+        int tam=dp(58), m=dp(6);
+        FrameLayout.LayoutParams up=new FrameLayout.LayoutParams(tam,tam,Gravity.TOP|Gravity.CENTER_HORIZONTAL); up.setMargins(0,m,0,0);
+        FrameLayout.LayoutParams dn=new FrameLayout.LayoutParams(tam,tam,Gravity.BOTTOM|Gravity.CENTER_HORIZONTAL); dn.setMargins(0,0,0,m);
+        FrameLayout.LayoutParams lf=new FrameLayout.LayoutParams(tam,tam,Gravity.LEFT|Gravity.CENTER_VERTICAL); lf.setMargins(m,0,0,0);
+        FrameLayout.LayoutParams rt=new FrameLayout.LayoutParams(tam,tam,Gravity.RIGHT|Gravity.CENTER_VERTICAL); rt.setMargins(0,0,m,0);
+        pad.addView(iconBtn(R.drawable.ic_up,58,44,Color.TRANSPARENT,true,"Cima",v->send(UP)),up);
+        pad.addView(iconBtn(R.drawable.ic_down,58,44,Color.TRANSPARENT,true,"Baixo",v->send(DOWN)),dn);
+        pad.addView(iconBtn(R.drawable.ic_left,58,44,Color.TRANSPARENT,true,"Esquerda",v->send(LEFT)),lf);
+        pad.addView(iconBtn(R.drawable.ic_right,58,44,Color.TRANSPARENT,true,"Direita",v->send(RIGHT)),rt);
+        Button ok=new Button(this); ok.setText("OK"); ok.setTextColor(WHITE); ok.setTextSize(18); ok.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
+        ok.setAllCaps(false); ok.setMinHeight(0); ok.setMinWidth(0); ok.setPadding(0,0,0,0); ok.setIncludeFontPadding(false);
+        ok.setBackground(ripple(Color.rgb(60,61,70),true,false)); ok.setHapticFeedbackEnabled(true);
+        ok.setOnClickListener(v->{ haptic(v); send(OK); });
+        pad.addView(ok,new FrameLayout.LayoutParams(dp(86),dp(86),Gravity.CENTER));
+        LinearLayout.LayoutParams pp=new LinearLayout.LayoutParams(dp(210),dp(210)); pp.gravity=Gravity.CENTER_HORIZONTAL; pp.setMargins(0,dp(14),0,dp(10));
+        root.addView(pad,pp);
+
+        r=row();
+        r.addView(cmdTile(R.drawable.ic_back,"Voltar",BACK,54));
+        r.addView(cmdTile(R.drawable.ic_menu,"Menu",MENU,54));
+        r.addView(cmdTile(R.drawable.ic_exit,"Sair",EXIT,54));
+        root.addView(r);
+
+        // Volume e canais em bastões, com o mudo no meio.
+        LinearLayout vc=new LinearLayout(this); vc.setOrientation(LinearLayout.HORIZONTAL); vc.setGravity(Gravity.CENTER);
+        vc.addView(bastao("Vol",VOL_UP,VOL_DOWN,"Volume mais","Volume menos"));
+        LinearLayout meio=new LinearLayout(this); meio.setOrientation(LinearLayout.VERTICAL); meio.setGravity(Gravity.CENTER);
+        meio.addView(iconBtn(R.drawable.ic_volume_off,56,26,KEY,true,"Mudo",v->send(MUTE)),new LinearLayout.LayoutParams(dp(56),dp(56)));
+        TextView mudo=label("Mudo",11); mudo.setTextColor(GRAY);
+        LinearLayout.LayoutParams mlp=new LinearLayout.LayoutParams(-2,-2); mlp.setMargins(0,dp(4),0,0);
+        meio.addView(mudo,mlp);
+        LinearLayout.LayoutParams melp=new LinearLayout.LayoutParams(-2,-2); melp.setMargins(dp(22),0,dp(22),0);
+        vc.addView(meio,melp);
+        vc.addView(bastao("Canal",CH_UP,CH_DOWN,"Canal mais","Canal menos"));
+        LinearLayout.LayoutParams vclp=new LinearLayout.LayoutParams(-1,-2); vclp.setMargins(0,dp(14),0,dp(4));
+        root.addView(vc,vclp);
+
+        // Teclas coloridas.
+        LinearLayout cores=new LinearLayout(this); cores.setOrientation(LinearLayout.HORIZONTAL); cores.setGravity(Gravity.CENTER);
+        int[] corv={Color.rgb(170,28,28),Color.rgb(24,130,56),Color.rgb(190,150,12),Color.rgb(30,92,175)};
+        int[] cmdc={RED,GREEN,YELLOW,BLUE};
+        String[] nomec={"Vermelho","Verde","Amarelo","Azul"};
+        for(int i=0;i<4;i++){
+            final int cmd=cmdc[i];
+            Button b=new Button(this); b.setText(""); b.setContentDescription(nomec[i]);
+            b.setBackground(ripple(corv[i],true,false)); b.setHapticFeedbackEnabled(true);
+            b.setOnClickListener(v->{ haptic(v); send(cmd); });
+            LinearLayout.LayoutParams bp=new LinearLayout.LayoutParams(dp(44),dp(44)); bp.setMargins(dp(10),0,dp(10),0);
+            cores.addView(b,bp);
+        }
+        LinearLayout.LayoutParams colp=new LinearLayout.LayoutParams(-1,-2); colp.setMargins(0,dp(14),0,0);
+        root.addView(cores,colp);
+    }
+
+    /** Bastão vertical (+ em cima, rótulo no meio, − embaixo) para volume e canais. */
+    private LinearLayout bastao(String rotulo,int cmdMais,int cmdMenos,String descMais,String descMenos){
+        LinearLayout p=new LinearLayout(this); p.setOrientation(LinearLayout.VERTICAL); p.setGravity(Gravity.CENTER);
+        GradientDrawable g=new GradientDrawable(); g.setColor(KEY); g.setCornerRadius(dp(34)); g.setStroke(dp(1),BORDER);
+        p.setBackground(g);
+        p.addView(iconBtn(R.drawable.ic_plus,64,28,Color.TRANSPARENT,true,descMais,v->send(cmdMais)),new LinearLayout.LayoutParams(dp(64),dp(56)));
+        TextView l=label(rotulo,12); l.setTextColor(GRAY);
+        p.addView(l,new LinearLayout.LayoutParams(-2,dp(22)));
+        p.addView(iconBtn(R.drawable.ic_minus,64,28,Color.TRANSPARENT,true,descMenos,v->send(cmdMenos)),new LinearLayout.LayoutParams(dp(64),dp(56)));
+        p.setLayoutParams(new LinearLayout.LayoutParams(dp(64),dp(136)));
+        return p;
+    }
+
+    private void painelTvNumeros(LinearLayout root){
+        String[][] nums={{"1","2","3"},{"4","5","6"},{"7","8","9"}};
+        String[][] letras={{"","ABC","DEF"},{"GHI","JKL","MNO"},{"PQRS","TUV","WXYZ"}};
+        LinearLayout.LayoutParams topo=new LinearLayout.LayoutParams(-1,-2); topo.setMargins(0,dp(8),0,0);
+        for(int i=0;i<3;i++){
+            LinearLayout r=row();
+            for(int j=0;j<3;j++){
+                Button b=key(nums[i][j],i*3+j+1,64,KEY_DARK,22);
+                String d=nums[i][j], l=letras[i][j];
+                if(!l.isEmpty()){
+                    android.text.SpannableString sp=new android.text.SpannableString(d+"\n"+l);
+                    sp.setSpan(new android.text.style.RelativeSizeSpan(.5f),d.length()+1,sp.length(),0);
+                    b.setText(sp);
+                }
+                r.addView(b);
+            }
+            if(i==0) root.addView(r,topo); else root.addView(r);
+        }
+        LinearLayout r=row();
+        r.addView(key("CC",CC,64,KEY_DARK,16));
+        r.addView(key("0",0,64,KEY_DARK,22));
+        r.addView(key("Legenda",SUBTITLE,64,KEY_DARK,14));
+        root.addView(r);
+    }
+
+    private void painelTvMidia(LinearLayout root){
+        LinearLayout.LayoutParams topo=new LinearLayout.LayoutParams(-1,-2); topo.setMargins(0,dp(8),0,0);
+        LinearLayout r=row();
+        r.addView(cmdTile(R.drawable.ic_rewind,"",REWIND,60));
+        r.addView(cmdTile(R.drawable.ic_play,"",PLAY,60));
+        r.addView(cmdTile(R.drawable.ic_pause,"",PAUSE,60));
+        r.addView(cmdTile(R.drawable.ic_stop,"",STOP,60));
+        r.addView(cmdTile(R.drawable.ic_forward,"",FAST_FORWARD,60));
+        root.addView(r,topo);
+        String[] desc={"Retroceder","Reproduzir","Pausar","Parar","Avançar"};
+        for(int i=0;i<r.getChildCount();i++) r.getChildAt(i).setContentDescription(desc[i]);
+
+        LinearLayout r2=row();
+        r2.addView(cmdTile(R.drawable.ic_info,"Info",INFO,60));
+        r2.addView(cmdTile(R.drawable.ic_tv,lgMode?"Smart":"Netflix",NETFLIX,60));
+        LinearLayout.LayoutParams l2=new LinearLayout.LayoutParams(-1,-2); l2.setMargins(0,dp(8),0,0);
+        root.addView(r2,l2);
     }
 
     private boolean enviarComandoSalvo(String funcao){
         if(controleAtivo==null || funcao.isEmpty()) return false;
         int codigo=controleStorage.codigoComando(controleAtivo,funcao);
         String perfil=controleStorage.perfilComando(controleAtivo,funcao);
-        int freq=controleStorage.frequenciaComando(controleAtivo,funcao);
-        if("RAW".equalsIgnoreCase(perfil) || codigo<0){
-            int[] raw=controleStorage.padraoRawComando(controleAtivo,funcao);
-            int rawFreq=controleStorage.frequenciaRawComando(controleAtivo,funcao);
-            return raw!=null && raw.length>0 && irPerfilTeste.transmitirRaw(rawFreq>0?rawFreq:freq,raw);
-        }
-        if(perfil.isEmpty()) return false;
-        return irPerfilTeste.transmitirSalvo(perfil,codigo,freq);
+        if(codigo<0 || perfil.isEmpty()) return false;
+        return irPerfilTeste.transmitirSalvo(perfil,codigo,controleStorage.frequenciaComando(controleAtivo,funcao));
     }
 
     /** Tecla n (1..5) do ventilador: usa o código aprendido para a função, ou o código padrão n. */
