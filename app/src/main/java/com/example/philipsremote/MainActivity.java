@@ -30,7 +30,7 @@ public class MainActivity extends Activity {
     private SharedPreferences prefs;
     private ControleStorage controleStorage;
     private ControleStorage.Controle controleAtivo;
-    private UpdateManager updateManager;
+    private Updater updateManager;
     private MonetizationManager monetizacao;
     private int aprenderFuncaoPos = 0;
     private static final int REQ_EXPORT_BACKUP = 4101;
@@ -70,7 +70,7 @@ private static final int CARD_2 = Color.rgb(31,31,36);
             lgMode="LG".equalsIgnoreCase(controleAtivo.marca);
             prefs.edit().putBoolean("lg_mode",lgMode).apply();
         }
-        updateManager=new UpdateManager(this);
+        updateManager=UpdaterFactory.criar(this);
         monetizacao=new MonetizationManager(this,()->showSelector());
         if(!prefs.getBoolean("initial_screen_seen",false)) showInitialScreen();
         else showSelector();
