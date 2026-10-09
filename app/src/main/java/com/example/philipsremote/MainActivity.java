@@ -2086,182 +2086,298 @@ render[0]=()->{
             .setPositiveButton("INICIAR TESTE",(d,w)->showUniversalScanner(marca,modelo,"TV")).show();
     }
 
+    private int remoteTab = 0;
+
+    private GradientDrawable remoteSurface(int color, int radius, int stroke) {
+        GradientDrawable d = new GradientDrawable();
+        d.setColor(color);
+        d.setCornerRadius(dp(radius));
+        d.setStroke(dp(1), stroke);
+        return d;
+    }
+
+    private Button remoteButton(String text, int command, int height, int textSize) {
+        Button b = new Button(this);
+        b.setText(text);
+        b.setTextColor(WHITE);
+        b.setTextSize(textSize);
+        b.setAllCaps(false);
+        b.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        b.setGravity(Gravity.CENTER);
+        b.setPadding(dp(3), dp(2), dp(3), dp(2));
+        b.setMinHeight(0);
+        b.setMinimumHeight(0);
+        b.setMinWidth(0);
+        b.setBackground(new RippleDrawable(
+                ColorStateList.valueOf(Color.rgb(72, 105, 155)),
+                remoteSurface(Color.rgb(17, 23, 35), 24, Color.rgb(39, 49, 68)), null));
+        b.setOnClickListener(v -> {
+            v.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP);
+            send(command);
+        });
+        LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(0, dp(height), 1f);
+        p.setMargins(dp(4), dp(4), dp(4), dp(4));
+        b.setLayoutParams(p);
+        return b;
+    }
+
     private void build(){
         fanMode=false;
         if(controleAtivo!=null && "Ventilador Universal".equals(controleAtivo.perfil)){ showFanRemote(); return; }
         if(controleAtivo!=null && "AC SmartIR".equals(controleAtivo.perfil)){ abrirSmartIrSalvo(controleAtivo); return; }
-        ScrollView sv=new ScrollView(this); sv.setFillViewport(true);
-        sv.setBackgroundColor(BG); sv.setClipToPadding(false);
 
-        LinearLayout root=new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(dp(12),dp(8),dp(12),dp(22)); root.setBackgroundColor(BG);
+        final int blue = Color.rgb(28, 133, 255);
+        final int dark = Color.rgb(5, 8, 14);
+        final int panel = Color.rgb(12, 17, 27);
+        final int muted = Color.rgb(164, 174, 195);
+        ScrollView sv = new ScrollView(this);
+        sv.setFillViewport(true);
+        sv.setBackgroundColor(dark);
+        sv.setClipToPadding(false);
 
-        LinearLayout modelRow=row();
-        LinearLayout brandBox=new LinearLayout(this); brandBox.setOrientation(LinearLayout.VERTICAL); brandBox.setGravity(Gravity.CENTER_VERTICAL);
-        TextView title=label("IR REMOTE BR",22); title.setTypeface(Typeface.DEFAULT,Typeface.BOLD); title.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
-        brandBox.addView(title,new LinearLayout.LayoutParams(-1,dp(28)));
-        TextView subtitle=label(controleAtivo!=null ? controleAtivo.nome : (lgMode?"LG 32LB620B":"Philips 50PUG6513/7"),12);
-        subtitle.setTextColor(GRAY); subtitle.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
-        brandBox.addView(subtitle,new LinearLayout.LayoutParams(-1,dp(20)));
-        modelRow.addView(brandBox,new LinearLayout.LayoutParams(0,dp(50),1));
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setPadding(dp(12), dp(10), dp(12), dp(24));
+        root.setBackgroundColor(dark);
 
-        Button change= new Button(this);
-        change.setText("TROCAR"); change.setTextColor(WHITE); change.setTextSize(12); change.setAllCaps(false);
-        GradientDrawable changeBg=new GradientDrawable(); changeBg.setColor(CARD_2); changeBg.setCornerRadius(dp(14)); changeBg.setStroke(dp(1),Color.rgb(60,60,66));
-        change.setBackground(changeBg); actionFeedback(change); change.setOnClickListener(v->showSelector());
-        modelRow.addView(change,new LinearLayout.LayoutParams(dp(88),dp(44)));
-        root.addView(modelRow);
+        String tvName = controleAtivo != null ? controleAtivo.nome : (lgMode ? "LG" : "Samsung");
+        String tvBrand = controleAtivo != null ? controleAtivo.marca : (lgMode ? "LG" : "Samsung");
+        String profile = controleAtivo != null ? controleAtivo.perfil : (lgMode ? "LG / NEC" : "Samsung");
+        boolean available = ir != null && ir.hasIrEmitter();
 
-        LinearLayout deviceCard=new LinearLayout(this);
-        deviceCard.setOrientation(LinearLayout.VERTICAL);
-        deviceCard.setPadding(dp(14),dp(8),dp(14),dp(8));
-        GradientDrawable deviceBg=new GradientDrawable();
-        deviceBg.setColor(controleAtivo!=null?Color.rgb(28,55,36):CARD);
-        deviceBg.setCornerRadius(dp(16));
-        deviceBg.setStroke(dp(1),controleAtivo!=null?Color.rgb(80,160,100):Color.rgb(55,55,60));
-        deviceCard.setBackground(deviceBg);
+        // Cabeçalho único com identidade do controle, perfil, estado IR e ações.
+        LinearLayout header = new LinearLayout(this);
+        header.setOrientation(LinearLayout.HORIZONTAL);
+        header.setGravity(Gravity.CENTER_VERTICAL);
+        header.setPadding(dp(12), dp(12), dp(8), dp(12));
+        header.setBackground(remoteSurface(panel, 22, Color.rgb(36, 45, 61)));
 
-        LinearLayout deviceTop=row();
-        TextView selected=label(controleAtivo!=null ? controleAtivo.nome : (lgMode?"LG 32LB620B":"Philips 50PUG6513/7"),16);
-        selected.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
-        selected.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
-        selected.setTextColor(WHITE);
-        deviceTop.addView(selected,new LinearLayout.LayoutParams(0,dp(34),1));
-        TextView ativoBadge=badge(controleAtivo!=null?"ATIVO":"PADRÃO",controleAtivo!=null?Color.rgb(55,110,65):Color.rgb(65,65,72));
-        deviceTop.addView(ativoBadge,new LinearLayout.LayoutParams(-2,dp(28)));
-        deviceCard.addView(deviceTop);
+        TextView tvIcon = label("▣\nTV", 22);
+        tvIcon.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        tvIcon.setTextColor(Color.rgb(230, 238, 255));
+        tvIcon.setBackground(remoteSurface(Color.rgb(19, 27, 42), 18, Color.rgb(55, 67, 88)));
+        LinearLayout.LayoutParams iconP = new LinearLayout.LayoutParams(dp(66), dp(76));
+        iconP.setMargins(0, 0, dp(10), 0);
+        header.addView(tvIcon, iconP);
 
-        TextView selectedDetail=label(controleAtivo!=null
-                ? controleAtivo.marca+" "+controleAtivo.modelo+"  •  "+controleStorage.quantidadeComandos(controleAtivo)+" botões configurados"
-                : (lgMode?"LG • perfil NEC":"Philips • perfil RC6"),12);
-        selectedDetail.setTextColor(controleAtivo!=null?Color.rgb(175,205,180):GRAY);
-        selectedDetail.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
-        deviceCard.addView(selectedDetail,new LinearLayout.LayoutParams(-1,dp(28)));
-        LinearLayout.LayoutParams deviceParams=new LinearLayout.LayoutParams(-1,dp(92));
-        deviceParams.setMargins(dp(2),0,dp(2),dp(5));
-        root.addView(deviceCard,deviceParams);
+        LinearLayout identity = new LinearLayout(this);
+        identity.setOrientation(LinearLayout.VERTICAL);
+        identity.setGravity(Gravity.CENTER_VERTICAL);
+        TextView name = label(tvName, 20);
+        name.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        name.setGravity(Gravity.LEFT | Gravity.CENTER_VERTICAL);
+        identity.addView(name, new LinearLayout.LayoutParams(-1, dp(29)));
+        TextView brand = label("TV  •  " + tvBrand, 13);
+        brand.setTextColor(muted);
+        brand.setGravity(Gravity.LEFT | Gravity.CENTER_VERTICAL);
+        identity.addView(brand, new LinearLayout.LayoutParams(-1, dp(22)));
 
-        LinearLayout r=row();
-        Button powerButton=new Button(this); powerButton.setText("");
-        powerButton.setBackgroundResource(R.drawable.power_button); powerButton.setPadding(0,0,0,0);
-        powerButton.setContentDescription("Ligar ou desligar a TV");
-        powerButton.setHapticFeedbackEnabled(true);
-        powerButton.setOnTouchListener((view,event)->{
-            if(event.getAction()==android.view.MotionEvent.ACTION_DOWN)
-                view.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP);
-            return false;
-        });
-        powerButton.setOnClickListener(v->{ v.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP); send(POWER); });
-        LinearLayout.LayoutParams powerParams=new LinearLayout.LayoutParams(dp(88),dp(88));
-        powerParams.setMargins(dp(4),dp(0),dp(4),dp(0)); powerButton.setLayoutParams(powerParams);
-        r.addView(powerButton); root.addView(r);
+        Button profileButton = new Button(this);
+        profileButton.setText("♙  Perfil: " + (controleAtivo != null ? "Salvo" : "Padrão") + "  ⌄");
+        profileButton.setTextColor(muted);
+        profileButton.setTextSize(11);
+        profileButton.setAllCaps(false);
+        profileButton.setGravity(Gravity.LEFT | Gravity.CENTER_VERTICAL);
+        profileButton.setPadding(0, 0, 0, 0);
+        profileButton.setBackgroundColor(Color.TRANSPARENT);
+        profileButton.setOnClickListener(v -> escolher("Perfil do controle",
+                "Perfil atual: " + profile + "\nOs códigos salvos continuam vinculados a este controle.",
+                new String[]{"Ver meus controles", "Editar funções / códigos", "Selecionar outro controle"},
+                i -> { if(i==0) showMeusControles(); else if(i==1 && controleAtivo!=null) showAprenderComandos(controleAtivo); else showSelector(); }));
+        identity.addView(profileButton, new LinearLayout.LayoutParams(-1, dp(30)));
 
-        TextView hint=label(controleAtivo!=null
-                ? "Controle ativo • "+controleStorage.quantidadeComandos(controleAtivo)+" botões personalizados"
-                : "Controle padrão • você pode salvar seu próprio controle",11);
-        hint.setTextColor(GRAY);
-        root.addView(hint,new LinearLayout.LayoutParams(-1,dp(24)));
+        TextView irStatus = label((available ? "●" : "○") + "  Emissor IR: " + (available ? "Ativo" : "Indisponível"), 12);
+        irStatus.setTextColor(available ? Color.rgb(45, 220, 100) : Color.rgb(255, 165, 80));
+        irStatus.setGravity(Gravity.LEFT | Gravity.CENTER_VERTICAL);
+        identity.addView(irStatus, new LinearLayout.LayoutParams(-1, dp(26)));
+        header.addView(identity, new LinearLayout.LayoutParams(0, dp(104), 1f));
 
-        r=row();
-        add(r,key("SOURCE",SOURCE,50,KEY,16)); add(r,key("INFO",INFO,50,KEY,16));
-        add(r,key("⚙",SETTINGS,50,KEY,25)); root.addView(r);
+        LinearLayout actions = new LinearLayout(this);
+        actions.setOrientation(LinearLayout.VERTICAL);
+        actions.setGravity(Gravity.CENTER);
+        Button power = new Button(this);
+        power.setText("⏻");
+        power.setTextColor(Color.rgb(255, 55, 70));
+        power.setTextSize(37);
+        power.setPadding(0, 0, 0, 0);
+        power.setMinHeight(0);
+        power.setMinWidth(0);
+        power.setBackground(remoteSurface(Color.rgb(43, 17, 27), 50, Color.rgb(84, 35, 48)));
+        power.setContentDescription("Ligar ou desligar a TV");
+        power.setOnClickListener(v -> send(POWER));
+        actions.addView(power, new LinearLayout.LayoutParams(dp(62), dp(62)));
+        TextView powerLabel = label("Ligar", 10);
+        powerLabel.setTextColor(muted);
+        actions.addView(powerLabel, new LinearLayout.LayoutParams(-1, dp(18)));
+        LinearLayout.LayoutParams actionsP = new LinearLayout.LayoutParams(dp(66), -2);
+        actionsP.setMargins(dp(4), 0, 0, 0);
+        header.addView(actions, actionsP);
+        root.addView(header, new LinearLayout.LayoutParams(-1, -2));
 
-        r=row();
-        add(r,key("GUIDE",GUIDE,50,KEY,16)); add(r,key("HOME",HOME,50,KEY,16));
-        add(r,key(lgMode?"SMART":"NETFLIX",NETFLIX,50,KEY,16)); root.addView(r);
+        LinearLayout actionRow = row();
+        Button change = botaoAcao("⇄\nTrocar", Color.rgb(18, 25, 39), 12);
+        change.setBackground(remoteSurface(Color.rgb(18,25,39), 18, Color.rgb(42,53,73)));
+        change.setOnClickListener(v -> showSelector());
+        Button edit = botaoAcao("✎\nEditar", Color.rgb(18, 25, 39), 12);
+        edit.setBackground(remoteSurface(Color.rgb(18,25,39), 18, Color.rgb(42,53,73)));
+        edit.setOnClickListener(v -> { if(controleAtivo!=null) showAprenderComandos(controleAtivo); else showMeusControles(); });
+        actionRow.addView(change, new LinearLayout.LayoutParams(0, dp(48), 1f));
+        actionRow.addView(edit, new LinearLayout.LayoutParams(0, dp(48), 1f));
+        LinearLayout.LayoutParams actionRowP = new LinearLayout.LayoutParams(-1, -2);
+        actionRowP.setMargins(0, dp(5), 0, dp(8));
+        root.addView(actionRow, actionRowP);
 
-        section(root,"NAVEGAÇÃO");
-        LinearLayout nav=new LinearLayout(this); nav.setOrientation(LinearLayout.VERTICAL);
-        nav.setGravity(Gravity.CENTER); nav.setPadding(dp(34),dp(6),dp(34),dp(6));
-        GradientDrawable navBg=new GradientDrawable(); navBg.setColor(Color.rgb(26,26,28));
-        navBg.setCornerRadius(dp(26)); navBg.setStroke(dp(1),Color.rgb(55,55,58));
-        nav.setBackground(navBg); LinearLayout.LayoutParams np=new LinearLayout.LayoutParams(-1,-2);
-        np.setMargins(dp(3),dp(2),dp(3),dp(2)); nav.setLayoutParams(np);
+        // Abas fixas: Principal, Números e Mídia.
+        LinearLayout tabs = new LinearLayout(this);
+        tabs.setOrientation(LinearLayout.HORIZONTAL);
+        tabs.setBackground(remoteSurface(panel, 18, Color.rgb(29, 38, 53)));
+        String[] tabNames = {"▣\nPrincipal", "▦\nNúmeros", "▷\nMídia"};
+        for(int i=0;i<tabNames.length;i++){
+            final int index=i;
+            Button tab = new Button(this);
+            tab.setText(tabNames[i]);
+            tab.setTextSize(13);
+            tab.setAllCaps(false);
+            tab.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+            tab.setTextColor(remoteTab==i?blue:muted);
+            tab.setMinHeight(0);
+            tab.setPadding(0, dp(5), 0, dp(5));
+            tab.setBackground(remoteTab==i
+                    ? remoteSurface(Color.rgb(15, 27, 45), 15, blue)
+                    : remoteSurface(Color.TRANSPARENT, 15, Color.TRANSPARENT));
+            tab.setOnClickListener(v -> { remoteTab=index; build(); });
+            tabs.addView(tab, new LinearLayout.LayoutParams(0, dp(60), 1f));
+        }
+        LinearLayout.LayoutParams tabsP = new LinearLayout.LayoutParams(-1, -2);
+        tabsP.setMargins(0, 0, 0, dp(18));
+        root.addView(tabs, tabsP);
 
-        r=row(); add(r,key("▲",UP,56,Color.rgb(60,61,70),22)); nav.addView(r);
-        r=row(); add(r,key("◀",LEFT,64,Color.rgb(60,61,70),22));
-        add(r,key("OK",OK,64,Color.rgb(60,61,70),18));
-        add(r,key("▶",RIGHT,64,Color.rgb(60,61,70),22)); nav.addView(r);
-        r=row(); add(r,key("▼",DOWN,56,Color.rgb(60,61,70),22)); nav.addView(r);
-        root.addView(nav);
+        if(remoteTab==0){
+            LinearLayout topActions = row();
+            add(topActions, remoteButton("▣\nFonte", SOURCE, 70, 15));
+            add(topActions, remoteButton("⌂\nInício", HOME, 70, 15));
+            add(topActions, remoteButton("☰\nMenu", MENU, 70, 15));
+            root.addView(topActions);
 
-        r=row(); add(r,key("↩  BACK",BACK,50,KEY,16));
-        add(r,key("☰  MENU",MENU,50,KEY,16)); add(r,key("EXIT",EXIT,50,KEY,16)); root.addView(r);
+            LinearLayout mainControls = new LinearLayout(this);
+            mainControls.setOrientation(LinearLayout.HORIZONTAL);
+            mainControls.setGravity(Gravity.CENTER);
+            mainControls.setPadding(0, dp(8), 0, dp(8));
 
-        section(root,"VOLUME E CANAIS");
-        r=row(); add(r,key("📡 VOL +",VOL_UP,50,KEY,16)); add(r,key("🔇",MUTE,50,KEY,20));
-        add(r,key("CH +  +",CH_UP,50,KEY,16)); root.addView(r);
-        r=row(); add(r,key("📡 VOL −",VOL_DOWN,50,KEY,16)); add(r,key("TV",SOURCE,50,KEY,16));
-        add(r,key("CH −  −",CH_DOWN,50,KEY,16)); root.addView(r);
+            LinearLayout volume = new LinearLayout(this);
+            volume.setOrientation(LinearLayout.VERTICAL);
+            volume.setGravity(Gravity.CENTER);
+            volume.setBackground(remoteSurface(panel, 34, Color.rgb(39,49,68)));
+            Button volUp = remoteButton("+", VOL_UP, 65, 27);
+            Button mute = remoteButton("◖))", MUTE, 65, 18);
+            Button volDown = remoteButton("−", VOL_DOWN, 65, 27);
+            volume.addView(volUp, new LinearLayout.LayoutParams(dp(74), dp(65)));
+            volume.addView(mute, new LinearLayout.LayoutParams(dp(74), dp(65)));
+            volume.addView(volDown, new LinearLayout.LayoutParams(dp(74), dp(65)));
+            mainControls.addView(volume);
 
-        section(root,"SMART TV");
-        r=row(); add(r,key("RED",RED,50,Color.rgb(145,18,18),14));
-        add(r,key("GREEN",GREEN,50,Color.rgb(18,118,48),14));
-        add(r,key("YELLOW",YELLOW,50,Color.rgb(166,132,8),14));
-        add(r,key("BLUE",BLUE,50,Color.rgb(24,78,155),14)); root.addView(r);
+            LinearLayout nav = new LinearLayout(this);
+            nav.setOrientation(LinearLayout.VERTICAL);
+            nav.setGravity(Gravity.CENTER);
+            nav.setBackground(remoteSurface(Color.rgb(14,20,32), 100, Color.rgb(47,59,80)));
+            nav.setPadding(dp(7), dp(7), dp(7), dp(7));
+            nav.addView(remoteButton("⌃", UP, 48, 23), new LinearLayout.LayoutParams(dp(68), dp(48)));
+            LinearLayout navMiddle = row();
+            navMiddle.addView(remoteButton("‹", LEFT, 54, 26), new LinearLayout.LayoutParams(dp(52), dp(54)));
+            navMiddle.addView(remoteButton("OK", OK, 64, 18), new LinearLayout.LayoutParams(dp(64), dp(64)));
+            navMiddle.addView(remoteButton("›", RIGHT, 54, 26), new LinearLayout.LayoutParams(dp(52), dp(54)));
+            nav.addView(navMiddle);
+            nav.addView(remoteButton("⌄", DOWN, 48, 23), new LinearLayout.LayoutParams(dp(68), dp(48)));
+            LinearLayout.LayoutParams navP = new LinearLayout.LayoutParams(0, -2, 1f);
+            navP.setMargins(dp(8), 0, dp(8), 0);
+            mainControls.addView(nav, navP);
 
-        section(root,"TECLADO");
-        String[][] nums={{"1","2 ABC","3 DEF"},{"4 GHI","5 JKL","6 MNO"},{"7 PQRS","8 TUV","9 WXYZ"},{"CC","0","SUBTITLE"}};
-        int[][] cmds={{1,2,3},{4,5,6},{7,8,9},{0x3C,0,SUBTITLE}};
-        for(int i=0;i<nums.length;i++){ r=row(); for(int j=0;j<3;j++){
-            int fs=(i==0&&j==0)?20:14; add(r,key(nums[i][j],cmds[i][j],50,KEY_DARK,fs));
-        } root.addView(r); }
+            LinearLayout channels = new LinearLayout(this);
+            channels.setOrientation(LinearLayout.VERTICAL);
+            channels.setGravity(Gravity.CENTER);
+            channels.setBackground(remoteSurface(panel, 34, Color.rgb(39,49,68)));
+            channels.addView(remoteButton("⌃", CH_UP, 65, 24), new LinearLayout.LayoutParams(dp(74), dp(65)));
+            channels.addView(remoteButton("▣", SOURCE, 65, 20), new LinearLayout.LayoutParams(dp(74), dp(65)));
+            channels.addView(remoteButton("⌄", CH_DOWN, 65, 24), new LinearLayout.LayoutParams(dp(74), dp(65)));
+            mainControls.addView(channels);
+            root.addView(mainControls);
 
-        section(root,"CONTROLE DE MÍDIA");
-        r=row(); add(r,key("◀◀",REWIND,50,KEY,19)); add(r,key("▶",PLAY,50,KEY,19));
-        add(r,key("Ⅱ",PAUSE,50,KEY,19)); add(r,key("■",STOP,50,KEY,19));
-        add(r,key("▶▶",FAST_FORWARD,50,KEY,19)); root.addView(r);
+            LinearLayout bottom = row();
+            add(bottom, remoteButton("↶\nVoltar", BACK, 60, 14));
+            add(bottom, remoteButton("⇥\nSair", EXIT, 60, 14));
+            add(bottom, remoteButton("ⓘ\nInfo", INFO, 60, 14));
+            root.addView(bottom);
 
-        boolean available=ir!=null&&ir.hasIrEmitter();
-        String perfilStatus=controleAtivo!=null?controleAtivo.perfil:(lgMode?"LG / NEC":"Philips / RC6");
-        TextView status=label(available?"●  Emissor IR detectado  •  "+perfilStatus+" • "+(controleAtivo!=null?controleAtivo.frequencia:(lgMode?38000:36000))+" Hz":"○  Emissor IR não detectado",12);
-        status.setTextColor(available?Color.rgb(75,145,95):GRAY);
-        root.addView(status,new LinearLayout.LayoutParams(-1,dp(38)));
-
-        if(controleAtivo!=null){
-            LinearLayout deviceBar=row();
-            deviceBar.setPadding(dp(2),dp(2),dp(2),dp(2));
-            GradientDrawable barBg=new GradientDrawable();
-            barBg.setColor(Color.rgb(24,30,26)); barBg.setCornerRadius(dp(14));
-            deviceBar.setBackground(barBg);
-
-            TextView deviceInfo=label("✓  "+controleAtivo.nome+"\n"+controleStorage.quantidadeComandos(controleAtivo)+" botões configurados",12);
-            deviceInfo.setTextColor(Color.rgb(105,175,115));
-            deviceInfo.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
-            deviceBar.addView(deviceInfo,new LinearLayout.LayoutParams(0,dp(52),1));
-
-            Button configurar=new Button(this);
-            configurar.setText("EDITAR");
-            configurar.setTextColor(WHITE);
-            configurar.setTextSize(11);
-            configurar.setAllCaps(false);
-            GradientDrawable configBg=new GradientDrawable();
-            configBg.setColor(Color.rgb(55,75,60));
-            configBg.setCornerRadius(dp(12));
-            configurar.setBackground(configBg);
-            actionFeedback(configurar);
-            configurar.setOnClickListener(v->showAprenderComandos(controleAtivo));
-            deviceBar.addView(configurar,new LinearLayout.LayoutParams(dp(82),dp(44)));
-            LinearLayout.LayoutParams barParams=new LinearLayout.LayoutParams(-1,dp(56));
-            barParams.setMargins(dp(2),dp(5),dp(2),dp(2));
-            root.addView(deviceBar,barParams);
+            LinearLayout colors = row();
+            int[] colorValues = {Color.rgb(245,25,40), Color.rgb(0,190,75), Color.rgb(255,190,0), blue};
+            int[] colorCommands = {RED,GREEN,YELLOW,BLUE};
+            for(int i=0;i<4;i++){
+                final int cmd=colorCommands[i];
+                Button cb=new Button(this);
+                cb.setText("●");
+                cb.setTextSize(28);
+                cb.setTextColor(colorValues[i]);
+                cb.setBackgroundColor(Color.TRANSPARENT);
+                cb.setOnClickListener(v->send(cmd));
+                colors.addView(cb,new LinearLayout.LayoutParams(0,dp(58),1f));
+            }
+            LinearLayout.LayoutParams colorsP = new LinearLayout.LayoutParams(-1,-2);
+            colorsP.setMargins(dp(20), dp(10), dp(20), 0);
+            root.addView(colors, colorsP);
+        } else if(remoteTab==1){
+            TextView numberTitle = label("Teclado numérico", 18);
+            numberTitle.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+            root.addView(numberTitle, new LinearLayout.LayoutParams(-1,dp(42)));
+            int[][] numberCommands={{1,2,3},{4,5,6},{7,8,9},{0x3C,0,SUBTITLE}};
+            String[][] numberLabels={{"1","2 ABC","3 DEF"},{"4 GHI","5 JKL","6 MNO"},{"7 PQRS","8 TUV","9 WXYZ"},{"CC","0","SUB"}};
+            for(int i=0;i<numberCommands.length;i++){
+                LinearLayout nr=row();
+                for(int j=0;j<3;j++) add(nr,remoteButton(numberLabels[i][j],numberCommands[i][j],68,17));
+                root.addView(nr);
+            }
+            LinearLayout numberExtras=row();
+            add(numberExtras,remoteButton("Guia",GUIDE,54,14));
+            add(numberExtras,remoteButton("Info",INFO,54,14));
+            add(numberExtras,remoteButton("Menu",MENU,54,14));
+            root.addView(numberExtras);
+        } else {
+            TextView mediaTitle = label("Reprodução e mídia", 18);
+            mediaTitle.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+            root.addView(mediaTitle, new LinearLayout.LayoutParams(-1,dp(42)));
+            LinearLayout media1=row();
+            add(media1,remoteButton("⏪\nVoltar",REWIND,76,15));
+            add(media1,remoteButton("▶\nReproduzir",PLAY,76,15));
+            root.addView(media1);
+            LinearLayout media2=row();
+            add(media2,remoteButton("Ⅱ\nPausar",PAUSE,76,15));
+            add(media2,remoteButton("■\nParar",STOP,76,15));
+            root.addView(media2);
+            LinearLayout media3=row();
+            add(media3,remoteButton("⏩\nAvançar",FAST_FORWARD,76,15));
+            add(media3,remoteButton("NETFLIX / SMART",NETFLIX,76,13));
+            root.addView(media3);
+            LinearLayout media4=row();
+            add(media4,remoteButton("Guia",GUIDE,58,14));
+            add(media4,remoteButton("Configurações",SETTINGS,58,13));
+            add(media4,remoteButton("Legendas",SUBTITLE,58,13));
+            root.addView(media4);
         }
 
-        Button meusControles=new Button(this);
-        meusControles.setText("★  MEUS CONTROLES  •  "+controleStorage.listar().size());
-        meusControles.setTextColor(WHITE);
-        meusControles.setTextSize(13);
-        meusControles.setAllCaps(false);
-        GradientDrawable meusBg=new GradientDrawable();
-        meusBg.setColor(KEY_DARK);
-        meusBg.setCornerRadius(dp(16));
-        meusControles.setBackground(meusBg);
-        actionFeedback(meusControles);
-        meusControles.setOnClickListener(v->showMeusControles());
-        LinearLayout.LayoutParams meusParams=new LinearLayout.LayoutParams(-1,dp(50));
-        meusParams.setMargins(dp(2),dp(6),dp(2),0);
-        root.addView(meusControles,meusParams);
-        sv.addView(root); mostrar(sv);
+        TextView status = label(available
+                ? "●  Emissor IR detectado  •  " + profile + "  •  " + (controleAtivo!=null?controleAtivo.frequencia:(lgMode?38000:38000)) + " Hz"
+                : "○  Este celular não possui emissor IR disponível", 11);
+        status.setTextColor(available?Color.rgb(65,190,105):Color.rgb(255,165,80));
+        LinearLayout.LayoutParams statusP = new LinearLayout.LayoutParams(-1,dp(38));
+        statusP.setMargins(0,dp(8),0,0);
+        root.addView(status,statusP);
+
+        Button saved = botaoAcao("★  MEUS CONTROLES  •  " + controleStorage.listar().size(), Color.rgb(18,25,39), 13);
+        saved.setBackground(remoteSurface(Color.rgb(18,25,39), 16, Color.rgb(39,49,68)));
+        saved.setOnClickListener(v -> showMeusControles());
+        root.addView(saved,new LinearLayout.LayoutParams(-1,dp(48)));
+
+        sv.addView(root);
+        mostrar(sv);
     }
 
     private boolean enviarComandoSalvo(String funcao){
