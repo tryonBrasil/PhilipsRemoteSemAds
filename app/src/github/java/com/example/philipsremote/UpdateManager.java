@@ -29,7 +29,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /** Verifica releases no GitHub, baixa o APK (com conferência de SHA-256) e abre o instalador do Android. */
-public class UpdateManager {
+public class UpdateManager implements Updater {
     private static final String RELEASES_URL =
         "https://api.github.com/repos/tryonBrasil/PhilipsRemoteSemAds/releases/latest";
     private static final String APK_PREFIX = "IRRemoteBR-update-";
