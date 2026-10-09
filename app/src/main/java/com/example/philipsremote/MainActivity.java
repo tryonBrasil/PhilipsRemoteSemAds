@@ -886,7 +886,7 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         });
         bottomActions.addView(save,lpPeso());
         Button back=botaoAcao("← VOLTAR",KEY_DARK,12); back.setOnClickListener(v->showSelector()); bottomActions.addView(back,lpPeso());
-        root.addView(actions,new LinearLayout.LayoutParams(-1,dp(50)));
+        root.addView(bottomActions,new LinearLayout.LayoutParams(-1,dp(50)));
 
         state.setText((ligado[0]?"● LIGADO":"○ DESLIGADO")+"  •  "+modoTexto(mode[0])+"  •  "+temp[0]+" °C  •  "+fanTexto(fan[0]));
         state.setTextColor(ligado[0]?Color.rgb(80,210,125):GRAY);
