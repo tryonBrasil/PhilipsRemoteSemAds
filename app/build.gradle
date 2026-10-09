@@ -4,14 +4,27 @@ plugins {
 
 android {
     namespace 'com.example.philipsremote'
-    compileSdk 35
+    compileSdk 36
 
     defaultConfig {
-        applicationId 'com.example.philipsremote'
         minSdk 23
-        targetSdk 35
+        targetSdk 36
         versionCode 67
-        versionName '1.7.7'
+        versionName '2.0.0'
+    }
+
+    flavorDimensions "dist"
+    productFlavors {
+        github {
+            dimension "dist"
+            applicationId "com.example.philipsremote"
+            buildConfigField "boolean", "ATUALIZACAO_POR_APK", "true"
+        }
+        play {
+            dimension "dist"
+            applicationId "io.github.tryonbrasil.irremote"
+            buildConfigField "boolean", "ATUALIZACAO_POR_APK", "false"
+        }
     }
 
     compileOptions {
