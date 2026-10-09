@@ -277,7 +277,7 @@ public class UpdateManager implements Updater {
             request.setDescription(automatico ? "Baixando atualização automaticamente..." : "Baixando atualização...");
             request.setMimeType("application/vnd.android.package-archive");
             request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
-            // A atualização automática também pode usar rede móvel. O usuário continua recebendo a notificação do download.
+            if (automatico) request.setAllowedOverMetered(false);      // download automático só em rede sem franquia
             request.setDestinationInExternalFilesDir(activity, Environment.DIRECTORY_DOWNLOADS, APK_PREFIX + versao + ".apk");
 
             long id = manager.enqueue(request);
