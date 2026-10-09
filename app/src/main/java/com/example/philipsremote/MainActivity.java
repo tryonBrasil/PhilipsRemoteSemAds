@@ -1,6 +1,7 @@
 package com.example.philipsremote;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.os.Bundle;
 import android.hardware.ConsumerIrManager;
 import android.graphics.Color;
@@ -861,7 +862,7 @@ private static final int CARD_2 = Color.rgb(31,31,36);
             root.addView(reset,new LinearLayout.LayoutParams(-1,dp(48)));
         }
 
-        LinearLayout actions=row();
+        LinearLayout bottomActions=row();
         Button save=botaoAcao(saved[0]==null?"★  SALVAR CONTROLE":"✓  CONTROLE SALVO",ACCENT,12);
         save.setOnClickListener(v->{
             if(saved[0]==null){
@@ -883,8 +884,8 @@ private static final int CARD_2 = Color.rgb(31,31,36);
                 acTab=0; build();
             }
         });
-        actions.addView(save,lpPeso());
-        Button back=botaoAcao("← VOLTAR",KEY_DARK,12); back.setOnClickListener(v->showSelector()); actions.addView(back,lpPeso());
+        bottomActions.addView(save,lpPeso());
+        Button back=botaoAcao("← VOLTAR",KEY_DARK,12); back.setOnClickListener(v->showSelector()); bottomActions.addView(back,lpPeso());
         root.addView(actions,new LinearLayout.LayoutParams(-1,dp(50)));
 
         state.setText((ligado[0]?"● LIGADO":"○ DESLIGADO")+"  •  "+modoTexto(mode[0])+"  •  "+temp[0]+" °C  •  "+fanTexto(fan[0]));
