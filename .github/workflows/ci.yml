@@ -39,11 +39,11 @@ jobs:
         run: gradle test
 
       - name: Debug APK
-        run: gradle assembleDebug
+        run: gradle assembleGithubDebug
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
           name: PhilipsRemoteSemAds-debug
-          path: app/build/outputs/apk/debug/*.apk
+          path: app/build/outputs/apk/github/debug/*.apk
           if-no-files-found: error
