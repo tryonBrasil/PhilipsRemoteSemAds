@@ -29,6 +29,7 @@ public class MonetizationManager {
     private boolean consultaEmAndamento = false;
     private boolean compraEmAndamento = false;
     private boolean reconexaoAgendada = false;
+    private final java.util.List<AdView> banners = new java.util.ArrayList<>();
 
     public MonetizationManager(Activity activity, Runnable onPremiumChanged) {
         this.activity = activity;
@@ -71,7 +72,22 @@ public class MonetizationManager {
 
         box.addView(ad, new FrameLayout.LayoutParams(-1, -2));
         root.addView(box, new LinearLayout.LayoutParams(-1, -2));
+        banners.add(ad);
         ad.loadAd(new AdRequest.Builder().build());
+    }
+
+    /** Indica se há opções de privacidade de anúncios disponíveis nesta versão. */
+    public boolean precisaOpcoesPrivacidade() {
+        return false;
+    }
+
+    /** Ponto de entrada seguro para a tela de privacidade de anúncios. */
+    public void mostrarOpcoesPrivacidade() {
+        new AlertDialog.Builder(activity)
+                .setTitle("Privacidade dos anúncios")
+                .setMessage("Os anúncios desta versão usam configurações padrão. Não há opções adicionais de privacidade disponíveis no momento.")
+                .setPositiveButton("OK", null)
+                .show();
     }
 
     public void showPremiumDialog() {
@@ -379,3 +395,17 @@ public class MonetizationManager {
         }
     }
 }
+    /** Libera todos os banners e encerra a conexão do Google Play. */
+    public void destroy() {
+        for (AdView ad : new java.util.ArrayList<>(banners)) {
+            try { ad.destroy(); } catch (Exception ignored) {}
+        }
+        banners.clear();
+        if (billingClient != null) {
+            try { billingClient.endConnection(); } catch (Exception ignored) {}
+            billingClient = null;
+        }
+        billingReady = false;
+        consultaEmAndamento = false;
+        compraEmAndamento = false;
+    }
