@@ -6,6 +6,10 @@ android {
     namespace 'com.example.philipsremote'
     compileSdk 36
 
+    buildFeatures {
+        buildConfig true
+    }
+
     defaultConfig {
         minSdk 23
         targetSdk 36
