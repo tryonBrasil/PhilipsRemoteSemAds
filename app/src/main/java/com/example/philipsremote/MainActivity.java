@@ -2152,11 +2152,13 @@ render[0]=()->{
         header.setPadding(dp(12), dp(12), dp(8), dp(12));
         header.setBackground(remoteSurface(panel, 22, Color.rgb(36, 45, 61)));
 
-        TextView tvIcon = label("▣\nTV", 22);
-        tvIcon.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        tvIcon.setTextColor(Color.rgb(230, 238, 255));
-        tvIcon.setBackground(remoteSurface(Color.rgb(19, 27, 42), 18, Color.rgb(55, 67, 88)));
-        LinearLayout.LayoutParams iconP = new LinearLayout.LayoutParams(dp(66), dp(76));
+        ImageView tvIcon = new ImageView(this);
+        tvIcon.setImageResource(com.example.philipsremote.R.drawable.tv_header);
+        tvIcon.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
+        tvIcon.setPadding(dp(5), dp(5), dp(5), dp(5));
+        tvIcon.setBackground(remoteSurface(Color.rgb(12, 21, 35), 18, Color.rgb(55, 67, 88)));
+        tvIcon.setContentDescription("Imagem de uma televisão");
+        LinearLayout.LayoutParams iconP = new LinearLayout.LayoutParams(dp(78), dp(78));
         iconP.setMargins(0, 0, dp(10), 0);
         header.addView(tvIcon, iconP);
 
@@ -2195,17 +2197,15 @@ render[0]=()->{
         LinearLayout actions = new LinearLayout(this);
         actions.setOrientation(LinearLayout.VERTICAL);
         actions.setGravity(Gravity.CENTER);
-        Button power = new Button(this);
-        power.setText("⏻");
-        power.setTextColor(Color.rgb(255, 55, 70));
-        power.setTextSize(37);
+        ImageButton power = new ImageButton(this);
+        power.setImageResource(com.example.philipsremote.R.drawable.power_button);
+        power.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
         power.setPadding(0, 0, 0, 0);
-        power.setMinHeight(0);
-        power.setMinWidth(0);
-        power.setBackground(remoteSurface(Color.rgb(43, 17, 27), 50, Color.rgb(84, 35, 48)));
+        power.setBackground(remoteSurface(Color.rgb(30, 11, 19), 50, Color.rgb(94, 38, 52)));
+        power.setColorFilter(null);
         power.setContentDescription("Ligar ou desligar a TV");
         power.setOnClickListener(v -> send(POWER));
-        actions.addView(power, new LinearLayout.LayoutParams(dp(62), dp(62)));
+        actions.addView(power, new LinearLayout.LayoutParams(dp(72), dp(72)));
         TextView powerLabel = label("Ligar", 10);
         powerLabel.setTextColor(muted);
         actions.addView(powerLabel, new LinearLayout.LayoutParams(-1, dp(18)));
