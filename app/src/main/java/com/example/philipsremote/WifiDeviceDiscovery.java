@@ -54,6 +54,8 @@ public final class WifiDeviceDiscovery {
 
         private static String platformFor(String type) {
             if (type == null) return "Desconhecido";
+            if (type.contains("philips-jointspace")) return "Philips";
+            if (type.contains("lg-netcast")) return "LG";
             if (type.contains("androidtvremote")) return "Android TV / Google TV";
             if (type.contains("googlecast")) return "Google Cast";
             if (type.contains("samsungmsf")) return "Samsung";
@@ -91,15 +93,13 @@ public final class WifiDeviceDiscovery {
     public synchronized void start() {
         stop();
         found.clear();
-        if (nsd == null) {
-            listener.onStatus("A descoberta de dispositivos não está disponível neste celular.");
-            return;
-        }
         scanning = true;
         final int generation = ++scanGeneration;
         acquireMulticastLock();
         listener.onStatus("Procurando dispositivos anunciados e verificando a rede local…");
-        for (String type : SERVICE_TYPES) startType(type);
+        if (nsd != null) {
+            for (String type : SERVICE_TYPES) startType(type);
+        }
         scanLocalSubnet(generation);
     }
 
@@ -126,8 +126,8 @@ public final class WifiDeviceDiscovery {
         }
         int localIp = Integer.reverseBytes(dhcp.ipAddress);
         int mask = Integer.reverseBytes(dhcp.netmask);
-        final long network = Integer.toUnsignedLong(localIp & mask);
-        final long broadcast = network | Integer.toUnsignedLong(~mask);
+        final long network = (((long)(localIp & mask)) & 0xffffffffL);
+        final long broadcast = network | (((long)(~mask)) & 0xffffffffL);
         final long first = network + 1;
         final long last = broadcast - 1;
         if (last < first || last - first > 1022) {
