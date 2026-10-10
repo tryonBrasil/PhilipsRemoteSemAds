@@ -2,6 +2,8 @@ package com.example.philipsremote;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.media.AudioManager;
+import android.view.KeyEvent;
 import android.os.Bundle;
 import android.hardware.ConsumerIrManager;
 import android.graphics.Color;
@@ -447,6 +449,9 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         TextView universalInfo=label("TV • AR-CONDICIONADO • VENTILADOR  •  pesquise a marca, teste códigos e salve o que funcionar.",12);
         universalInfo.setTextColor(GRAY); universalInfo.setGravity(Gravity.CENTER);
         root.addView(universalInfo,new LinearLayout.LayoutParams(-1,dp(44)));
+
+        Button speaker=new Button(this); speaker.setText("🔊  CAIXA DE SOM • BLUETOOTH"); speaker.setAllCaps(false); speaker.setTextColor(WHITE); speaker.setOnClickListener(v->showSpeakerControl());
+        root.addView(speaker,new LinearLayout.LayoutParams(-1,dp(54)));
 
         Button premium=new Button(this);
         premium.setText(monetizacao.isPremium()?"⭐  PREMIUM ATIVO":"⭐  IR REMOTE PREMIUM");
@@ -1976,6 +1981,37 @@ render[0]=()->{
     private Button smallAction(String text,int color){
         Button b=new Button(this); b.setText(text); b.setTextColor(WHITE); b.setTextSize(11); b.setAllCaps(false); b.setMinHeight(0); b.setMinWidth(0); b.setPadding(0,0,0,0);
         GradientDrawable g=new GradientDrawable(); g.setColor(color); g.setCornerRadius(dp(11)); g.setStroke(dp(1),Color.rgb(70,70,75)); b.setBackground(g); actionFeedback(b); return b;
+    }
+
+    private void showSpeakerControl(){
+        showingSelector=false;
+        ScrollView sv=new ScrollView(this); sv.setFillViewport(true); sv.setBackgroundColor(BG);
+        LinearLayout root=new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL); root.setPadding(dp(18),dp(18),dp(18),dp(24));
+        TextView title=label("🔊 CAIXA DE SOM",24); title.setTypeface(Typeface.DEFAULT,Typeface.BOLD); root.addView(title,new LinearLayout.LayoutParams(-1,dp(44)));
+        TextView info=label("Mondial CM-400 • Conecte MONDIAL CM nas configurações Bluetooth. Esta tela controla o volume de mídia e envia comandos de reprodução ao Android; não controla diretamente as luzes, o modo ou a energia da caixa.",13);
+        info.setTextColor(GRAY); root.addView(info,new LinearLayout.LayoutParams(-1,dp(110)));
+        AudioManager audio=(AudioManager)getSystemService(AUDIO_SERVICE);
+        TextView vl=label("VOLUME DE MÍDIA",13); root.addView(vl,new LinearLayout.LayoutParams(-1,dp(30)));
+        SeekBar volume=new SeekBar(this); int max=audio==null?15:audio.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
+        volume.setMax(Math.max(1,max)); volume.setProgress(audio==null?0:audio.getStreamVolume(AudioManager.STREAM_MUSIC));
+        volume.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){
+            public void onProgressChanged(SeekBar b,int p,boolean user){if(user&&audio!=null)audio.setStreamVolume(AudioManager.STREAM_MUSIC,p,0);}
+            public void onStartTrackingTouch(SeekBar b){} public void onStopTrackingTouch(SeekBar b){}
+        });
+        root.addView(volume,new LinearLayout.LayoutParams(-1,dp(48)));
+        LinearLayout controls=row();
+        Button prev=botaoAcao("⏮",KEY_DARK,16), play=botaoAcao("▶ / ⏸",ACCENT,14), next=botaoAcao("⏭",KEY_DARK,16);
+        controls.addView(prev,lpPeso()); controls.addView(play,lpPeso()); controls.addView(next,lpPeso());
+        root.addView(controls,new LinearLayout.LayoutParams(-1,dp(58)));
+        View.OnClickListener media=v->{
+            int code=v==prev?KeyEvent.KEYCODE_MEDIA_PREVIOUS:(v==next?KeyEvent.KEYCODE_MEDIA_NEXT:KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE);
+            if(audio!=null){long t=android.os.SystemClock.uptimeMillis();audio.dispatchMediaKeyEvent(new KeyEvent(t,t,KeyEvent.ACTION_DOWN,code,0));audio.dispatchMediaKeyEvent(new KeyEvent(android.os.SystemClock.uptimeMillis(),t,KeyEvent.ACTION_UP,code,0));}
+            Toast.makeText(this,"Comando de mídia enviado; a resposta depende do Android e do player ativo.",Toast.LENGTH_SHORT).show();
+        };
+        prev.setOnClickListener(media); play.setOnClickListener(media); next.setOnClickListener(media);
+        Button back=new Button(this); back.setText("VOLTAR"); back.setAllCaps(false); back.setOnClickListener(v->{showingSelector=true;showSelector();});
+        root.addView(back,new LinearLayout.LayoutParams(-1,dp(50)));
+        monetizacao.addBanner(root); sv.addView(root); mostrar(sv);
     }
 
     private void showFanRemote(){
