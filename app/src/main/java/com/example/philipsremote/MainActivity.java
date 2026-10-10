@@ -373,7 +373,7 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         ArrayAdapter<WifiDeviceDiscovery.Device> adapter=new ArrayAdapter<>(
                 this,android.R.layout.simple_list_item_1,devices);
         devicesList.setAdapter(adapter);
-        root.addView(devicesList,new LinearLayout.LayoutParams(-1,0,1f));
+        root.addView(devicesList,new LinearLayout.LayoutParams(-1,dp(280)));
         devicesList.setOnItemClickListener((parent,view,position,id)->{
             WifiDeviceDiscovery.Device device=devices.get(position);
             new AlertDialog.Builder(this)
