@@ -1,6 +1,7 @@
 package com.example.philipsremote;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.os.Bundle;
 import android.hardware.ConsumerIrManager;
 import android.graphics.Color;
@@ -688,9 +689,9 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         identity.addView(irs,new LinearLayout.LayoutParams(-1,dp(25)));
         header.addView(identity,new LinearLayout.LayoutParams(0,dp(98),1f));
 
-        LinearLayout actions=new LinearLayout(this);
-        actions.setOrientation(LinearLayout.VERTICAL);
-        actions.setGravity(Gravity.CENTER);
+        LinearLayout headerActions=new LinearLayout(this);
+        headerActions.setOrientation(LinearLayout.VERTICAL);
+        headerActions.setGravity(Gravity.CENTER);
         ImageButton power=new ImageButton(this);
         power.setImageResource(com.example.philipsremote.R.drawable.power_button);
         power.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
@@ -707,10 +708,10 @@ private static final int CARD_2 = Color.rgb(31,31,36);
             }
             refreshAcState(state,climate,mode,fan,swing,temp,ligado,saved);
         });
-        actions.addView(power,new LinearLayout.LayoutParams(dp(68),dp(68)));
+        headerActions.addView(power,new LinearLayout.LayoutParams(dp(68),dp(68)));
         TextView powerLabel=label("Power",10); powerLabel.setTextColor(Color.rgb(170,181,200));
-        actions.addView(powerLabel,new LinearLayout.LayoutParams(-1,dp(18)));
-        header.addView(actions,new LinearLayout.LayoutParams(dp(70),dp(88)));
+        headerActions.addView(powerLabel,new LinearLayout.LayoutParams(-1,dp(18)));
+        header.addView(headerActions,new LinearLayout.LayoutParams(dp(70),dp(88)));
 
         Button change=botaoAcao("⇄\nTrocar",Color.rgb(15,26,42),11);
         change.setOnClickListener(v->showSelector());
