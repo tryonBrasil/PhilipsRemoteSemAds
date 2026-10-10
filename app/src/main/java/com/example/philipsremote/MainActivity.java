@@ -376,8 +376,9 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         root.addView(devicesList,new LinearLayout.LayoutParams(-1,dp(280)));
         devicesList.setOnItemClickListener((parent,view,position,id)->{
             WifiDeviceDiscovery.Device device=devices.get(position);
-            if(device.host!=null && !device.host.isEmpty() && device.platform.contains("LG")){
-                showWifiTvSetup("LG", device.host);
+            if(device.host!=null && !device.host.isEmpty()
+                    && (device.platform.contains("LG") || device.platform.contains("Philips"))) {
+                showWifiTvSetup(device.platform.contains("LG") ? "LG" : "PHILIPS", device.host);
             } else {
                 new AlertDialog.Builder(this)
                         .setTitle(device.name)
