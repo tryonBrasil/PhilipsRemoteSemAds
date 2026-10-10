@@ -1147,7 +1147,12 @@ private static final int CARD_2 = Color.rgb(31,31,36);
     }
 
     @Override public void onBackPressed(){
-        if(!showingSelector){ showSelector(); } else { super.onBackPressed(); }
+        if(!showingSelector){
+            if(wifiDeviceDiscovery!=null) wifiDeviceDiscovery.stop();
+            showSelector();
+        } else {
+            super.onBackPressed();
+        }
     }
 
     private boolean ehMarcaArCondicionado(String marca){
