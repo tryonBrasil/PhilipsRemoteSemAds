@@ -3,7 +3,14 @@ package com.example.philipsremote;
 import android.content.Context;
 import android.net.nsd.NsdManager;
 import android.net.nsd.NsdServiceInfo;
+import android.net.wifi.WifiManager;
+import android.net.wifi.DhcpInfo;
 import android.util.Log;
+import java.net.InetSocketAddress;
+import java.net.Socket;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -69,10 +76,15 @@ public final class WifiDeviceDiscovery {
             new LinkedHashMap<>();
     private final Map<String, Device> found = new LinkedHashMap<>();
     private boolean scanning;
+    private final Context applicationContext;
+    private WifiManager.MulticastLock multicastLock;
+    private ExecutorService subnetExecutor;
+    private int scanGeneration = 0;
+    private static final int[][] CANDIDATE_PORTS = {{1925,1},{8080,2},{3000,3},{8008,4},{8009,4},{8001,5},{8002,5}};
 
     public WifiDeviceDiscovery(Context context, Listener listener) {
-        this.nsd = (NsdManager) context.getApplicationContext()
-                .getSystemService(Context.NSD_SERVICE);
+        this.applicationContext = context.getApplicationContext();
+        this.nsd = (NsdManager) applicationContext.getSystemService(Context.NSD_SERVICE);
         this.listener = listener;
     }
 
@@ -84,8 +96,104 @@ public final class WifiDeviceDiscovery {
             return;
         }
         scanning = true;
-        listener.onStatus("Procurando TVs e dispositivos compatíveis na rede Wi-Fi…");
+        final int generation = ++scanGeneration;
+        acquireMulticastLock();
+        listener.onStatus("Procurando dispositivos anunciados e verificando a rede local…");
         for (String type : SERVICE_TYPES) startType(type);
+        scanLocalSubnet(generation);
+    }
+
+
+    private void acquireMulticastLock() {
+        try {
+            WifiManager wifi = (WifiManager) applicationContext.getSystemService(Context.WIFI_SERVICE);
+            if (wifi != null) {
+                multicastLock = wifi.createMulticastLock("PhilipsRemoteWifiDiscovery");
+                multicastLock.setReferenceCounted(false);
+                multicastLock.acquire();
+            }
+        } catch (RuntimeException error) {
+            Log.w(TAG, "Could not acquire Wi-Fi multicast lock", error);
+        }
+    }
+
+    private void scanLocalSubnet(final int generation) {
+        WifiManager wifi = (WifiManager) applicationContext.getSystemService(Context.WIFI_SERVICE);
+        DhcpInfo dhcp = wifi == null ? null : wifi.getDhcpInfo();
+        if (dhcp == null || dhcp.ipAddress == 0 || dhcp.netmask == 0) {
+            listener.onStatus("Não consegui identificar a rede Wi-Fi. Confira o Wi-Fi ou informe o IP da TV.");
+            return;
+        }
+        int localIp = Integer.reverseBytes(dhcp.ipAddress);
+        int mask = Integer.reverseBytes(dhcp.netmask);
+        final long network = Integer.toUnsignedLong(localIp & mask);
+        final long broadcast = network | Integer.toUnsignedLong(~mask);
+        final long first = network + 1;
+        final long last = broadcast - 1;
+        if (last < first || last - first > 1022) {
+            listener.onStatus("A rede é grande demais para a busca automática. Informe o IP da TV.");
+            return;
+        }
+        final int total = (int)(last - first + 1);
+        final AtomicInteger completed = new AtomicInteger();
+        subnetExecutor = Executors.newFixedThreadPool(24);
+        listener.onStatus("Verificando " + total + " endereços da rede Wi-Fi…");
+        for (long address = first; address <= last; address++) {
+            if (!isScanning(generation)) break;
+            final String host = toIpv4(address);
+            subnetExecutor.execute(() -> {
+                try {
+                    for (int[] item : CANDIDATE_PORTS) {
+                        if (!isScanning(generation)) return;
+                        if (!portOpen(host, item[0], 180)) continue;
+                        String platform;
+                        String serviceType;
+                        switch (item[1]) {
+                            case 1: platform = "Philips JointSpace"; serviceType = "_philips-jointspace._tcp."; break;
+                            case 2: platform = "LG NetCast (possível)"; serviceType = "_lg-netcast._tcp."; break;
+                            case 3: platform = "LG webOS (possível)"; serviceType = "_webos._tcp."; break;
+                            case 4: platform = "Google Cast (possível)"; serviceType = "_googlecast._tcp."; break;
+                            default: platform = "Samsung (possível)"; serviceType = "_samsungmsf._tcp."; break;
+                        }
+                        Device device = new Device(platform + " • " + host, host, item[0], serviceType);
+                        synchronized (WifiDeviceDiscovery.this) {
+                            if (!isScanning(generation) || found.containsKey(device.uniqueKey())) return;
+                            found.put(device.uniqueKey(), device);
+                        }
+                        listener.onDeviceFound(device);
+                        break;
+                    }
+                } finally {
+                    int done = completed.incrementAndGet();
+                    if (done == total && isScanning(generation)) {
+                        List<Device> results = getFoundDevices();
+                        listener.onStatus(results.isEmpty()
+                                ? "Busca concluída: nenhum serviço compatível encontrado. Use CONECTAR POR IP."
+                                : "Busca concluída. Candidatos encontrados: " + results.size());
+                    } else if (done % 32 == 0 && isScanning(generation)) {
+                        listener.onStatus("Verificando rede Wi-Fi… " + done + "/" + total);
+                    }
+                }
+            });
+        }
+    }
+
+    private boolean isScanning(int generation) {
+        return scanning && scanGeneration == generation;
+    }
+
+    private static boolean portOpen(String host, int port, int timeoutMs) {
+        try (Socket socket = new Socket()) {
+            socket.connect(new InetSocketAddress(host, port), timeoutMs);
+            return true;
+        } catch (Exception ignored) {
+            return false;
+        }
+    }
+
+    private static String toIpv4(long address) {
+        return ((address >> 24) & 255) + "." + ((address >> 16) & 255) + "."
+                + ((address >> 8) & 255) + "." + (address & 255);
     }
 
     private void startType(final String type) {
@@ -157,6 +265,8 @@ public final class WifiDeviceDiscovery {
 
     public synchronized void stop() {
         scanning = false;
+        scanGeneration++;
+        if (subnetExecutor != null) { subnetExecutor.shutdownNow(); subnetExecutor = null; }
         for (Map.Entry<String, NsdManager.DiscoveryListener> entry :
                 new ArrayList<>(active.entrySet())) {
             try {
@@ -166,6 +276,11 @@ public final class WifiDeviceDiscovery {
             }
         }
         active.clear();
+        if (multicastLock != null) {
+            try { if (multicastLock.isHeld()) multicastLock.release(); }
+            catch (RuntimeException error) { Log.d(TAG, "Multicast lock already released", error); }
+            multicastLock = null;
+        }
     }
 
     private synchronized void stopListener(String type) {
