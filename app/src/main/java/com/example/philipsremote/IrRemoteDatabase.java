@@ -182,6 +182,7 @@ public final class IrRemoteDatabase {
         String c=categoria.toUpperCase(Locale.ROOT);
         if(c.contains("AC") || c.contains("AR")) return "ACs";
         if(c.contains("TV")) return "TVs";
+        if(c.contains("SPEAKER") || c.contains("CAIXA") || c.contains("SOM")) return "Speakers";
         if(c.contains("FAN") || c.contains("VENT")) return "Fans";
         return "Fans";
     }
