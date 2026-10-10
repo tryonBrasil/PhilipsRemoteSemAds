@@ -75,11 +75,11 @@ public final class WifiDeviceDiscovery {
     private final Map<String, NsdManager.DiscoveryListener> active =
             new LinkedHashMap<>();
     private final Map<String, Device> found = new LinkedHashMap<>();
-    private boolean scanning;
+    private volatile boolean scanning;
     private final Context applicationContext;
     private WifiManager.MulticastLock multicastLock;
     private ExecutorService subnetExecutor;
-    private int scanGeneration = 0;
+    private volatile int scanGeneration = 0;
     private static final int[][] CANDIDATE_PORTS = {{1925,1},{8080,2},{3000,3},{8008,4},{8009,4},{8001,5},{8002,5}};
 
     public WifiDeviceDiscovery(Context context, Listener listener) {
