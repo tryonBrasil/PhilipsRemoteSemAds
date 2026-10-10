@@ -376,14 +376,30 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         root.addView(devicesList,new LinearLayout.LayoutParams(-1,dp(280)));
         devicesList.setOnItemClickListener((parent,view,position,id)->{
             WifiDeviceDiscovery.Device device=devices.get(position);
-            new AlertDialog.Builder(this)
-                    .setTitle(device.name)
-                    .setMessage("Plataforma identificada: "+device.platform+
-                            "\nEndereço: "+(device.host.isEmpty()?"indisponível":device.host)+
-                            "\n\nO dispositivo foi encontrado na rede, mas o controle ainda depende de implementar e testar o protocolo de emparelhamento específico.")
-                    .setPositiveButton("Entendi",null)
-                    .show();
+            if(device.host!=null && !device.host.isEmpty() && device.platform.contains("LG")){
+                showWifiTvSetup("LG", device.host);
+            } else {
+                new AlertDialog.Builder(this)
+                        .setTitle(device.name)
+                        .setMessage("Plataforma identificada: "+device.platform+
+                                "\\nEndereço: "+(device.host.isEmpty()?"indisponível":device.host)+
+                                "\\n\\nPara os seus modelos Philips 50PUG6513/7 e LG 32LB620B, use os atalhos abaixo. O suporte depende de a TV aceitar o protocolo local e de concluir o emparelhamento quando solicitado.")
+                        .setPositiveButton("Entendi",null)
+                        .show();
+            }
         });
+
+        Button philipsWifi=botaoAcao("PHILIPS 50PUG6513/7 • CONECTAR POR IP",Color.rgb(45,65,82),13);
+        LinearLayout.LayoutParams brandP=new LinearLayout.LayoutParams(-1,dp(48));
+        brandP.setMargins(0,dp(8),0,dp(4));
+        root.addView(philipsWifi,brandP);
+        philipsWifi.setOnClickListener(v->showWifiTvSetup("PHILIPS", null));
+
+        Button lgWifi=botaoAcao("LG 32LB620B • CONECTAR / EMPARELHAR",Color.rgb(45,65,82),13);
+        LinearLayout.LayoutParams lgP=new LinearLayout.LayoutParams(-1,dp(48));
+        lgP.setMargins(0,dp(4),0,dp(8));
+        root.addView(lgWifi,lgP);
+        lgWifi.setOnClickListener(v->showWifiTvSetup("LG", null));
 
         Button scan=botaoAcao("PROCURAR DISPOSITIVOS",Color.rgb(28,75,95),15);
         LinearLayout.LayoutParams scanP=new LinearLayout.LayoutParams(-1,dp(52));
@@ -420,6 +436,225 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         sv.addView(root);
         mostrar(sv);
         wifiDeviceDiscovery.start();
+    }
+
+
+    /** Tela de conexão direta aos modelos Philips SAPHI e LG NetCast do usuário. */
+    private void showWifiTvSetup(String brand, String discoveredHost){
+        showingSelector=false;
+        if(wifiDeviceDiscovery!=null) wifiDeviceDiscovery.stop();
+        final String selected=brand.toUpperCase(Locale.ROOT);
+        final WifiTvProtocol protocol=new WifiTvProtocol(this);
+        final String model=selected.equals("LG")?"LG 32LB620B":"Philips 50PUG6513/7";
+
+        ScrollView sv=new ScrollView(this);
+        sv.setFillViewport(true);
+        sv.setBackgroundColor(BG);
+        LinearLayout root=new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setPadding(dp(18),dp(22),dp(18),dp(28));
+
+        TextView title=label(model,22);
+        title.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
+        root.addView(title,new LinearLayout.LayoutParams(-1,dp(46)));
+
+        TextView info=label(selected.equals("LG")
+                ? "Conecte a TV e o celular à mesma rede. Se a TV for compatível com LG NetCast, o app pedirá uma chave exibida na tela da TV."
+                : "Conecte a TV e o celular à mesma rede. O app tentará a API local Philips JointSpace; a compatibilidade depende do firmware SAPHI.",13);
+        info.setTextColor(GRAY);
+        info.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
+        root.addView(info,new LinearLayout.LayoutParams(-1,dp(76)));
+
+        EditText ip=new EditText(this);
+        ip.setSingleLine(true);
+        ip.setInputType(android.text.InputType.TYPE_CLASS_TEXT|android.text.InputType.TYPE_TEXT_VARIATION_URI);
+        ip.setHint("IP da TV (ex.: 192.168.1.50)");
+        ip.setTextColor(WHITE);
+        ip.setHintTextColor(GRAY);
+        String initial=discoveredHost==null?protocol.getHost(selected):discoveredHost;
+        if(initial!=null&&!initial.isEmpty()) ip.setText(initial);
+        root.addView(ip,new LinearLayout.LayoutParams(-1,dp(54)));
+
+        TextView status=label("Informe o IP mostrado nas configurações de rede da TV.",12);
+        status.setTextColor(Color.rgb(130,190,210));
+        status.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
+        root.addView(status,new LinearLayout.LayoutParams(-1,dp(46)));
+
+        LinearLayout controls=new LinearLayout(this);
+        controls.setOrientation(LinearLayout.VERTICAL);
+        controls.setVisibility(View.GONE);
+        controls.setPadding(0,dp(8),0,dp(8));
+        root.addView(controls,new LinearLayout.LayoutParams(-1,-2));
+
+        Runnable buildControls=()->{
+            controls.removeAllViews();
+            controls.setVisibility(View.VISIBLE);
+            TextView connected=label("CONTROLE WI-FI CONECTADO",13);
+            connected.setTextColor(SUCCESS);
+            controls.addView(connected,new LinearLayout.LayoutParams(-1,dp(36)));
+            java.util.function.BiConsumer<String,String> addKey=(caption,key)->{};
+            Button power=botaoAcao("⏻  LIGAR / DESLIGAR",Color.rgb(135,35,42),15);
+            controls.addView(power,new LinearLayout.LayoutParams(-1,dp(48)));
+            power.setOnClickListener(v->sendWifiTvKey(selected,"POWER",status));
+            LinearLayout vol=row();
+            Button volDown=botaoAcao("VOL −",KEY_DARK,13);
+            Button mute=botaoAcao("MUDO",KEY_DARK,13);
+            Button volUp=botaoAcao("VOL +",KEY_DARK,13);
+            vol.addView(volDown,lpPeso()); vol.addView(mute,lpPeso()); vol.addView(volUp,lpPeso());
+            controls.addView(vol);
+            volDown.setOnClickListener(v->sendWifiTvKey(selected,"VOLDOWN",status));
+            mute.setOnClickListener(v->sendWifiTvKey(selected,"MUTE",status));
+            volUp.setOnClickListener(v->sendWifiTvKey(selected,"VOLUP",status));
+            LinearLayout navTop=row();
+            Button home=botaoAcao("⌂ INÍCIO",KEY_DARK,13);
+            Button input=botaoAcao("ENTRADA",KEY_DARK,13);
+            Button menu=botaoAcao("MENU",KEY_DARK,13);
+            navTop.addView(home,lpPeso()); navTop.addView(input,lpPeso()); navTop.addView(menu,lpPeso());
+            controls.addView(navTop);
+            home.setOnClickListener(v->sendWifiTvKey(selected,"HOME",status));
+            input.setOnClickListener(v->sendWifiTvKey(selected,"INPUT",status));
+            menu.setOnClickListener(v->sendWifiTvKey(selected,"MENU",status));
+            controls.addView(wifiNavPad(selected,status));
+            LinearLayout navBottom=row();
+            Button back=botaoAcao("VOLTAR",KEY_DARK,13);
+            Button chDown=botaoAcao("CH −",KEY_DARK,13);
+            Button chUp=botaoAcao("CH +",KEY_DARK,13);
+            navBottom.addView(back,lpPeso()); navBottom.addView(chDown,lpPeso()); navBottom.addView(chUp,lpPeso());
+            controls.addView(navBottom);
+            back.setOnClickListener(v->sendWifiTvKey(selected,"BACK",status));
+            chDown.setOnClickListener(v->sendWifiTvKey(selected,"CHDOWN",status));
+            chUp.setOnClickListener(v->sendWifiTvKey(selected,"CHUP",status));
+            LinearLayout media=row();
+            Button play=botaoAcao("▶",KEY_DARK,15);
+            Button pause=botaoAcao("Ⅱ",KEY_DARK,15);
+            Button stop=botaoAcao("■",KEY_DARK,15);
+            media.addView(play,lpPeso()); media.addView(pause,lpPeso()); media.addView(stop,lpPeso());
+            controls.addView(media);
+            play.setOnClickListener(v->sendWifiTvKey(selected,"PLAY",status));
+            pause.setOnClickListener(v->sendWifiTvKey(selected,"PAUSE",status));
+            stop.setOnClickListener(v->sendWifiTvKey(selected,"STOP",status));
+        };
+
+        Button connect=botaoAcao(selected.equals("LG")?"SOLICITAR EMPARELHAMENTO":"TESTAR CONEXÃO",Color.rgb(28,75,95),14);
+        LinearLayout.LayoutParams connectP=new LinearLayout.LayoutParams(-1,dp(50));
+        connectP.setMargins(0,dp(10),0,dp(6));
+        root.addView(connect,connectP);
+        connect.setOnClickListener(v->{
+            String host=ip.getText().toString().trim();
+            if(host.isEmpty()){ip.setError("Informe o IP da TV");return;}
+            protocol.saveHost(selected,host);
+            status.setText("Conectando à TV…");
+            connect.setEnabled(false);
+            new Thread(()->{
+                try{
+                    if(selected.equals("LG")){
+                        String response=protocol.requestLgPairKey(host);
+                        runOnUiThread(()->{
+                            connect.setEnabled(true);
+                            status.setText("Solicitação enviada. Veja se a TV mostra uma chave de emparelhamento.");
+                            EditText pairing=new EditText(this);
+                            pairing.setSingleLine(true);
+                            pairing.setInputType(android.text.InputType.TYPE_CLASS_NUMBER|android.text.InputType.TYPE_NUMBER_VARIATION_PASSWORD);
+                            pairing.setHint("Chave exibida na TV");
+                            new AlertDialog.Builder(this).setTitle("Emparelhar LG")
+                                .setMessage("Se a TV exibiu uma chave, digite-a abaixo. Se não apareceu, este modelo pode usar outro protocolo.")
+                                .setView(pairing)
+                                .setNegativeButton("Cancelar",null)
+                                .setPositiveButton("EMPARELHAR",(d,w)->{
+                                    String code=pairing.getText().toString().trim();
+                                    status.setText("Validando chave…");
+                                    new Thread(()->{
+                                        try{
+                                            protocol.pairLg(host,code);
+                                            runOnUiThread(()->{status.setText("LG emparelhada com sucesso.");connect.setText("REFAZER EMPARELHAMENTO");buildControls.run();});
+                                        }catch(Exception e){runOnUiThread(()->status.setText(e.getMessage()));}
+                                    }).start();
+                                }).show();
+                        });
+                    }else{
+                        String result=protocol.testPhilips(host);
+                        runOnUiThread(()->{
+                            connect.setEnabled(true);
+                            status.setText("TV respondeu: "+result);
+                            connect.setText("TESTAR NOVAMENTE");
+                            buildControls.run();
+                        });
+                    }
+                }catch(Exception e){
+                    runOnUiThread(()->{
+                        connect.setEnabled(true);
+                        status.setText(e.getMessage()==null?"Falha de conexão com a TV.":e.getMessage());
+                    });
+                }
+            }).start();
+        });
+
+        Button back=botaoAcao("VOLTAR À BUSCA WI-FI",KEY_DARK,13);
+        LinearLayout.LayoutParams backP=new LinearLayout.LayoutParams(-1,dp(46));
+        backP.setMargins(0,dp(8),0,0);
+        root.addView(back,backP);
+        back.setOnClickListener(v->showWifiDiscoveryScreen());
+
+        sv.addView(root);
+        mostrar(sv);
+    }
+
+    private LinearLayout wifiNavPad(String brand, TextView status){
+        LinearLayout pad=new LinearLayout(this);
+        pad.setOrientation(LinearLayout.VERTICAL);
+        pad.setGravity(Gravity.CENTER);
+        pad.setPadding(dp(8),dp(8),dp(8),dp(8));
+        Button up=botaoAcao("▲",KEY_DARK,16);
+        Button left=botaoAcao("◀",KEY_DARK,16);
+        Button ok=botaoAcao("OK",ACCENT,15);
+        Button right=botaoAcao("▶",KEY_DARK,16);
+        Button down=botaoAcao("▼",KEY_DARK,16);
+        pad.addView(up,new LinearLayout.LayoutParams(dp(88),dp(44)));
+        LinearLayout middle=row();
+        middle.addView(left,new LinearLayout.LayoutParams(dp(78),dp(48)));
+        middle.addView(ok,new LinearLayout.LayoutParams(dp(88),dp(48)));
+        middle.addView(right,new LinearLayout.LayoutParams(dp(78),dp(48)));
+        pad.addView(middle);
+        pad.addView(down,new LinearLayout.LayoutParams(dp(88),dp(44)));
+        up.setOnClickListener(v->sendWifiTvKey(brand,"UP",status));
+        left.setOnClickListener(v->sendWifiTvKey(brand,"LEFT",status));
+        ok.setOnClickListener(v->sendWifiTvKey(brand,"OK",status));
+        right.setOnClickListener(v->sendWifiTvKey(brand,"RIGHT",status));
+        down.setOnClickListener(v->sendWifiTvKey(brand,"DOWN",status));
+        return pad;
+    }
+
+    private void sendWifiTvKey(String brand, String key, TextView status){
+        WifiTvProtocol protocol=new WifiTvProtocol(this);
+        status.setText("Enviando "+key+"…");
+        new Thread(()->{
+            try{
+                if("LG".equals(brand)) protocol.sendLgKey(key);
+                else {
+                    String mapped=key;
+                    if("POWER".equals(key)) mapped="Standby";
+                    else if("UP".equals(key)) mapped="CursorUp";
+                    else if("DOWN".equals(key)) mapped="CursorDown";
+                    else if("LEFT".equals(key)) mapped="CursorLeft";
+                    else if("RIGHT".equals(key)) mapped="CursorRight";
+                    else if("OK".equals(key)) mapped="Confirm";
+                    else if("BACK".equals(key)) mapped="Back";
+                    else if("HOME".equals(key)) mapped="Home";
+                    else if("MENU".equals(key)) mapped="Menu";
+                    else if("VOLUP".equals(key)) mapped="VolumeUp";
+                    else if("VOLDOWN".equals(key)) mapped="VolumeDown";
+                    else if("MUTE".equals(key)) mapped="Mute";
+                    else if("CHUP".equals(key)) mapped="ChannelStepUp";
+                    else if("CHDOWN".equals(key)) mapped="ChannelStepDown";
+                    else if("INPUT".equals(key)) mapped="Source";
+                    else if("PLAY".equals(key)) mapped="Play";
+                    else if("PAUSE".equals(key)) mapped="Pause";
+                    else if("STOP".equals(key)) mapped="Stop";
+                    protocol.sendPhilipsKey(protocol.getHost("PHILIPS"),mapped);
+                }
+                runOnUiThread(()->status.setText("Comando enviado: "+key));
+            }catch(Exception e){runOnUiThread(()->status.setText(e.getMessage()==null?"Falha ao enviar comando.":e.getMessage()));}
+        }).start();
     }
 
     private void showSelector(){
