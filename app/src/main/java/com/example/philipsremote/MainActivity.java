@@ -492,7 +492,6 @@ private static final int CARD_2 = Color.rgb(31,31,36);
             TextView connected=label("CONTROLE WI-FI CONECTADO",13);
             connected.setTextColor(SUCCESS);
             controls.addView(connected,new LinearLayout.LayoutParams(-1,dp(36)));
-            java.util.function.BiConsumer<String,String> addKey=(caption,key)->{};
             Button power=botaoAcao("⏻  LIGAR / DESLIGAR",Color.rgb(135,35,42),15);
             controls.addView(power,new LinearLayout.LayoutParams(-1,dp(48)));
             power.setOnClickListener(v->sendWifiTvKey(selected,"POWER",status));
