@@ -26,20 +26,17 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Gradle 8.7
-        uses: gradle/actions/setup-gradle@v6
-        with:
-          gradle-version: "8.7"
-          cache-provider: basic
+      - name: Preparar Gradle Wrapper
+        run: chmod +x ./gradlew
 
       - name: Lint
-        run: gradle lint
+        run: ./gradlew --no-daemon lint
 
       - name: Unit tests
-        run: gradle test
+        run: ./gradlew --no-daemon test
 
       - name: Debug APK
-        run: gradle assembleDebug
+        run: ./gradlew --no-daemon assembleDebug
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
