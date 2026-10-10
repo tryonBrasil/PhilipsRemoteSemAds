@@ -24,6 +24,7 @@ import static com.example.philipsremote.RemoteKeys.*;
 
 public class MainActivity extends Activity {
     private ConsumerIrManager ir;
+    private WifiDeviceDiscovery wifiDeviceDiscovery;
     private IrPerfilTeste irPerfilTeste;
     private boolean lgMode = false;
     private boolean showingSelector = true;
@@ -340,6 +341,87 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         mostrar(sv);
     }
 
+
+    private void showWifiDiscoveryScreen(){
+        showingSelector=false;
+        if(wifiDeviceDiscovery!=null) wifiDeviceDiscovery.stop();
+
+        ScrollView sv=new ScrollView(this);
+        sv.setFillViewport(true);
+        sv.setBackgroundColor(BG);
+        LinearLayout root=new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setPadding(dp(20),dp(26),dp(20),dp(28));
+
+        TextView title=label("Controle por Wi-Fi",26);
+        title.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
+        root.addView(title,new LinearLayout.LayoutParams(-1,dp(48)));
+
+        TextView description=label("Procure Smart TVs e dispositivos compatíveis conectados à mesma rede Wi-Fi do celular.",14);
+        description.setTextColor(GRAY);
+        description.setGravity(Gravity.TOP|Gravity.LEFT);
+        LinearLayout.LayoutParams descriptionP=new LinearLayout.LayoutParams(-1,dp(66));
+        descriptionP.setMargins(0,dp(4),0,dp(10));
+        root.addView(description,descriptionP);
+
+        TextView status=label("Pronto para procurar dispositivos.",13);
+        status.setTextColor(Color.rgb(130,190,210));
+        root.addView(status,new LinearLayout.LayoutParams(-1,dp(42)));
+
+        ListView devicesList=new ListView(this);
+        ArrayList<WifiDeviceDiscovery.Device> devices=new ArrayList<>();
+        ArrayAdapter<WifiDeviceDiscovery.Device> adapter=new ArrayAdapter<>(
+                this,android.R.layout.simple_list_item_1,devices);
+        devicesList.setAdapter(adapter);
+        root.addView(devicesList,new LinearLayout.LayoutParams(-1,0,1f));
+        devicesList.setOnItemClickListener((parent,view,position,id)->{
+            WifiDeviceDiscovery.Device device=devices.get(position);
+            new AlertDialog.Builder(this)
+                    .setTitle(device.name)
+                    .setMessage("Plataforma identificada: "+device.platform+
+                            "\nEndereço: "+(device.host.isEmpty()?"indisponível":device.host)+
+                            "\n\nO dispositivo foi encontrado na rede, mas o controle ainda depende de implementar e testar o protocolo de emparelhamento específico.")
+                    .setPositiveButton("Entendi",null)
+                    .show();
+        });
+
+        Button scan=botaoAcao("PROCURAR DISPOSITIVOS",Color.rgb(28,75,95),15);
+        LinearLayout.LayoutParams scanP=new LinearLayout.LayoutParams(-1,dp(52));
+        scanP.setMargins(0,dp(12),0,dp(8));
+        root.addView(scan,scanP);
+
+        Button back=botaoAcao("VOLTAR AOS CONTROLES IR",KEY_DARK,14);
+        root.addView(back,new LinearLayout.LayoutParams(-1,dp(48)));
+        back.setOnClickListener(v->{
+            if(wifiDeviceDiscovery!=null) wifiDeviceDiscovery.stop();
+            showSelector();
+        });
+
+        wifiDeviceDiscovery=new WifiDeviceDiscovery(this,new WifiDeviceDiscovery.Listener(){
+            @Override public void onDeviceFound(WifiDeviceDiscovery.Device device){
+                runOnUiThread(()->{
+                    boolean exists=false;
+                    for(WifiDeviceDiscovery.Device item:devices){
+                        if(item.uniqueKey().equals(device.uniqueKey())){exists=true;break;}
+                    }
+                    if(!exists){devices.add(device);adapter.notifyDataSetChanged();}
+                    status.setText("Dispositivos encontrados: "+devices.size());
+                });
+            }
+            @Override public void onStatus(String message){
+                runOnUiThread(()->status.setText(message));
+            }
+        });
+        scan.setOnClickListener(v->{
+            devices.clear();
+            adapter.notifyDataSetChanged();
+            wifiDeviceDiscovery.start();
+        });
+        sv.addView(root);
+        mostrar(sv);
+        wifiDeviceDiscovery.start();
+    }
+
     private void showSelector(){
         showingSelector=true; fanMode=false;
         ScrollView sv=new ScrollView(this); sv.setFillViewport(true); sv.setBackgroundColor(BG);
@@ -370,6 +452,23 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         TextView sub=label("Infravermelho • rápido • sem anúncios",14); sub.setTextColor(GRAY);
         sub.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
         root.addView(sub,new LinearLayout.LayoutParams(-1,dp(30)));
+
+        Button wifi=new Button(this);
+        wifi.setText("⌁  CONTROLE POR WI-FI");
+        wifi.setTextColor(WHITE);
+        wifi.setTextSize(15);
+        wifi.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
+        wifi.setAllCaps(false);
+        GradientDrawable wifiBg=new GradientDrawable();
+        wifiBg.setColor(Color.rgb(28,65,82));
+        wifiBg.setCornerRadius(dp(14));
+        wifiBg.setStroke(dp(1),Color.rgb(54,105,128));
+        wifi.setBackground(wifiBg);
+        actionFeedback(wifi);
+        LinearLayout.LayoutParams wifiP=new LinearLayout.LayoutParams(-1,dp(52));
+        wifiP.setMargins(0,dp(4),0,dp(10));
+        root.addView(wifi,wifiP);
+        wifi.setOnClickListener(v->showWifiDiscoveryScreen());
         List<ControleStorage.Controle> salvosHome=controleStorage.listar();
         boolean temControlesSalvos=!salvosHome.isEmpty();
         Button meusControlesHome=new Button(this);
@@ -1042,6 +1141,7 @@ private static final int CARD_2 = Color.rgb(31,31,36);
     }
 
     @Override protected void onDestroy(){
+        if(wifiDeviceDiscovery!=null) wifiDeviceDiscovery.stop();
         if(updateManager!=null) updateManager.destroy();
         super.onDestroy();
     }
