@@ -94,8 +94,19 @@ public final class WifiTvProtocol {
         int code = lgKeyCode(keyName);
         String body = "<?xml version=\"1.0\" encoding=\"utf-8\"?><command><session>"
                 + session + "</session><type>HandleKeyInput</type><value>" + code + "</value></command>";
-        request("POST", "http://" + cleanHost(host) + ":8080/roap/api/command",
-                body, "application/atom+xml");
+        try {
+            request("POST", "http://" + cleanHost(host) + ":8080/roap/api/command",
+                    body, "application/atom+xml");
+        } catch (Exception firstFailure) {
+            String pairingKey = prefs.getString(key("LG", "pairing_key"), "");
+            if (pairingKey.isEmpty()) throw firstFailure;
+            pairLg(host, pairingKey);
+            String renewedSession = prefs.getString(key("LG", "session"), "");
+            String retryBody = "<?xml version=\"1.0\" encoding=\"utf-8\"?><command><session>"
+                    + renewedSession + "</session><type>HandleKeyInput</type><value>" + code + "</value></command>";
+            request("POST", "http://" + cleanHost(host) + ":8080/roap/api/command",
+                    retryBody, "application/atom+xml");
+        }
     }
 
     private static int lgKeyCode(String key) throws Exception {
