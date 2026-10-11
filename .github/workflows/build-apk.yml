@@ -1,4 +1,5 @@
 name: Gerar APK
+# Rebuild limpo apos remocao do Wi-Fi
 # Gera APK assinado. Nunca sobrescreve uma Release existente automaticamente.
 
 on:
