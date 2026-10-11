@@ -1,6 +1,6 @@
 name: Gerar APK
-# Rebuild limpo apos remocao do Wi-Fi
-# Gera APK assinado. Nunca sobrescreve uma Release existente automaticamente.
+# Cada push em main incrementa automaticamente a versão antes de compilar.
+# O APK é assinado, verificado e publicado no GitHub Releases.
 
 on:
   push:
@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
     inputs:
       replace_existing:
-        description: "Substituir o APK da Release existente (use apenas para republicar a mesma versão)"
+        description: "Substituir os arquivos da Release atual (somente para republicar sem nova versão)"
         required: true
         type: boolean
         default: false
@@ -22,6 +22,8 @@ jobs:
     steps:
       - name: Baixar projeto
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Java 17
         uses: actions/setup-java@v5
@@ -32,13 +34,42 @@ jobs:
       - name: Dar permissao ao Gradle Wrapper
         run: chmod +x gradlew
 
-      - name: Validar versao e identificador
+      - name: Incrementar versão automaticamente em cada alteração
+        if: github.event_name == 'push'
+        run: |
+          set -euo pipefail
+          FILE=app/build.gradle
+          VERSION=$(sed -n "s/.*versionName '\([^']*\)'.*/\1/p" "$FILE")
+          CODE=$(sed -n 's/.*versionCode \([0-9][0-9]*\).*/\1/p' "$FILE")
+          test -n "$VERSION" || { echo "versionName não encontrada"; exit 1; }
+          test -n "$CODE" || { echo "versionCode não encontrado"; exit 1; }
+          if [[ ! "$VERSION" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+            echo "Formato de versão inválido: $VERSION (esperado X.Y.Z)"
+            exit 1
+          fi
+          MAJOR="${BASH_REMATCH[1]}"
+          MINOR="${BASH_REMATCH[2]}"
+          PATCH="${BASH_REMATCH[3]}"
+          NEXT_VERSION="$MAJOR.$MINOR.$((PATCH + 1))"
+          NEXT_CODE=$((CODE + 1))
+          sed -i "s/versionCode $CODE/versionCode $NEXT_CODE/" "$FILE"
+          sed -i "s/versionName '$VERSION'/versionName '$NEXT_VERSION'/" "$FILE"
+          echo "Versão automática: $VERSION ($CODE) -> $NEXT_VERSION ($NEXT_CODE)"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$FILE"
+          git commit -m "chore(release): versionar automaticamente $NEXT_VERSION [skip ci]"
+          git push origin HEAD:main
+
+      - name: Validar versão e identificador
         run: |
           VERSION=$(sed -n "s/.*versionName '\([^']*\)'.*/\1/p" app/build.gradle)
           CODE=$(sed -n 's/.*versionCode \([0-9][0-9]*\).*/\1/p' app/build.gradle)
-          test "$VERSION" = "2.0.4" || { echo "Versao esperada 2.0.4; encontrada: $VERSION"; exit 1; }
+          test -n "$VERSION" || { echo "versionName ausente"; exit 1; }
           test -n "$CODE" || { echo "versionCode ausente"; exit 1; }
-          echo "Versao validada: $VERSION (versionCode $CODE)"
+          echo "Versão validada: $VERSION (versionCode $CODE)"
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "VERSION_CODE=$CODE" >> "$GITHUB_ENV"
 
       - name: Preparar keystore
         env:
@@ -78,7 +109,7 @@ jobs:
       - name: Disponibilizar APK e hash
         uses: actions/upload-artifact@v4
         with:
-          name: IR-Remote-BR-2.0.4-release
+          name: IR-Remote-BR-${{ env.VERSION }}-release
           path: |
             app/build/outputs/apk/github/release/app-release.apk
             app/build/outputs/apk/github/release/app-release.apk.sha256
@@ -87,16 +118,15 @@ jobs:
       - name: Publicar Release
         env:
           GH_TOKEN: ${{ github.token }}
-          REPLACE_EXISTING: ${{ inputs.replace_existing || (github.event_name == 'push' && contains(github.event.head_commit.message, '[republish-v2.0.4]')) }}
+          REPLACE_EXISTING: ${{ inputs.replace_existing }}
         run: |
           set -euo pipefail
-          VERSION=$(sed -n "s/.*versionName '\([^']*\)'.*/\1/p" app/build.gradle)
           TAG="v$VERSION"
           APK=app/build/outputs/apk/github/release/app-release.apk
           HASH=app/build/outputs/apk/github/release/app-release.apk.sha256
           if gh release view "$TAG" >/dev/null 2>&1; then
             if [ "$REPLACE_EXISTING" != "true" ]; then
-              echo "A Release $TAG ja existe. Nada foi sobrescrito. Para republicar, execute manualmente o workflow e marque replace_existing."
+              echo "A Release $TAG já existe. Para republicar a mesma versão, execute manualmente e marque replace_existing."
               exit 1
             fi
             gh release upload "$TAG" "$APK" "$HASH" --clobber
