@@ -13,8 +13,8 @@ android {
     defaultConfig {
         minSdk 23
         targetSdk 36
-        versionCode 71
-        versionName '2.0.4'
+        versionCode 72
+        versionName '2.0.5'
     }
 
     flavorDimensions "dist"
