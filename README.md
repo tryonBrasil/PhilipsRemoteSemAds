@@ -40,11 +40,14 @@ Confira o hash com o arquivo `app-release.apk.sha256` da Release.
 
 Requer JDK 17. No Windows use `GERAR_APK.bat` (debug) ou `gradlew.bat`.
 
-## Publicar uma versão (GitHub Actions)
+## Versionamento e publicação automática
 
-1. Aumente `versionName` **e** `versionCode` em `app/build.gradle` (o app compara o `versionName`).
-2. Faça push em `main`: o workflow **Gerar APK** roda os testes, assina o APK, gera o SHA-256 e cria a Release `vX.Y.Z`.
-3. Se a Release da versão já existir, nada é sobrescrito; para substituir use *Run workflow → substituir*.
+**Não precisa alterar a versão manualmente.** Toda vez que houver um push na branch `main`, o workflow **Gerar APK**:
+1. Incrementa automaticamente o último número da versão (por exemplo, `2.0.4` → `2.0.5`) e aumenta o `versionCode`.
+2. Registra a nova versão em `app/build.gradle` num commit automático.
+3. Compila e verifica o APK assinado, calcula o SHA-256 e publica a Release correspondente (`vX.Y.Z`).
+
+O versionamento automático pressupõe que o push tenha permissão para gravar na branch `main`. Se o workflow falhar, abra **Actions → Gerar APK** e confira a etapa que falhou. Para republicar exatamente a mesma versão sem incrementar, use **Run workflow** e marque `replace_existing` somente quando realmente quiser substituir os arquivos da Release.
 
 Secrets necessários (Settings → Secrets and variables → Actions):
 
