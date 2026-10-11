@@ -156,6 +156,8 @@ public class IrPerfilTeste {
             itens.add(new Item("Midea • Cool 24°C", MIDEA, 0xBF80));
             itens.add(new Item("Midea • LED/Turbo candidato", MIDEA, 0xA545));
         } else if (p.equals(PERFIL_VENTILADOR)) {
+            // Candidato confirmado pelo usuário no ventilador KXD194: LG/NEC 0x18.
+            itens.add(new Item("KXD194 • Liga/Desliga (LG/NEC 0x18)", NEC, 0x04, 0x18));
             itens.add(new Item("Ventilador • Ligar / Desligar", FAN, 1));
             itens.add(new Item("Ventilador • Oscilação", FAN, 2));
             itens.add(new Item("Ventilador • Velocidade", FAN, 3));
