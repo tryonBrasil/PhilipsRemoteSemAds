@@ -156,13 +156,29 @@ public class IrPerfilTeste {
             itens.add(new Item("Midea • Cool 24°C", MIDEA, 0xBF80));
             itens.add(new Item("Midea • LED/Turbo candidato", MIDEA, 0xA545));
         } else if (p.equals(PERFIL_VENTILADOR)) {
-            // Candidato confirmado pelo usuário no ventilador KXD194: LG/NEC 0x18.
+            // Candidato já observado pelo usuário no KXD194.
             itens.add(new Item("KXD194 • Liga/Desliga (LG/NEC 0x18)", NEC, 0x04, 0x18));
-            itens.add(new Item("Ventilador • Ligar / Desligar", FAN, 1));
-            itens.add(new Item("Ventilador • Oscilação", FAN, 2));
-            itens.add(new Item("Ventilador • Velocidade", FAN, 3));
-            itens.add(new Item("Ventilador • Timer", FAN, 4));
-            itens.add(new Item("Ventilador • Noturno", FAN, 5));
+            // Códigos NEC documentados para ventiladores/luminárias Brilliant Mazzaro/Salerno.
+            // Endereço 0x01; IrEncoder.nec gera os bytes de complemento automaticamente.
+            itens.add(new Item("Brilliant/Salerno • Luz ligada", NEC, 0x01, 0xB8));
+            itens.add(new Item("Brilliant/Salerno • Luz desligada", NEC, 0x01, 0xC7));
+            itens.add(new Item("Brilliant/Salerno • Brilho +", NEC, 0x01, 0xB7));
+            itens.add(new Item("Brilliant/Salerno • Brilho -", NEC, 0x01, 0x5F));
+            itens.add(new Item("Brilliant/Salerno • Luz mais quente", NEC, 0x01, 0x87));
+            itens.add(new Item("Brilliant/Salerno • Luz mais fria", NEC, 0x01, 0xA7));
+            itens.add(new Item("Brilliant/Salerno • Luz SOS", NEC, 0x01, 0xCF));
+            itens.add(new Item("Brilliant/Salerno • Luz RGB", NEC, 0x01, 0xAF));
+            itens.add(new Item("Brilliant/Salerno • Ventilador velocidade +", NEC, 0x01, 0x27));
+            itens.add(new Item("Brilliant/Salerno • Ventilador velocidade -", NEC, 0x01, 0x77));
+            itens.add(new Item("Brilliant/Salerno • Ventilador reversão", NEC, 0x01, 0x1F));
+            itens.add(new Item("Brilliant/Salerno • Ventilador parar", NEC, 0x01, 0x07));
+            itens.add(new Item("Brilliant/Salerno • Ventilador pulso", NEC, 0x01, 0xCD));
+            // Os códigos numéricos do timer 1h/2h/4h não estavam publicados; não inventar sinais.
+            itens.add(new Item("Ventilador • Ligar / Desligar (candidato RAW)", FAN, 1));
+            itens.add(new Item("Ventilador • Oscilação (candidato RAW)", FAN, 2));
+            itens.add(new Item("Ventilador • Velocidade (candidato RAW)", FAN, 3));
+            itens.add(new Item("Ventilador • Timer (candidato RAW)", FAN, 4));
+            itens.add(new Item("Ventilador • Noturno (candidato RAW)", FAN, 5));
         }
     }
 
@@ -236,7 +252,12 @@ public class IrPerfilTeste {
         if (familiaNec(p)) return new Sinal(38000, IrEncoder.nec(comAddr ? addr : 0x00, cmd));
         if (p.equals("AC Coolix")) return new Sinal(38000, IrEncoder.coolix(codigo));
         if (p.equals("AC Midea")) return new Sinal(38000, IrEncoder.midea(codigo));
-        if (p.equals(PERFIL_VENTILADOR)) return new Sinal(38000, IrEncoder.raw(fanRaw(codigo)));
+        if (p.equals(PERFIL_VENTILADOR)) {
+            // Códigos NEC salvos são codificados como (endereço << 8) | comando;
+            // valores 1..5 preservam os antigos candidatos RAW do testador.
+            if (codigo > 255) return new Sinal(38000, IrEncoder.nec(addr, cmd));
+            return new Sinal(38000, IrEncoder.raw(fanRaw(codigo)));
+        }
         return null;
     }
 
