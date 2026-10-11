@@ -10,6 +10,7 @@ import java.util.Locale;
 /**
  * Perfis de teste/transmissão IR: lista de candidatos por perfil, varredura 0x00-0xFF,
  * envio de códigos salvos e banco de códigos de teste. A geração dos sinais fica em {@link IrEncoder}.
+ * Códigos de teste para ventiladores com luz (NEC) incluídos para validação no aparelho real.
  */
 public class IrPerfilTeste {
     public static final String PERFIL_VENTILADOR = "Ventilador Universal";
