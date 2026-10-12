@@ -20,6 +20,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import org.json.JSONArray;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.GoogleAuthProvider;
+import com.google.android.gms.auth.api.signin.GoogleSignIn;
+import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
+import com.google.android.gms.auth.api.signin.GoogleSignInClient;
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
+import com.google.android.gms.common.api.ApiException;
+import com.google.android.gms.tasks.Task;
 import static com.example.philipsremote.RemoteKeys.*;
 
 public class MainActivity extends Activity {
@@ -33,6 +41,9 @@ public class MainActivity extends Activity {
     private ControleStorage.Controle controleAtivo;
     private Updater updateManager;
     private MonetizationManager monetizacao;
+    private FirebaseAuth firebaseAuth;
+    private GoogleSignInClient googleSignInClient;
+    private static final int REQ_GOOGLE_SIGN_IN = 7412;
     private int aprenderFuncaoPos = 0;
     private static final int REQ_EXPORT_BACKUP = 4101;
     private static final int REQ_IMPORT_BACKUP = 4102;
@@ -73,6 +84,12 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         }
         updateManager=UpdaterFactory.criar(this);
         monetizacao=new MonetizationManager(this,()->showSelector());
+        firebaseAuth=FirebaseAuth.getInstance();
+        GoogleSignInOptions googleOptions=new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                .requestIdToken(getString(com.example.philipsremote.R.string.default_web_client_id))
+                .requestEmail()
+                .build();
+        googleSignInClient=GoogleSignIn.getClient(this,googleOptions);
         if(!prefs.getBoolean("initial_screen_seen",false)) showInitialScreen();
         else showSelector();
     }
@@ -317,6 +334,33 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         status.setGravity(Gravity.CENTER);
         root.addView(status,new LinearLayout.LayoutParams(-1,dp(54)));
 
+        boolean conectado=firebaseAuth.getCurrentUser()!=null;
+        TextView contaStatus=label(conectado
+                ? "Conectado: "+firebaseAuth.getCurrentUser().getEmail()
+                : "Entre com Google para vincular e restaurar sua compra",13);
+        contaStatus.setTextColor(conectado?SUCCESS:GRAY);
+        contaStatus.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
+        LinearLayout.LayoutParams csP=new LinearLayout.LayoutParams(-1,dp(48));
+        csP.setMargins(0,dp(4),0,dp(4));
+        root.addView(contaStatus,csP);
+
+        Button loginGoogle=botaoAcao(conectado?"SAIR DA CONTA GOOGLE":"ENTRAR COM GOOGLE",Color.rgb(45,65,95),14);
+        root.addView(loginGoogle,new LinearLayout.LayoutParams(-1,dp(52)));
+        loginGoogle.setOnClickListener(v->{
+            if(firebaseAuth.getCurrentUser()!=null){
+                new AlertDialog.Builder(this).setTitle("Sair da conta?")
+                        .setMessage("Você poderá entrar novamente para restaurar seu Premium.")
+                        .setNegativeButton("Cancelar",null)
+                        .setPositiveButton("Sair",(d,w)->{
+                            firebaseAuth.signOut();
+                            googleSignInClient.signOut().addOnCompleteListener(task->showPremiumAccountScreen());
+                        }).show();
+            } else {
+                try { startActivityForResult(googleSignInClient.getSignInIntent(),REQ_GOOGLE_SIGN_IN); }
+                catch(Exception e){ Toast.makeText(this,"Não foi possível abrir o login do Google.",Toast.LENGTH_LONG).show(); }
+            }
+        });
+
         Button restaurar=botaoAcao("RESTAURAR / VERIFICAR PREMIUM",Color.rgb(55,55,62),14);
         LinearLayout.LayoutParams rp=new LinearLayout.LayoutParams(-1,dp(52));
         rp.setMargins(0,dp(12),0,dp(8));
@@ -338,6 +382,31 @@ private static final int CARD_2 = Color.rgb(31,31,36);
 
         sv.addView(root);
         mostrar(sv);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode,int resultCode,Intent data){
+        super.onActivityResult(requestCode,resultCode,data);
+        if(requestCode!=REQ_GOOGLE_SIGN_IN) return;
+        Task<GoogleSignInAccount> task=GoogleSignIn.getSignedInAccountFromIntent(data);
+        try{
+            GoogleSignInAccount account=task.getResult(ApiException.class);
+            if(account==null || account.getIdToken()==null){
+                Toast.makeText(this,"O Google não retornou o token de login. Confira o cliente OAuth.",Toast.LENGTH_LONG).show();
+                return;
+            }
+            firebaseAuth.signInWithCredential(GoogleAuthProvider.getCredential(account.getIdToken(),null))
+                    .addOnCompleteListener(this,authTask->{
+                        if(authTask.isSuccessful()){
+                            Toast.makeText(this,"Conta Google conectada.",Toast.LENGTH_LONG).show();
+                            showPremiumAccountScreen();
+                        }else{
+                            Toast.makeText(this,"Falha no login Firebase: "+(authTask.getException()==null?"tente novamente":authTask.getException().getMessage()),Toast.LENGTH_LONG).show();
+                        }
+                    });
+        }catch(ApiException e){
+            Toast.makeText(this,"Login Google cancelado ou falhou (código "+e.getStatusCode()+").",Toast.LENGTH_LONG).show();
+        }
     }
 
     private void showSelector(){
