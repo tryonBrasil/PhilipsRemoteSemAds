@@ -19,6 +19,9 @@
             android:name="com.google.android.gms.ads.APPLICATION_ID"
             android:value="@string/admob_app_id" />
 
+        <activity android:name=".AdminActivity" android:exported="false" />
+        <activity android:name=".FeedbackActivity" android:exported="false" />
+
         <activity
             android:name=".MainActivity"
             android:screenOrientation="portrait"
