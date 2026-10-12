@@ -285,7 +285,7 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         conta.setOnClickListener(v->showPremiumAccountScreen());
         root.addView(conta,new LinearLayout.LayoutParams(-1,dp(52)));
 
-        TextView note=label("⭐ O Premium é vinculado à sua compra no Google Play.",12);
+        TextView note=label("⭐ O Premium fica vinculado à sua conta Google após a compra.",12);
         note.setTextColor(GRAY);
         note.setGravity(Gravity.CENTER);
         LinearLayout.LayoutParams np=new LinearLayout.LayoutParams(-1,dp(48));
@@ -316,7 +316,7 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         title.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
         root.addView(title,new LinearLayout.LayoutParams(-1,dp(52)));
 
-        TextView info=label("A compra do Premium é associada à conta do Google Play usada na compra.\n\nVocê não precisa criar uma senha separada para usar o aplicativo.",14);
+        TextView info=label("A compra feita pelo Mercado Pago fica vinculada à conta Google conectada aqui.\n\nUse a mesma conta Google em outro aparelho para restaurar o Premium.",14);
         info.setTextColor(GRAY);
         info.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);
         LinearLayout.LayoutParams ip=new LinearLayout.LayoutParams(-1,dp(92));
