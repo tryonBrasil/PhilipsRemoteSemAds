@@ -50,7 +50,7 @@ public class AdminActivity extends Activity {
   private void render(JSONObject data) {
     content.removeAllViews();
     if (data == null) { summary.setText("Não foi possível carregar. Confira se o servidor já foi publicado."); return; }
-    if (data.has("error")) { summary.setText("Acesso não autorizado ou servidor ainda não atualizado."); return; }
+    if (data.has("error")) { String code=data.optString("error","erro_desconhecido"); int status=data.optInt("_httpStatus",0); String detail="Falha na Central ADM: "+code+(status>0?" (HTTP "+status+")":"")+"."; if ("admin_only".equals(code)) detail="A conta conectada não está autorizada como administradora ou o e-mail não está verificado (HTTP "+status+")."; else if ("unauthorized".equals(code) || "invalid_firebase_token".equals(code)) detail="O servidor não aceitou o token do Firebase. Saia da conta Google no app e entre novamente. (HTTP "+status+")"; else if ("admin_request_failed".equals(code)) detail="O servidor recebeu a solicitação, mas falhou ao consultar os dados. Confira os logs da Vercel. (HTTP "+status+")"; summary.setText(detail); return; }
     JSONObject totals = data.optJSONObject("totals");
     summary.setText("Clientes: " + (totals == null ? 0 : totals.optInt("users")) +
       "   •   Premium: " + (totals == null ? 0 : totals.optInt("premium")) +
@@ -96,10 +96,10 @@ public class AdminActivity extends Activity {
       c=(HttpURLConnection)new URL(SERVER+path).openConnection(); c.setRequestMethod(method); c.setConnectTimeout(12000); c.setReadTimeout(12000);
       c.setRequestProperty("Authorization","Bearer "+token); c.setRequestProperty("Accept","application/json");
       if(body!=null){ c.setDoOutput(true); c.setRequestProperty("Content-Type","application/json"); try(OutputStream o=c.getOutputStream()){o.write(body.toString().getBytes(StandardCharsets.UTF_8));} }
-      InputStream in=(c.getResponseCode()<400)?c.getInputStream():c.getErrorStream(); if(in==null)return null;
+      int status=c.getResponseCode(); InputStream in=(status<400)?c.getInputStream():c.getErrorStream(); if(in==null){ JSONObject empty=new JSONObject(); empty.put("error","empty_server_response"); empty.put("_httpStatus",status); return empty; }
       ByteArrayOutputStream out=new ByteArrayOutputStream(); byte[] b=new byte[4096]; int n; while((n=in.read(b))!=-1)out.write(b,0,n);
-      return new JSONObject(new String(out.toByteArray(),StandardCharsets.UTF_8));
-    } catch(Exception e){return null;} finally {if(c!=null)c.disconnect();}
+      JSONObject result=new JSONObject(new String(out.toByteArray(),StandardCharsets.UTF_8)); result.put("_httpStatus",status); return result;
+    } catch(Exception e){ JSONObject failure=new JSONObject(); try { failure.put("error","network_error"); failure.put("detail",e.getClass().getSimpleName()); } catch(Exception ignored){} return failure; } finally {if(c!=null)c.disconnect();}
   }
   private void addHeading(String s){TextView t=text(s,16,red);t.setTypeface(null,Typeface.BOLD);t.setPadding(0,dp(18),0,dp(8));content.addView(t);}
   private void addNote(String s){TextView t=text(s,14,white);t.setPadding(dp(12),dp(10),dp(12),dp(10));t.setBackgroundColor(card);LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,-2);p.setMargins(0,dp(3),0,dp(3));content.addView(t,p);}
