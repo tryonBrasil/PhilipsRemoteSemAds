@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "616140212",
+    "project_id": "ir-remote-br",
+    "storage_bucket": "ir-remote-br.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:616140212:android:db8d9c85bb994b76d5b6e1",
+        "android_client_info": {
+          "package_name": "com.example.philipsremote"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "616140212-of0jb1kmrggbinp8b47na5sbvglejvsq.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCMLHsfzgDc0dyYR2IQRwjphXVoVJ42D-U"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "616140212-of0jb1kmrggbinp8b47na5sbvglejvsq.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
