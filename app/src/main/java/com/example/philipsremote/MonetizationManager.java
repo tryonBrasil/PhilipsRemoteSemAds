@@ -15,6 +15,10 @@ import android.os.Looper;
 import android.view.View;
 import android.widget.*;
 import com.google.android.gms.ads.*;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
+import com.google.android.gms.tasks.Tasks;
+import java.util.concurrent.TimeUnit;
 import org.json.JSONObject;
 import java.io.BufferedReader;
 import java.io.InputStream;
@@ -161,6 +165,7 @@ public class MonetizationManager {
                 connection.setReadTimeout(25000);
                 connection.setDoOutput(true);
                 connection.setRequestProperty("Content-Type", "application/json; charset=utf-8");
+                connection.setRequestProperty("Authorization", "Bearer " + getFirebaseIdToken());
                 JSONObject request = new JSONObject();
                 request.put("email", email);
                 try (OutputStream out = connection.getOutputStream()) {
@@ -248,8 +253,73 @@ public class MonetizationManager {
                 .show();
     }
 
+    private String getFirebaseIdToken() throws Exception {
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user == null) throw new Exception("Entre com sua conta Google antes de continuar.");
+        return Tasks.await(user.getIdToken(false), 15, TimeUnit.SECONDS).getToken();
+    }
+
     public void restaurarCompra() {
-        verificarPagamento(true);
+        if (requestInProgress) {
+            toast("Aguarde a consulta atual terminar.");
+            return;
+        }
+        if (FirebaseAuth.getInstance().getCurrentUser() == null) {
+            toast("Entre com Google para restaurar o Premium em qualquer aparelho.");
+            return;
+        }
+        requestInProgress = true;
+        toast("Consultando sua conta Premium...");
+        executor.execute(() -> {
+            HttpURLConnection connection = null;
+            try {
+                URL url = new URL(SERVER + "/api/premium-account");
+                connection = (HttpURLConnection) url.openConnection();
+                connection.setRequestMethod("GET");
+                connection.setConnectTimeout(15000);
+                connection.setReadTimeout(20000);
+                connection.setRequestProperty("Authorization", "Bearer " + getFirebaseIdToken());
+                int status = connection.getResponseCode();
+                String response = readResponse(connection, status);
+                JSONObject json = new JSONObject(response);
+                if (status < 200 || status >= 300) {
+                    throw new Exception(json.optString("message", json.optString("error", "Não foi possível consultar a conta.")));
+                }
+                boolean active = json.optBoolean("premium_unlocked", false);
+                main.post(() -> {
+                    requestInProgress = false;
+                    if (activity.isFinishing()) return;
+                    if (active) {
+                        boolean changed = !isPremium();
+                        prefs.edit().putBoolean(KEY_PREMIUM, true)
+                                .putLong(KEY_PREMIUM_UPDATED, System.currentTimeMillis()).apply();
+                        toast("⭐ Premium restaurado nesta conta Google!");
+                        if (changed && onPremiumChanged != null) onPremiumChanged.run();
+                    } else {
+                        // A conta ainda não tem entitlement; consulta a compra local autenticada, se existir.
+                        if (prefs.getString(KEY_PURCHASE_ID, "").isEmpty()) {
+                            new AlertDialog.Builder(activity)
+                                    .setTitle("Premium não encontrado")
+                                    .setMessage("Não há compra aprovada vinculada a esta conta Google ainda.")
+                                    .setPositiveButton("OK", null).show();
+                        } else {
+                            verificarPagamento(true);
+                        }
+                    }
+                });
+            } catch (Exception e) {
+                android.util.Log.e("MonetizationManager", "Falha ao restaurar Premium", e);
+                main.post(() -> {
+                    requestInProgress = false;
+                    if (!activity.isFinishing()) new AlertDialog.Builder(activity)
+                            .setTitle("Não foi possível restaurar")
+                            .setMessage(safeMessage(e))
+                            .setPositiveButton("OK", null).show();
+                });
+            } finally {
+                if (connection != null) connection.disconnect();
+            }
+        });
     }
 
     private void criarCheckout() {
@@ -269,6 +339,7 @@ public class MonetizationManager {
                 connection.setReadTimeout(20000);
                 connection.setDoOutput(true);
                 connection.setRequestProperty("Content-Type", "application/json; charset=utf-8");
+                connection.setRequestProperty("Authorization", "Bearer " + getFirebaseIdToken());
                 try (OutputStream out = connection.getOutputStream()) {
                     out.write("{}".getBytes(StandardCharsets.UTF_8));
                 }
@@ -328,6 +399,7 @@ public class MonetizationManager {
                 connection.setRequestMethod("GET");
                 connection.setConnectTimeout(15000);
                 connection.setReadTimeout(20000);
+                connection.setRequestProperty("Authorization", "Bearer " + getFirebaseIdToken());
                 int status = connection.getResponseCode();
                 String response = readResponse(connection, status);
                 JSONObject json = new JSONObject(response);
