@@ -387,25 +387,56 @@ private static final int CARD_2 = Color.rgb(31,31,36);
     @Override
     protected void onActivityResult(int requestCode,int resultCode,Intent data){
         super.onActivityResult(requestCode,resultCode,data);
-        if(requestCode!=REQ_GOOGLE_SIGN_IN) return;
-        Task<GoogleSignInAccount> task=GoogleSignIn.getSignedInAccountFromIntent(data);
-        try{
-            GoogleSignInAccount account=task.getResult(ApiException.class);
-            if(account==null || account.getIdToken()==null){
-                Toast.makeText(this,"O Google não retornou o token de login. Confira o cliente OAuth.",Toast.LENGTH_LONG).show();
-                return;
+        if(requestCode==REQ_GOOGLE_SIGN_IN){
+            Task<GoogleSignInAccount> task=GoogleSignIn.getSignedInAccountFromIntent(data);
+            try{
+                GoogleSignInAccount account=task.getResult(ApiException.class);
+                if(account==null || account.getIdToken()==null){
+                    Toast.makeText(this,"O Google não retornou o token de login. Confira o cliente OAuth.",Toast.LENGTH_LONG).show();
+                    return;
+                }
+                firebaseAuth.signInWithCredential(GoogleAuthProvider.getCredential(account.getIdToken(),null))
+                        .addOnCompleteListener(this,authTask->{
+                            if(authTask.isSuccessful()){
+                                Toast.makeText(this,"Conta Google conectada.",Toast.LENGTH_LONG).show();
+                                showPremiumAccountScreen();
+                            }else{
+                                Toast.makeText(this,"Falha no login Firebase: "+(authTask.getException()==null?"tente novamente":authTask.getException().getMessage()),Toast.LENGTH_LONG).show();
+                            }
+                        });
+            }catch(ApiException e){
+                Toast.makeText(this,"Login Google cancelado ou falhou (código "+e.getStatusCode()+").",Toast.LENGTH_LONG).show();
             }
-            firebaseAuth.signInWithCredential(GoogleAuthProvider.getCredential(account.getIdToken(),null))
-                    .addOnCompleteListener(this,authTask->{
-                        if(authTask.isSuccessful()){
-                            Toast.makeText(this,"Conta Google conectada.",Toast.LENGTH_LONG).show();
-                            showPremiumAccountScreen();
-                        }else{
-                            Toast.makeText(this,"Falha no login Firebase: "+(authTask.getException()==null?"tente novamente":authTask.getException().getMessage()),Toast.LENGTH_LONG).show();
-                        }
-                    });
-        }catch(ApiException e){
-            Toast.makeText(this,"Login Google cancelado ou falhou (código "+e.getStatusCode()+").",Toast.LENGTH_LONG).show();
+            return;
+        }
+        if(resultCode!=RESULT_OK || data==null || data.getData()==null) return;
+        android.net.Uri uri=data.getData();
+        if(requestCode==REQ_EXPORT_BACKUP) {
+            try(java.io.OutputStream out=getContentResolver().openOutputStream(uri)) {
+                String json=controleStorage.exportarJson();
+                if(json==null || out==null) throw new java.io.IOException("backup vazio");
+                out.write(json.getBytes(java.nio.charset.StandardCharsets.UTF_8)); out.flush();
+                Toast.makeText(this,"✓ Backup exportado com sucesso.",Toast.LENGTH_LONG).show();
+            } catch(Exception e) {
+                Toast.makeText(this,"Não foi possível exportar o backup.",Toast.LENGTH_LONG).show();
+            }
+        } else if(requestCode==REQ_IMPORT_BACKUP) {
+            try(java.io.InputStream in=getContentResolver().openInputStream(uri)) {
+                if(in==null) throw new java.io.IOException("arquivo indisponível");
+                java.io.ByteArrayOutputStream buffer=new java.io.ByteArrayOutputStream();
+                byte[] dataBuf=new byte[8192]; int n;
+                while((n=in.read(dataBuf))!=-1) buffer.write(dataBuf,0,n);
+                String json=new String(buffer.toByteArray(),java.nio.charset.StandardCharsets.UTF_8);
+                final String backup=json;
+                new android.app.AlertDialog.Builder(this)
+                    .setTitle("Restaurar backup")
+                    .setMessage("Escolha como importar os controles encontrados neste backup.")
+                    .setNegativeButton("ADICIONAR",(d,w)->finalizarImportacao(backup,false))
+                    .setPositiveButton("SUBSTITUIR",(d,w)->finalizarImportacao(backup,true))
+                    .show();
+            } catch(Exception e) {
+                Toast.makeText(this,"Arquivo de backup inválido ou inacessível.",Toast.LENGTH_LONG).show();
+            }
         }
     }
 
@@ -1766,38 +1797,6 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         startActivityForResult(i,REQ_IMPORT_BACKUP);
     }
 
-    @Override protected void onActivityResult(int requestCode,int resultCode,android.content.Intent data) {
-        super.onActivityResult(requestCode,resultCode,data);
-        if(resultCode!=RESULT_OK || data==null || data.getData()==null) return;
-        android.net.Uri uri=data.getData();
-        if(requestCode==REQ_EXPORT_BACKUP) {
-            try(java.io.OutputStream out=getContentResolver().openOutputStream(uri)) {
-                String json=controleStorage.exportarJson();
-                if(json==null || out==null) throw new java.io.IOException("backup vazio");
-                out.write(json.getBytes(java.nio.charset.StandardCharsets.UTF_8)); out.flush();
-                Toast.makeText(this,"✓ Backup exportado com sucesso.",Toast.LENGTH_LONG).show();
-            } catch(Exception e) {
-                Toast.makeText(this,"Não foi possível exportar o backup.",Toast.LENGTH_LONG).show();
-            }
-        } else if(requestCode==REQ_IMPORT_BACKUP) {
-            try(java.io.InputStream in=getContentResolver().openInputStream(uri)) {
-                if(in==null) throw new java.io.IOException("arquivo indisponível");
-                java.io.ByteArrayOutputStream buffer=new java.io.ByteArrayOutputStream();
-                byte[] dataBuf=new byte[8192]; int n;
-                while((n=in.read(dataBuf))!=-1) buffer.write(dataBuf,0,n);
-                String json=new String(buffer.toByteArray(),java.nio.charset.StandardCharsets.UTF_8);
-                final String backup=json;
-                new android.app.AlertDialog.Builder(this)
-                    .setTitle("Restaurar backup")
-                    .setMessage("Escolha como importar os controles encontrados neste backup.")
-                    .setNegativeButton("ADICIONAR",(d,w)->finalizarImportacao(backup,false))
-                    .setPositiveButton("SUBSTITUIR",(d,w)->finalizarImportacao(backup,true))
-                    .show();
-            } catch(Exception e) {
-                Toast.makeText(this,"Arquivo de backup inválido ou inacessível.",Toast.LENGTH_LONG).show();
-            }
-        }
-    }
 
     private void finalizarImportacao(String json, boolean substituir) {
         int qtd=controleStorage.importarJson(json,substituir);
