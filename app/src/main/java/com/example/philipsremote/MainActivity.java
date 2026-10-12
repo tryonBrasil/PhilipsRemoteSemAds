@@ -86,7 +86,7 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         monetizacao=new MonetizationManager(this,()->showSelector());
         firebaseAuth=FirebaseAuth.getInstance();
         GoogleSignInOptions googleOptions=new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                .requestIdToken(getString(com.example.philipsremote.R.string.default_web_client_id))
+                .requestIdToken(BuildConfig.WEB_CLIENT_ID)
                 .requestEmail()
                 .build();
         googleSignInClient=GoogleSignIn.getClient(this,googleOptions);
