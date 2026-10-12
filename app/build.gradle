@@ -16,6 +16,7 @@ android {
         targetSdk 36
         versionCode 84
         versionName '2.0.17'
+        buildConfigField "String", "WEB_CLIENT_ID", '"616140212-of0jb1kmrggbinp8b47na5sbvglejvsq.apps.googleusercontent.com"'
     }
 
     flavorDimensions "dist"
