@@ -5,6 +5,10 @@ import android.app.AlertDialog;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
+import android.graphics.BitmapFactory;
+import android.util.Base64;
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.net.Uri;
 import android.os.Handler;
 import android.os.Looper;
@@ -104,12 +108,144 @@ public class MonetizationManager {
                         + "Preço: R$ 19,90\n"
                         + "Pagamento seguro pelo Mercado Pago.")
                 .setNegativeButton("AGORA NÃO", null)
-                .setNeutralButton("JÁ PAGUEI — VERIFICAR", null)
-                .setPositiveButton("PAGAR R$ 19,90", (d, w) -> criarCheckout())
+                .setNeutralButton("GERAR PIX", null)
+                .setPositiveButton("OUTRAS FORMAS DE PAGAR", (d, w) -> criarCheckout())
                 .create();
         dialog.setOnShowListener(v -> dialog.getButton(AlertDialog.BUTTON_NEUTRAL)
-                .setOnClickListener(x -> verificarPagamento(true)));
+                .setOnClickListener(x -> solicitarPix()));
         dialog.show();
+    }
+
+    private void solicitarPix() {
+        EditText emailInput = new EditText(activity);
+        emailInput.setSingleLine(true);
+        emailInput.setInputType(android.text.InputType.TYPE_CLASS_TEXT
+                | android.text.InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
+        emailInput.setHint("seuemail@exemplo.com");
+        int pad = (int) (20 * activity.getResources().getDisplayMetrics().density);
+        LinearLayout form = new LinearLayout(activity);
+        form.setOrientation(LinearLayout.VERTICAL);
+        form.setPadding(pad, pad / 2, pad, 0);
+        TextView note = new TextView(activity);
+        note.setText("Informe seu e-mail para gerar o Pix de R$ 19,90 pelo Mercado Pago.");
+        form.addView(note);
+        form.addView(emailInput, new LinearLayout.LayoutParams(-1, -2));
+        new AlertDialog.Builder(activity)
+                .setTitle("Gerar Pix")
+                .setView(form)
+                .setNegativeButton("Cancelar", null)
+                .setPositiveButton("GERAR PIX", (d, w) -> {
+                    String email = emailInput.getText().toString().trim();
+                    if (email.isEmpty() || !android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
+                        toast("Informe um e-mail válido para gerar o Pix.");
+                    } else {
+                        criarPix(email);
+                    }
+                }).show();
+    }
+
+    private void criarPix(String email) {
+        if (requestInProgress) {
+            toast("Aguarde, estamos processando sua solicitação.");
+            return;
+        }
+        requestInProgress = true;
+        toast("Gerando Pix seguro...");
+        executor.execute(() -> {
+            HttpURLConnection connection = null;
+            try {
+                URL url = new URL(SERVER + "/api/create-pix");
+                connection = (HttpURLConnection) url.openConnection();
+                connection.setRequestMethod("POST");
+                connection.setConnectTimeout(15000);
+                connection.setReadTimeout(25000);
+                connection.setDoOutput(true);
+                connection.setRequestProperty("Content-Type", "application/json; charset=utf-8");
+                JSONObject request = new JSONObject();
+                request.put("email", email);
+                try (OutputStream out = connection.getOutputStream()) {
+                    out.write(request.toString().getBytes(StandardCharsets.UTF_8));
+                }
+                int status = connection.getResponseCode();
+                String response = readResponse(connection, status);
+                JSONObject json = new JSONObject(response);
+                if (status < 200 || status >= 300) {
+                    throw new Exception(json.optString("message",
+                            json.optString("error", "Não foi possível gerar o Pix.")));
+                }
+                String purchaseId = json.optString("purchase_id", "");
+                String qrCode = json.optString("qr_code", "");
+                String qrBase64 = json.optString("qr_code_base64", "");
+                if (purchaseId.isEmpty() || qrCode.isEmpty() || qrBase64.isEmpty()) {
+                    throw new Exception("O Mercado Pago não retornou os dados do Pix.");
+                }
+                prefs.edit().putString(KEY_PURCHASE_ID, purchaseId).apply();
+                main.post(() -> {
+                    requestInProgress = false;
+                    if (!activity.isFinishing()) mostrarPix(qrCode, qrBase64);
+                });
+            } catch (Exception e) {
+                android.util.Log.e("MonetizationManager", "Falha ao gerar Pix", e);
+                main.post(() -> {
+                    requestInProgress = false;
+                    if (!activity.isFinishing()) new AlertDialog.Builder(activity)
+                            .setTitle("Não foi possível gerar o Pix")
+                            .setMessage(safeMessage(e))
+                            .setPositiveButton("Tentar novamente", (d, w) -> solicitarPix())
+                            .setNegativeButton("Fechar", null).show();
+                });
+            } finally {
+                if (connection != null) connection.disconnect();
+            }
+        });
+    }
+
+    private void mostrarPix(String qrCode, String qrBase64) {
+        LinearLayout layout = new LinearLayout(activity);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        int pad = (int) (16 * activity.getResources().getDisplayMetrics().density);
+        layout.setPadding(pad, pad, pad, pad);
+        TextView instructions = new TextView(activity);
+        instructions.setText("Escaneie o QR Code no aplicativo do seu banco ou copie o código Pix abaixo. Após pagar, toque em “JÁ PAGUEI — VERIFICAR”.");
+        layout.addView(instructions);
+        ImageView qrImage = new ImageView(activity);
+        qrImage.setAdjustViewBounds(true);
+        qrImage.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        try {
+            byte[] bytes = Base64.decode(qrBase64, Base64.DEFAULT);
+            qrImage.setImageBitmap(BitmapFactory.decodeByteArray(bytes, 0, bytes.length));
+            int size = (int) (240 * activity.getResources().getDisplayMetrics().density);
+            LinearLayout.LayoutParams imageParams = new LinearLayout.LayoutParams(size, size);
+            imageParams.gravity = android.view.Gravity.CENTER_HORIZONTAL;
+            imageParams.topMargin = pad / 2;
+            imageParams.bottomMargin = pad / 2;
+            layout.addView(qrImage, imageParams);
+        } catch (Exception e) {
+            android.util.Log.e("MonetizationManager", "Falha ao mostrar QR Pix", e);
+        }
+        TextView copyLabel = new TextView(activity);
+        copyLabel.setText("Pix Copia e Cola:");
+        layout.addView(copyLabel);
+        TextView code = new TextView(activity);
+        code.setText(qrCode);
+        code.setTextIsSelectable(true);
+        code.setMaxLines(4);
+        code.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        code.setPadding(0, pad / 3, 0, pad / 3);
+        layout.addView(code);
+        new AlertDialog.Builder(activity)
+                .setTitle("Pix de R$ 19,90")
+                .setView(layout)
+                .setNegativeButton("FECHAR", null)
+                .setPositiveButton("COPIAR PIX", (d, w) -> {
+                    ClipboardManager clipboard = (ClipboardManager) activity.getSystemService(Activity.CLIPBOARD_SERVICE);
+                    if (clipboard != null) {
+                        clipboard.setPrimaryClip(ClipData.newPlainText("Pix IR Remote BR Premium", qrCode));
+                        toast("Código Pix copiado. Cole no aplicativo do seu banco.");
+                    }
+                })
+                .setNeutralButton("JÁ PAGUEI — VERIFICAR", (d, w) -> verificarPagamento(true))
+                .show();
     }
 
     public void restaurarCompra() {
