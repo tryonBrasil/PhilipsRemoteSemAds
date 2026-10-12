@@ -2,40 +2,49 @@ package com.example.philipsremote;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.Color;
-import android.view.ViewGroup;
+import android.net.Uri;
+import android.os.Handler;
+import android.os.Looper;
+import android.view.View;
 import android.widget.*;
-import com.android.billingclient.api.*;
 import com.google.android.gms.ads.*;
-import java.util.*;
+import org.json.JSONObject;
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class MonetizationManager {
     public static final String PREMIUM_PRODUCT_ID = "ir_remote_premium";
     private static final String PREFS = "remote_prefs";
     private static final String KEY_PREMIUM = "premium_unlocked";
     private static final String KEY_PREMIUM_UPDATED = "premium_unlocked_at";
+    private static final String KEY_PURCHASE_ID = "mp_purchase_id";
     private static final int FREE_SAVED_LIMIT = 3;
-
-    // IDs DE TESTE. Substituir pelos IDs reais antes da publicação comercial.
+    private static final String SERVER = "https://ir-remote-br-premium-server.vercel.app";
     public static final String ADMOB_APP_ID_TEST = "ca-app-pub-3940256099942544~3347511713";
-    private static final String BANNER_TEST_ID = "ca-app-pub-3940256099942544/9214589741";
+    public static final String BANNER_TEST_ID = "ca-app-pub-3940256099942544/9214589741";
 
     private final Activity activity;
-    private final android.content.SharedPreferences prefs;
+    private final SharedPreferences prefs;
     private final Runnable onPremiumChanged;
-    private BillingClient billingClient;
-    private ProductDetails premiumProduct;
-    private boolean billingReady = false;
-    private boolean consultaEmAndamento = false;
-    private boolean compraEmAndamento = false;
-    private boolean reconexaoAgendada = false;
+    private final ExecutorService executor = Executors.newSingleThreadExecutor();
+    private final Handler main = new Handler(Looper.getMainLooper());
+    private boolean requestInProgress = false;
 
     public MonetizationManager(Activity activity, Runnable onPremiumChanged) {
         this.activity = activity;
         this.prefs = activity.getSharedPreferences(PREFS, Activity.MODE_PRIVATE);
         this.onPremiumChanged = onPremiumChanged;
         MobileAds.initialize(activity, status -> {});
-        iniciarBilling();
     }
 
     public boolean isPremium() {
@@ -58,17 +67,13 @@ public class MonetizationManager {
 
     public void addBanner(LinearLayout root) {
         if (root == null || isPremium()) return;
-
         FrameLayout box = new FrameLayout(activity);
         box.setPadding(0, 6, 0, 6);
-
         AdView ad = new AdView(activity);
         ad.setAdUnitId(BANNER_TEST_ID);
-
         int width = Math.max(1, (int) (activity.getResources().getDisplayMetrics().widthPixels
                 / activity.getResources().getDisplayMetrics().density));
         ad.setAdSize(AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(activity, width));
-
         box.addView(ad, new FrameLayout.LayoutParams(-1, -2));
         root.addView(box, new LinearLayout.LayoutParams(-1, -2));
         ad.loadAd(new AdRequest.Builder().build());
@@ -79,21 +84,14 @@ public class MonetizationManager {
             new AlertDialog.Builder(activity)
                     .setTitle("⭐ IR Remote BR Premium")
                     .setMessage("Premium ativo neste aparelho.\n\n"
-                            + "✓ Sem anúncios\n"
-                            + "✓ Controles salvos ilimitados\n"
+                            + "✓ Sem anúncios\n✓ Controles salvos ilimitados\n"
                             + "✓ Mais códigos e testes personalizados\n"
-                            + "✓ Recursos avançados para controles universais\n\n"
-                            + "Sua compra é vinculada à conta do Google Play.")
+                            + "✓ Recursos avançados para controles universais")
                     .setPositiveButton("OK", null)
-                    .setNeutralButton("VERIFICAR COMPRA", (d, w) -> restaurarCompra())
+                    .setNeutralButton("VERIFICAR PAGAMENTO", (d, w) -> verificarPagamento(true))
                     .show();
             return;
         }
-
-        String preco = premiumProduct != null
-                && premiumProduct.getOneTimePurchaseOfferDetails() != null
-                ? premiumProduct.getOneTimePurchaseOfferDetails().getFormattedPrice()
-                : "preço no Google Play";
 
         AlertDialog dialog = new AlertDialog.Builder(activity)
                 .setTitle("⭐ IR Remote BR Premium")
@@ -103,279 +101,157 @@ public class MonetizationManager {
                         + "✓ Mais códigos e testes personalizados\n"
                         + "✓ Recursos avançados para controles universais\n"
                         + "✓ Compra única, sem mensalidade\n\n"
-                        + "Preço: " + preco)
+                        + "Preço: R$ 19,90\n"
+                        + "Pagamento seguro pelo Mercado Pago.")
                 .setNegativeButton("AGORA NÃO", null)
-                .setNeutralButton("RESTAURAR COMPRA", null)
-                .setPositiveButton("DESBLOQUEAR", (d, w) -> comprar())
+                .setNeutralButton("JÁ PAGUEI — VERIFICAR", null)
+                .setPositiveButton("PAGAR R$ 19,90", (d, w) -> criarCheckout())
                 .create();
-
         dialog.setOnShowListener(v -> dialog.getButton(AlertDialog.BUTTON_NEUTRAL)
-                .setOnClickListener(x -> restaurarCompra()));
+                .setOnClickListener(x -> verificarPagamento(true)));
         dialog.show();
     }
 
     public void restaurarCompra() {
-        if (!billingReady || billingClient == null) {
-            Toast.makeText(activity,
-                    "Google Play ainda está conectando. Tente novamente em alguns segundos.",
-                    Toast.LENGTH_SHORT).show();
-            iniciarBilling();
-            return;
-        }
-        consultarCompras(true);
+        verificarPagamento(true);
     }
 
-    private void iniciarBilling() {
-        if (billingClient != null && billingClient.isReady()) {
-            billingReady = true;
-            carregarProduto();
-            consultarCompras(false);
+    private void criarCheckout() {
+        if (requestInProgress) {
+            toast("Aguarde, estamos processando sua solicitação.");
             return;
         }
-
-        billingReady = false;
-        premiumProduct = null;
-
-        billingClient = BillingClient.newBuilder(activity)
-                .setListener((billingResult, purchases) -> {
-                    int code = billingResult.getResponseCode();
-
-                    if (code == BillingClient.BillingResponseCode.OK) {
-                        compraEmAndamento = false;
-                        processarCompras(purchases);
-                    } else if (code == BillingClient.BillingResponseCode.USER_CANCELED) {
-                        compraEmAndamento = false;
-                    } else {
-                        compraEmAndamento = false;
-                        Toast.makeText(activity,
-                                "Não foi possível concluir a compra agora.",
-                                Toast.LENGTH_SHORT).show();
+        requestInProgress = true;
+        toast("Preparando pagamento seguro...");
+        executor.execute(() -> {
+            HttpURLConnection connection = null;
+            try {
+                URL url = new URL(SERVER + "/api/create-preference");
+                connection = (HttpURLConnection) url.openConnection();
+                connection.setRequestMethod("POST");
+                connection.setConnectTimeout(15000);
+                connection.setReadTimeout(20000);
+                connection.setDoOutput(true);
+                connection.setRequestProperty("Content-Type", "application/json; charset=utf-8");
+                try (OutputStream out = connection.getOutputStream()) {
+                    out.write("{}".getBytes(StandardCharsets.UTF_8));
+                }
+                int status = connection.getResponseCode();
+                String response = readResponse(connection, status);
+                JSONObject json = new JSONObject(response);
+                if (status < 200 || status >= 300) {
+                    String error = json.optString("message", json.optString("error", "Não foi possível criar o pagamento."));
+                    throw new Exception(error);
+                }
+                String checkout = json.optString("checkout_url", "");
+                String purchaseId = json.optString("purchase_id", "");
+                if (!checkout.startsWith("https://") || purchaseId.isEmpty()) {
+                    throw new Exception("O servidor não retornou um checkout válido.");
+                }
+                prefs.edit().putString(KEY_PURCHASE_ID, purchaseId).apply();
+                main.post(() -> {
+                    requestInProgress = false;
+                    if (activity.isFinishing()) return;
+                    try {
+                        activity.startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(checkout)));
+                    } catch (Exception e) {
+                        toast("Não foi possível abrir o Mercado Pago neste aparelho.");
                     }
-                })
-                .enablePendingPurchases(
-                        PendingPurchasesParams.newBuilder()
-                                .enableOneTimeProducts()
-                                .build())
-                .build();
+                });
+            } catch (Exception e) {
+                android.util.Log.e("MonetizationManager", "Falha ao criar checkout", e);
+                main.post(() -> {
+                    requestInProgress = false;
+                    if (!activity.isFinishing()) new AlertDialog.Builder(activity)
+                            .setTitle("Pagamento indisponível")
+                            .setMessage("Não foi possível iniciar o pagamento. Verifique a internet e tente novamente.\n\nDetalhe: " + safeMessage(e))
+                            .setPositiveButton("OK", null).show();
+                });
+            } finally {
+                if (connection != null) connection.disconnect();
+            }
+        });
+    }
 
-        billingClient.startConnection(new BillingClientStateListener() {
-            @Override
-            public void onBillingSetupFinished(BillingResult result) {
-                billingReady = result.getResponseCode() == BillingClient.BillingResponseCode.OK;
-
-                if (billingReady) {
-                    reconexaoAgendada = false;
-                    carregarProduto();
-                    consultarCompras(false);
-                } else {
-                    agendarReconexao();
+    public void verificarPagamento(boolean mostrarResultado) {
+        String purchaseId = prefs.getString(KEY_PURCHASE_ID, "");
+        if (purchaseId.isEmpty()) {
+            if (mostrarResultado) toast("Nenhuma compra iniciada neste aparelho. Toque em Pagar R$ 19,90 primeiro.");
+            return;
+        }
+        if (requestInProgress) {
+            if (mostrarResultado) toast("Aguarde a consulta atual terminar.");
+            return;
+        }
+        requestInProgress = true;
+        executor.execute(() -> {
+            HttpURLConnection connection = null;
+            try {
+                URL url = new URL(SERVER + "/api/payment-status?purchase_id=" + purchaseId);
+                connection = (HttpURLConnection) url.openConnection();
+                connection.setRequestMethod("GET");
+                connection.setConnectTimeout(15000);
+                connection.setReadTimeout(20000);
+                int status = connection.getResponseCode();
+                String response = readResponse(connection, status);
+                JSONObject json = new JSONObject(response);
+                if (status < 200 || status >= 300) {
+                    throw new Exception(json.optString("error", "Falha ao consultar pagamento."));
                 }
-            }
-
-            @Override
-            public void onBillingServiceDisconnected() {
-                billingReady = false;
-                agendarReconexao();
-            }
-        });
-    }
-
-    private void agendarReconexao() {
-        if (reconexaoAgendada || activity.isFinishing()) return;
-
-        reconexaoAgendada = true;
-        activity.getWindow().getDecorView().postDelayed(() -> {
-            reconexaoAgendada = false;
-            if (!billingReady) iniciarBilling();
-        }, 1500L);
-    }
-
-    private void carregarProduto() {
-        if (!billingReady || billingClient == null || !billingClient.isReady()) return;
-
-        QueryProductDetailsParams.Product p =
-                QueryProductDetailsParams.Product.newBuilder()
-                        .setProductId(PREMIUM_PRODUCT_ID)
-                        .setProductType(BillingClient.ProductType.INAPP)
-                        .build();
-
-        QueryProductDetailsParams params =
-                QueryProductDetailsParams.newBuilder()
-                        .setProductList(Collections.singletonList(p))
-                        .build();
-
-        billingClient.queryProductDetailsAsync(params, (result, details) -> {
-            if (result.getResponseCode() == BillingClient.BillingResponseCode.OK
-                    && details != null
-                    && !details.getProductDetailsList().isEmpty()) {
-                premiumProduct = details.getProductDetailsList().get(0);
-            } else {
-                premiumProduct = null;
-                android.util.Log.w("MonetizationManager",
-                        "Produto Premium indisponível: " + result.getDebugMessage());
-            }
-        });
-    }
-
-    private void consultarCompras(boolean mostrarResultado) {
-        if (!billingReady || billingClient == null || !billingClient.isReady()
-                || consultaEmAndamento) return;
-
-        consultaEmAndamento = true;
-
-        QueryPurchasesParams params = QueryPurchasesParams.newBuilder()
-                .setProductType(BillingClient.ProductType.INAPP)
-                .build();
-
-        billingClient.queryPurchasesAsync(params, (result, purchases) -> {
-            consultaEmAndamento = false;
-
-            if (result.getResponseCode() == BillingClient.BillingResponseCode.OK) {
-                boolean encontrado = false;
-
-                if (purchases != null) {
-                    for (Purchase purchase : purchases) {
-                        if (!purchase.getProducts().contains(PREMIUM_PRODUCT_ID)) continue;
-
-                        if (purchase.getPurchaseState() == Purchase.PurchaseState.PURCHASED) {
-                            encontrado = true;
-                            ativarPremium(purchase);
-                        } else if (purchase.getPurchaseState() == Purchase.PurchaseState.PENDING
-                                && mostrarResultado) {
-                            Toast.makeText(activity,
-                                    "Compra Premium pendente. O acesso será liberado após a confirmação do Google Play.",
-                                    Toast.LENGTH_LONG).show();
-                        }
+                boolean approved = json.optBoolean("premium_unlocked", false)
+                        && "approved".equalsIgnoreCase(json.optString("status", ""));
+                main.post(() -> {
+                    requestInProgress = false;
+                    if (activity.isFinishing()) return;
+                    if (approved) {
+                        boolean changed = !isPremium();
+                        prefs.edit().putBoolean(KEY_PREMIUM, true)
+                                .putLong(KEY_PREMIUM_UPDATED, System.currentTimeMillis()).apply();
+                        toast("⭐ Pagamento confirmado! Premium ativado.");
+                        if (changed && onPremiumChanged != null) onPremiumChanged.run();
+                    } else if (mostrarResultado) {
+                        String state = json.optString("status", "not_paid");
+                        String message = "pending".equalsIgnoreCase(state)
+                                ? "O pagamento ainda está pendente. Aguarde a confirmação do Mercado Pago e tente novamente."
+                                : "Ainda não encontramos um pagamento aprovado para esta compra. Se você já pagou, aguarde um instante e verifique novamente.";
+                        new AlertDialog.Builder(activity).setTitle("Pagamento não confirmado")
+                                .setMessage(message).setPositiveButton("Tentar novamente", (d, w) -> verificarPagamento(true))
+                                .setNegativeButton("Fechar", null).show();
                     }
-                }
-
-                // Só altera o estado local quando o Google Play respondeu com sucesso.
-                // Assim, uma falha temporária de conexão não remove um Premium já adquirido.
-                if (!encontrado && isPremium()) {
-                    definirPremium(false, false);
-                }
-
-                if (mostrarResultado && !encontrado) {
-                    Toast.makeText(activity,
-                            "Nenhuma compra Premium ativa foi encontrada nesta conta do Google Play.",
-                            Toast.LENGTH_LONG).show();
-                }
-            } else if (mostrarResultado) {
-                Toast.makeText(activity,
-                        "Não foi possível consultar suas compras agora.",
-                        Toast.LENGTH_LONG).show();
+                });
+            } catch (Exception e) {
+                android.util.Log.e("MonetizationManager", "Falha ao verificar pagamento", e);
+                main.post(() -> {
+                    requestInProgress = false;
+                    if (mostrarResultado && !activity.isFinishing()) toast("Não foi possível verificar agora. Confira a conexão e tente novamente.");
+                });
+            } finally {
+                if (connection != null) connection.disconnect();
             }
         });
     }
 
-    private void processarCompras(List<Purchase> purchases) {
-        if (purchases == null) return;
-
-        for (Purchase purchase : purchases) {
-            if (!purchase.getProducts().contains(PREMIUM_PRODUCT_ID)) continue;
-
-            if (purchase.getPurchaseState() == Purchase.PurchaseState.PURCHASED) {
-                ativarPremium(purchase);
-            } else if (purchase.getPurchaseState() == Purchase.PurchaseState.PENDING) {
-                Toast.makeText(activity,
-                        "Compra pendente. Aguarde a confirmação do Google Play.",
-                        Toast.LENGTH_LONG).show();
-            }
+    private String readResponse(HttpURLConnection connection, int status) throws Exception {
+        InputStream stream = status >= 200 && status < 400
+                ? connection.getInputStream() : connection.getErrorStream();
+        if (stream == null) return "{}";
+        StringBuilder result = new StringBuilder();
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(stream, StandardCharsets.UTF_8))) {
+            String line;
+            while ((line = reader.readLine()) != null) result.append(line);
         }
+        return result.toString();
     }
 
-    private void ativarPremium(Purchase purchase) {
-        definirPremium(true, true);
-
-        if (!purchase.isAcknowledged()
-                && billingClient != null
-                && billingClient.isReady()) {
-
-            billingClient.acknowledgePurchase(
-                    AcknowledgePurchaseParams.newBuilder()
-                            .setPurchaseToken(purchase.getPurchaseToken())
-                            .build(),
-                    result -> {
-                        if (result.getResponseCode() != BillingClient.BillingResponseCode.OK) {
-                            android.util.Log.w("MonetizationManager",
-                                    "Falha ao reconhecer compra Premium: "
-                                            + result.getDebugMessage());
-                        }
-                    });
-        }
+    private String safeMessage(Exception e) {
+        String message = e.getMessage();
+        if (message == null || message.trim().isEmpty()) return "erro de conexão";
+        return message.length() > 180 ? message.substring(0, 180) : message;
     }
 
-    private void definirPremium(boolean ativo, boolean mostrarToast) {
-        boolean mudou = isPremium() != ativo;
-
-        prefs.edit()
-                .putBoolean(KEY_PREMIUM, ativo)
-                .putLong(KEY_PREMIUM_UPDATED, System.currentTimeMillis())
-                .apply();
-
-        if (mudou || mostrarToast) {
-            activity.runOnUiThread(() -> {
-                if (mostrarToast) {
-                    Toast.makeText(activity,
-                            ativo
-                                    ? "⭐ Premium ativado/restaurado!"
-                                    : "Premium não está ativo nesta conta.",
-                            Toast.LENGTH_LONG).show();
-                }
-
-                if (mudou && onPremiumChanged != null) {
-                    onPremiumChanged.run();
-                }
-            });
-        }
-    }
-
-    private void comprar() {
-        if (compraEmAndamento) {
-            Toast.makeText(activity,
-                    "A compra já está sendo processada.",
-                    Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        if (!billingReady || billingClient == null || premiumProduct == null) {
-            Toast.makeText(activity,
-                    "Produto Premium ainda não disponível. Verifique sua conexão com o Google Play.",
-                    Toast.LENGTH_LONG).show();
-            iniciarBilling();
-            return;
-        }
-
-        ProductDetails.OneTimePurchaseOfferDetails offer =
-                premiumProduct.getOneTimePurchaseOfferDetails();
-
-        if (offer == null) {
-            Toast.makeText(activity,
-                    "Oferta Premium indisponível no momento.",
-                    Toast.LENGTH_LONG).show();
-            carregarProduto();
-            return;
-        }
-
-        BillingFlowParams.ProductDetailsParams productParams =
-                BillingFlowParams.ProductDetailsParams.newBuilder()
-                        .setProductDetails(premiumProduct)
-                        .setOfferToken(offer.getOfferToken())
-                        .build();
-
-        BillingFlowParams flow =
-                BillingFlowParams.newBuilder()
-                        .setProductDetailsParamsList(Collections.singletonList(productParams))
-                        .build();
-
-        compraEmAndamento = true;
-        BillingResult result = billingClient.launchBillingFlow(activity, flow);
-
-        if (result.getResponseCode() != BillingClient.BillingResponseCode.OK) {
-            compraEmAndamento = false;
-            Toast.makeText(activity,
-                    "O Google Play não iniciou a compra: " + result.getDebugMessage(),
-                    Toast.LENGTH_LONG).show();
-        }
+    private void toast(String message) {
+        main.post(() -> {
+            if (!activity.isFinishing()) Toast.makeText(activity, message, Toast.LENGTH_LONG).show();
+        });
     }
 }
