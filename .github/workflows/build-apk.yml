@@ -83,6 +83,15 @@ jobs:
           echo "$KEYSTORE_B64" | base64 --decode > ir-remote-release.jks
           test -s ir-remote-release.jks
 
+      - name: Mostrar impressões digitais do certificado (Firebase)
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+        run: |
+          set -euo pipefail
+          keytool -list -v -keystore ir-remote-release.jks -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" |
+            awk '/SHA1:/{print "SHA-1 para cadastrar no Firebase: "$0} /SHA256:/{print "SHA-256 para cadastrar no Firebase: "$0}'
+
       - name: Gerar APK assinado
         env:
           KEYSTORE_FILE: ${{ github.workspace }}/ir-remote-release.jks
