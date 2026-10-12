@@ -285,6 +285,12 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         conta.setOnClickListener(v->showPremiumAccountScreen());
         root.addView(conta,new LinearLayout.LayoutParams(-1,dp(52)));
 
+        Button feedbackBtn=botaoAcao("💬 ENVIAR FEEDBACK",Color.rgb(42,42,48),14);
+        LinearLayout.LayoutParams feedbackP=new LinearLayout.LayoutParams(-1,dp(48));
+        feedbackP.setMargins(0,dp(8),0,dp(0));
+        root.addView(feedbackBtn,feedbackP);
+        feedbackBtn.setOnClickListener(v->startActivity(new Intent(this,FeedbackActivity.class)));
+
         TextView note=label("⭐ O Premium fica vinculado à sua conta Google após a compra.",12);
         note.setTextColor(GRAY);
         note.setGravity(Gravity.CENTER);
@@ -346,6 +352,13 @@ private static final int CARD_2 = Color.rgb(31,31,36);
 
         Button loginGoogle=botaoAcao(conectado?"SAIR DA CONTA GOOGLE":"ENTRAR COM GOOGLE",Color.rgb(45,65,95),14);
         root.addView(loginGoogle,new LinearLayout.LayoutParams(-1,dp(52)));
+        if(conectado && "henri.antonio.silva@gmail.com".equalsIgnoreCase(firebaseAuth.getCurrentUser().getEmail())){
+            Button adminBtn=botaoAcao("🛡 CENTRAL ADM",Color.rgb(65,45,20),14);
+            LinearLayout.LayoutParams adminP=new LinearLayout.LayoutParams(-1,dp(52));
+            adminP.setMargins(0,dp(8),0,dp(0));
+            root.addView(adminBtn,adminP);
+            adminBtn.setOnClickListener(v->startActivity(new Intent(this,AdminActivity.class)));
+        }
         loginGoogle.setOnClickListener(v->{
             if(firebaseAuth.getCurrentUser()!=null){
                 new AlertDialog.Builder(this).setTitle("Sair da conta?")
