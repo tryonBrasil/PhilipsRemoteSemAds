@@ -61,6 +61,14 @@ android {
     }
 }
 
+// O app publicado na Play usa outro applicationId e ainda não tem cliente Firebase próprio.
+// Evita que o Google Services falhe ao gerar variantes Play; a variante GitHub usa google-services.json.
+tasks.configureEach { task ->
+    if (task.name.startsWith("processPlay") && task.name.endsWith("GoogleServices")) {
+        task.enabled = false
+    }
+}
+
 dependencies {
     implementation platform('com.google.firebase:firebase-bom:34.6.0')
     implementation 'com.google.firebase:firebase-auth'
