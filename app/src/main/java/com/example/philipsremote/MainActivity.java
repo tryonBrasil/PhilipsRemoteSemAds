@@ -1546,10 +1546,13 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         int qtd=controleStorage.quantidadeComandos(controle);
 
         if(resultado.suportado && resultado.configurados>0){
-            String mensagem="⚡ O aplicativo pode montar automaticamente os principais botões deste controle.\n\n"
+            String mensagem="⚡ O aplicativo preencheu os botões disponíveis para este perfil.\n\n"
                     +"✓ "+resultado.configurados+" funções configuradas agora\n"
                     +"✓ "+qtd+" de "+totalFuncoes+" botões prontos\n\n"
-                    +"Você pode abrir o controle e testar. Se alguma função não responder, ela poderá ser ajustada depois em CONFIGURAR.";
+                    +(resultado.candidata
+                        ? "⚠️ Estes são códigos candidatos: teste os botões no aparelho real antes de confiar neles. Marcas e modelos podem usar códigos diferentes.\n\n"
+                        : "")
+                    +"Se alguma função não responder, ela poderá ser corrigida em CONFIGURAR.";
 
             new android.app.AlertDialog.Builder(this)
                 .setTitle("CONFIGURAÇÃO AUTOMÁTICA")
