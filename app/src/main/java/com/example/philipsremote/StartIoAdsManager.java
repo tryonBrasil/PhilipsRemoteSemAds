@@ -25,8 +25,8 @@ public final class StartIoAdsManager {
         StartAppSDK.initParams(activity, APP_ID)
                 .setReturnAdsEnabled(false)
                 .setCallback(() -> {
-                    // Test ads remain enabled for validation. Disable only for the production release.
-                    StartAppSDK.setTestAdsEnabled(true);
+                    // Use test inventory only in debug builds; production release uses real inventory.
+                    StartAppSDK.setTestAdsEnabled(BuildConfig.DEBUG);
                     load();
                 })
                 .init();
