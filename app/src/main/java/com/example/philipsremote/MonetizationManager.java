@@ -299,6 +299,99 @@ public class MonetizationManager {
         }
     }
 
+    /** Envia ao servidor um pedido de troca antecipada para análise do administrador. */
+    public void solicitarTrocaDispositivo() {
+        if (FirebaseAuth.getInstance().getCurrentUser() == null) {
+            toast("Entre com sua conta Google antes de solicitar a troca.");
+            return;
+        }
+        EditText reasonInput = new EditText(activity);
+        reasonInput.setHint("Explique por que precisa trocar de aparelho (opcional)");
+        reasonInput.setMinLines(2);
+        reasonInput.setGravity(android.view.Gravity.TOP | android.view.Gravity.START);
+        int pad = (int) (18 * activity.getResources().getDisplayMetrics().density);
+        LinearLayout form = new LinearLayout(activity);
+        form.setOrientation(LinearLayout.VERTICAL);
+        form.setPadding(pad, pad / 2, pad, 0);
+        TextView note = new TextView(activity);
+        note.setText("A solicitação será enviada ao ADM. A troca só será feita após aprovação. A regra normal de 30 dias continua valendo.");
+        form.addView(note);
+        form.addView(reasonInput, new LinearLayout.LayoutParams(-1, -2));
+        new AlertDialog.Builder(activity)
+                .setTitle("Solicitar troca de aparelho")
+                .setView(form)
+                .setNegativeButton("Cancelar", null)
+                .setPositiveButton("ENVIAR SOLICITAÇÃO", (dialog, which) -> {
+                    String reason = reasonInput.getText().toString().trim();
+                    enviarSolicitacaoTroca(reason);
+                }).show();
+    }
+
+    private void enviarSolicitacaoTroca(String reason) {
+        if (requestInProgress) {
+            toast("Aguarde a solicitação atual terminar.");
+            return;
+        }
+        requestInProgress = true;
+        toast("Enviando solicitação ao ADM...");
+        executor.execute(() -> {
+            HttpURLConnection connection = null;
+            try {
+                URL url = new URL(SERVER + "/api/device-transfer-request");
+                connection = (HttpURLConnection) url.openConnection();
+                connection.setRequestMethod("POST");
+                connection.setConnectTimeout(15000);
+                connection.setReadTimeout(20000);
+                connection.setDoOutput(true);
+                connection.setRequestProperty("Content-Type", "application/json; charset=utf-8");
+                connection.setRequestProperty("Authorization", "Bearer " + getFirebaseIdToken());
+                connection.setRequestProperty("X-Device-ID", getDeviceId());
+                JSONObject body = new JSONObject();
+                body.put("device_id", getDeviceId());
+                body.put("reason", reason == null ? "" : reason);
+                try (OutputStream out = connection.getOutputStream()) {
+                    out.write(body.toString().getBytes(StandardCharsets.UTF_8));
+                }
+                int status = connection.getResponseCode();
+                JSONObject json = new JSONObject(readResponse(connection, status));
+                if (status < 200 || status >= 300) {
+                    String error = json.optString("error", "request_unavailable");
+                    String message;
+                    if ("not_entitled".equals(error)) message = "Não encontramos o Premium ativo nesta conta. Entre com a conta correta e restaure a compra.";
+                    else if ("device_already_registered".equals(error)) message = "Este aparelho já está vinculado ao Premium.";
+                    else if ("invalid_device_id".equals(error)) message = "Não foi possível identificar este aparelho. Feche e abra o aplicativo e tente novamente.";
+                    else if ("authentication_required".equals(error)) message = "Sua sessão expirou. Entre novamente com Google.";
+                    else message = "Não foi possível enviar o pedido agora (HTTP " + status + "). Tente novamente mais tarde.";
+                    throw new Exception(message);
+                }
+                main.post(() -> {
+                    requestInProgress = false;
+                    if (activity.isFinishing()) return;
+                    String state = json.optString("status", "pending");
+                    if ("pending".equals(state)) {
+                        new AlertDialog.Builder(activity)
+                                .setTitle("Solicitação enviada")
+                                .setMessage("Seu pedido de troca de aparelho foi enviado ao ADM. O aparelho atual continuará vinculado até a aprovação.")
+                                .setPositiveButton("OK", null).show();
+                    } else {
+                        toast("Solicitação processada.");
+                    }
+                });
+            } catch (Exception e) {
+                android.util.Log.e("MonetizationManager", "Falha ao solicitar troca de aparelho", e);
+                main.post(() -> {
+                    requestInProgress = false;
+                    if (!activity.isFinishing()) new AlertDialog.Builder(activity)
+                            .setTitle("Não foi possível solicitar a troca")
+                            .setMessage(safeMessage(e))
+                            .setPositiveButton("OK", null).show();
+                });
+            } finally {
+                if (connection != null) connection.disconnect();
+            }
+        });
+    }
+
     private String getFirebaseIdToken() throws Exception {
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         if (user == null) throw new Exception("Entre com sua conta Google antes de continuar.");
