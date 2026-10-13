@@ -53,7 +53,7 @@ public class MonetizationManager {
         this.activity = activity;
         this.prefs = activity.getSharedPreferences(PREFS, Activity.MODE_PRIVATE);
         this.onPremiumChanged = onPremiumChanged;
-        this.startIoAds = new StartIoAdsManager(activity, this::isPremium);
+        this.startIoAds = new StartIoAdsManager(activity);
     }
 
     public boolean isPremium() {
