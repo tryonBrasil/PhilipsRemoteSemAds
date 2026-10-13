@@ -6,6 +6,7 @@ import android.util.Log;
 import com.startapp.sdk.adsbase.Ad;
 import com.startapp.sdk.adsbase.StartAppAd;
 import com.startapp.sdk.adsbase.StartAppSDK;
+import com.startapp.sdk.adsbase.adlisteners.AdDisplayListener;
 import com.startapp.sdk.adsbase.adlisteners.AdEventListener;
 
 /** Start.io interstitials; shown only at explicit navigation points, never on IR key presses. */
@@ -16,6 +17,7 @@ public final class StartIoAdsManager {
     private final Activity activity;
     private final StartAppAd interstitial;
     private boolean ready = false;
+    private boolean loading = false;
 
     public StartIoAdsManager(Activity activity) {
         this.activity = activity;
@@ -23,7 +25,7 @@ public final class StartIoAdsManager {
         StartAppSDK.initParams(activity, APP_ID)
                 .setReturnAdsEnabled(false)
                 .setCallback(() -> {
-                    // Test ads remain enabled until the integration is validated.
+                    // Test ads remain enabled for validation. Disable only for the production release.
                     StartAppSDK.setTestAdsEnabled(true);
                     load();
                 })
@@ -31,16 +33,20 @@ public final class StartIoAdsManager {
     }
 
     private void load() {
-        if (activity.isFinishing()) return;
+        if (activity.isFinishing() || loading || ready) return;
+        loading = true;
         interstitial.loadAd(new AdEventListener() {
             @Override public void onReceiveAd(Ad ad) {
+                loading = false;
                 ready = true;
                 Log.d(TAG, "Start.io interstitial ready");
             }
 
             @Override public void onFailedToReceiveAd(Ad ad) {
+                loading = false;
                 ready = false;
-                Log.w(TAG, "Start.io interstitial unavailable");
+                // Start.io's SDK handles retry after a failed load; don't call loadAd() here.
+                Log.w(TAG, "Start.io interstitial unavailable; SDK will retry");
             }
         });
     }
@@ -49,10 +55,27 @@ public final class StartIoAdsManager {
         if (activity.isFinishing() || !ready) return;
         ready = false;
         try {
-            interstitial.showAd();
+            interstitial.showAd(new AdDisplayListener() {
+                @Override public void adDisplayed(Ad ad) {
+                    Log.d(TAG, "Start.io interstitial displayed");
+                }
+
+                @Override public void adHidden(Ad ad) {
+                    Log.d(TAG, "Start.io interstitial closed");
+                    load();
+                }
+
+                @Override public void adClicked(Ad ad) {
+                    Log.d(TAG, "Start.io interstitial clicked");
+                }
+
+                @Override public void adNotDisplayed(Ad ad) {
+                    Log.w(TAG, "Start.io interstitial could not be displayed");
+                    load();
+                }
+            });
         } catch (RuntimeException e) {
             Log.w(TAG, "Could not show interstitial", e);
-        } finally {
             load();
         }
     }
