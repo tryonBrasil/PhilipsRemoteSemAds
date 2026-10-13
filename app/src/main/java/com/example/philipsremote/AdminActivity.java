@@ -5,7 +5,6 @@ import android.app.AlertDialog;
 import android.os.Bundle;
 import android.graphics.Color;
 import android.graphics.Typeface;
-import android.view.Gravity;
 import android.widget.*;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -21,6 +20,7 @@ public class AdminActivity extends Activity {
   private final int bg = Color.rgb(12,12,12), card = Color.rgb(26,26,30), white = Color.WHITE, gray = Color.rgb(175,175,175), red = Color.rgb(190,24,32), green = Color.rgb(80,170,100);
   private LinearLayout root, content;
   private TextView summary;
+  private EditText premiumEmail;
 
   @Override public void onCreate(Bundle state) {
     super.onCreate(state);
@@ -29,7 +29,7 @@ public class AdminActivity extends Activity {
     ScrollView scroll = new ScrollView(this); scroll.setFillViewport(true); scroll.setBackgroundColor(bg);
     root = new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL); root.setPadding(dp(18),dp(24),dp(18),dp(24));
     TextView title = text("CENTRAL ADM",25,white); title.setTypeface(null,Typeface.BOLD); root.addView(title);
-    TextView sub = text("Clientes e feedbacks",14,gray); root.addView(sub);
+    TextView sub = text("Clientes, Premium e feedbacks",14,gray); root.addView(sub);
     summary = text("Carregando dados...",14,gray); summary.setPadding(0,dp(14),0,dp(12)); root.addView(summary);
     Button refresh = button("ATUALIZAR",red); root.addView(refresh); refresh.setOnClickListener(v -> load());
     content = new LinearLayout(this); content.setOrientation(LinearLayout.VERTICAL); root.addView(content);
@@ -55,15 +55,53 @@ public class AdminActivity extends Activity {
     summary.setText("Clientes: " + (totals == null ? 0 : totals.optInt("users")) +
       "   •   Premium: " + (totals == null ? 0 : totals.optInt("premium")) +
       "   •   Feedbacks pendentes: " + (totals == null ? 0 : totals.optInt("feedbackOpen")));
+
+    addHeading("ADICIONAR / LIBERAR PREMIUM");
+    TextView instruction = text("Informe o e-mail de uma conta já cadastrada no aplicativo.",13,gray);
+    instruction.setPadding(0,0,0,dp(8)); content.addView(instruction);
+    premiumEmail = new EditText(this);
+    premiumEmail.setSingleLine(true);
+    premiumEmail.setHint("E-mail do cliente");
+    premiumEmail.setHintTextColor(gray);
+    premiumEmail.setTextColor(white);
+    premiumEmail.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
+    premiumEmail.setPadding(dp(12),dp(10),dp(12),dp(10));
+    premiumEmail.setBackgroundTintList(android.content.res.ColorStateList.valueOf(gray));
+    content.addView(premiumEmail);
+    Button grantByEmail = button("LIBERAR PREMIUM PARA ESTE E-MAIL",green); content.addView(grantByEmail);
+    grantByEmail.setOnClickListener(v -> {
+      String target = premiumEmail.getText().toString().trim();
+      if (target.isEmpty() || !android.util.Patterns.EMAIL_ADDRESS.matcher(target).matches()) {
+        Toast.makeText(this,"Informe um e-mail válido.",Toast.LENGTH_LONG).show(); return;
+      }
+      new AlertDialog.Builder(this).setTitle("Liberar Premium")
+        .setMessage("Deseja liberar o Premium para "+target+"? A conta precisa já existir no aplicativo.")
+        .setNegativeButton("Cancelar",null)
+        .setPositiveButton("Liberar", (dialog,which) -> managePremium("",target,true)).show();
+    });
+
     addHeading("CLIENTES");
     JSONArray users = data.optJSONArray("users");
     if (users == null || users.length() == 0) addNote("Nenhum cliente encontrado.");
     else for (int i=0;i<users.length();i++) {
       JSONObject u=users.optJSONObject(i); if(u==null) continue;
-      String name=u.optString("displayName",""); String email=u.optString("email","Sem e-mail");
-      String line=(name.isEmpty()?email:name+"\n"+email)+"\n"+(u.optBoolean("premium")?"⭐ Premium ativo":"Plano gratuito")+(u.optBoolean("disabled")?" • conta desativada":"");
-      addNote(line);
+      final String uid=u.optString("uid","");
+      final String email=u.optString("email","Sem e-mail");
+      final boolean hasPremium=u.optBoolean("premium");
+      String name=u.optString("displayName","");
+      String line=(name.isEmpty()?email:name+"\n"+email)+"\n"+(hasPremium?"⭐ Premium ativo":"Plano gratuito")+(u.optBoolean("disabled")?" • conta desativada":"");
+      LinearLayout box=new LinearLayout(this); box.setOrientation(LinearLayout.VERTICAL); box.setPadding(dp(12),dp(10),dp(12),dp(10)); box.setBackgroundColor(card);
+      LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,-2); p.setMargins(0,dp(3),0,dp(3)); content.addView(box,p);
+      box.addView(text(line,14,white));
+      Button premiumButton=button(hasPremium?"REVOGAR PREMIUM":"LIBERAR PREMIUM",hasPremium?red:green);
+      box.addView(premiumButton);
+      premiumButton.setOnClickListener(v -> new AlertDialog.Builder(this)
+        .setTitle(hasPremium?"Revogar Premium":"Liberar Premium")
+        .setMessage((hasPremium?"Deseja remover o acesso Premium de ":"Deseja liberar o Premium para ")+email+"?")
+        .setNegativeButton("Cancelar",null)
+        .setPositiveButton("Confirmar",(dialog,which)->managePremium(uid,"",!hasPremium)).show());
     }
+
     addHeading("FEEDBACKS");
     JSONArray feedback = data.optJSONArray("feedback");
     if (feedback == null || feedback.length()==0) addNote("Ainda não há feedbacks recebidos.");
@@ -79,6 +117,30 @@ public class AdminActivity extends Activity {
         done.setOnClickListener(v -> updateStatus(id, "resolvido"));
       }
     }
+  }
+
+  private void managePremium(String uid, String email, boolean grant) {
+    FirebaseUser user=FirebaseAuth.getInstance().getCurrentUser(); if(user==null) return;
+    user.getIdToken(true).addOnSuccessListener(token -> new Thread(() -> {
+      JSONObject body=new JSONObject();
+      try {
+        body.put("action",grant?"grant_premium":"revoke_premium");
+        if(uid!=null && !uid.isEmpty()) body.put("uid",uid);
+        if(email!=null && !email.isEmpty()) body.put("email",email);
+      } catch(Exception ignored){}
+      JSONObject result=request("POST","/api/admin",token.getToken(),body);
+      runOnUiThread(() -> {
+        if(result!=null && result.optBoolean("ok")) {
+          Toast.makeText(this,grant?"Premium liberado com sucesso.":"Premium revogado.",Toast.LENGTH_LONG).show();
+          load();
+        } else {
+          String error=result==null?"erro_de_rede":result.optString("error","falha");
+          String message="Não foi possível alterar o Premium: "+error;
+          if("user_not_found".equals(error)) message="Não existe uma conta cadastrada com esse e-mail.";
+          Toast.makeText(this,message,Toast.LENGTH_LONG).show();
+        }
+      });
+    }).start()).addOnFailureListener(e -> Toast.makeText(this,"Não foi possível validar a conta administrativa.",Toast.LENGTH_LONG).show());
   }
 
   private void updateStatus(String id, String status) {
