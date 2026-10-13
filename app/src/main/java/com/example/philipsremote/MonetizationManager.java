@@ -64,7 +64,11 @@ public class MonetizationManager {
     }
 
     public boolean podeSalvarControle(int quantidadeAtual) {
-        return isPremium() || Math.max(0, quantidadeAtual) < FREE_SAVED_LIMIT;
+        return podeSalvar(quantidadeAtual, isPremium());
+    }
+
+    static boolean podeSalvar(int quantidadeAtual, boolean premium) {
+        return premium || Math.max(0, quantidadeAtual) < FREE_SAVED_LIMIT;
     }
 
     public int limiteGratuito() {
