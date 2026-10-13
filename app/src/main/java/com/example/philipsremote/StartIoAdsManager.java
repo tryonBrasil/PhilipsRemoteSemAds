@@ -45,14 +45,21 @@ public final class StartIoAdsManager {
             @Override public void onFailedToReceiveAd(Ad ad) {
                 loading = false;
                 ready = false;
-                // Start.io's SDK handles retry after a failed load; don't call loadAd() here.
-                Log.w(TAG, "Start.io interstitial unavailable; SDK will retry");
+                // A later navigation request will retry loading if no ad is ready.
+                Log.w(TAG, "Start.io interstitial unavailable; will retry on next eligible navigation");
             }
         });
     }
 
     public void showIfReady() {
-        if (activity.isFinishing() || !ready) return;
+        if (activity.isFinishing()) return;
+        if (!ready) {
+            // Previously this path returned without requesting another load. If the first
+            // request failed, ads could remain unavailable until the app was restarted.
+            load();
+            Log.d(TAG, "Interstitial not ready; requested load for the next navigation");
+            return;
+        }
         ready = false;
         try {
             interstitial.showAd(new AdDisplayListener() {
