@@ -19,7 +19,10 @@ Controle remoto por **infravermelho** para Android, **sem anúncios**. Usa o emi
 | Perfil | Situação |
 |---|---|
 | Philips RC6, LG NEC | Em uso e validados em TV real |
-| Samsung | Codificador testado em JVM com endereço TV E0E0 e comandos comuns; tabela automática candidata, ainda precisa validar em TV real |\n| Sony | Codificador SIRC testado em JVM; tabela automática candidata, ainda precisa validar em TV real |\n| Philips RC5 | Codificador testado em JVM; configuração automática desativada até validar o mapeamento de funções |\n| NEC genérico (AOC/TCL/Philco/Semp/Toshiba) | Varredura guiada por endereço/comando; os códigos variam por modelo |
+| Samsung | Codificador testado em JVM com endereço TV E0E0 e comandos comuns; tabela automática candidata, ainda precisa validar em TV real |
+| Sony | Codificador SIRC testado em JVM; tabela automática candidata, ainda precisa validar em TV real |
+| Philips RC5 | Codificador testado em JVM; configuração automática desativada até validar o mapeamento de funções |
+| NEC genérico (AOC/TCL/Philco/Semp/Toshiba) | Varredura guiada por endereço/comando; os códigos variam por modelo |
 | AC Coolix / "Midea" | Quadro Coolix corrigido (B2 4D 7B 84 E0 1F…); falta validar em um AR real |
 | Panasonic | **Não verificado**: a ordem de bits do ID do fabricante pode estar invertida |
 | Ventilador | Códigos brutos genéricos; compatibilidade varia por modelo |
