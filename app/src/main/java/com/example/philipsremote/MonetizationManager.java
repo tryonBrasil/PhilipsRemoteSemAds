@@ -19,6 +19,7 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.android.gms.tasks.Tasks;
 import java.util.concurrent.TimeUnit;
+import java.util.UUID;
 import org.json.JSONObject;
 import java.io.BufferedReader;
 import java.io.InputStream;
@@ -37,6 +38,7 @@ public class MonetizationManager {
     private static final String KEY_PREMIUM_UID = "premium_unlocked_uid";
     private static final String KEY_PREMIUM_UPDATED = "premium_unlocked_at";
     private static final String KEY_PURCHASE_ID = "mp_purchase_id";
+    private static final String KEY_DEVICE_ID = "premium_device_id";
     private static final int FREE_SAVED_LIMIT = 1;
     private static final String SERVER = "https://ir-remote-br-premium-server.vercel.app";
     public static final String ADMOB_APP_ID_TEST = "ca-app-pub-3940256099942544~3347511713";
@@ -261,6 +263,49 @@ public class MonetizationManager {
                 .show();
     }
 
+    private String getDeviceId() {
+        String id = prefs.getString(KEY_DEVICE_ID, "");
+        if (id.isEmpty()) {
+            id = UUID.randomUUID().toString();
+            prefs.edit().putString(KEY_DEVICE_ID, id).apply();
+        }
+        return id;
+    }
+
+    /** O servidor é a autoridade: vincula o Premium a um único aparelho e controla a troca em 30 dias. */
+    private void verificarAcessoDispositivo() throws Exception {
+        HttpURLConnection connection = null;
+        try {
+            URL url = new URL(SERVER + "/api/device-access");
+            connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestMethod("POST");
+            connection.setConnectTimeout(15000);
+            connection.setReadTimeout(20000);
+            connection.setDoOutput(true);
+            connection.setRequestProperty("Content-Type", "application/json; charset=utf-8");
+            connection.setRequestProperty("Authorization", "Bearer " + getFirebaseIdToken());
+            connection.setRequestProperty("X-Device-ID", getDeviceId());
+            try (OutputStream out = connection.getOutputStream()) {
+                out.write("{}".getBytes(StandardCharsets.UTF_8));
+            }
+            int status = connection.getResponseCode();
+            JSONObject json = new JSONObject(readResponse(connection, status));
+            if (status >= 200 && status < 300 && json.optBoolean("allowed", false)) return;
+            String error = json.optString("error", "");
+            if ("device_transfer_cooldown".equals(error)) {
+                int days = json.optInt("days_remaining", 30);
+                throw new Exception("Este Premium já está vinculado a outro celular. A troca poderá ser feita em aproximadamente "
+                        + days + " dia(s), respeitando o intervalo de 30 dias.");
+            }
+            if ("not_entitled".equals(error)) {
+                throw new Exception("Não encontramos uma compra Premium aprovada nesta conta Google.");
+            }
+            throw new Exception("Não foi possível autorizar este celular. Tente novamente mais tarde.");
+        } finally {
+            if (connection != null) connection.disconnect();
+        }
+    }
+
     private String getFirebaseIdToken() throws Exception {
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         if (user == null) throw new Exception("Entre com sua conta Google antes de continuar.");
@@ -294,6 +339,7 @@ public class MonetizationManager {
                     throw new Exception(json.optString("message", json.optString("error", "Não foi possível consultar a conta.")));
                 }
                 boolean active = json.optBoolean("premium_unlocked", false);
+                if (active) verificarAcessoDispositivo();
                 main.post(() -> {
                     requestInProgress = false;
                     if (activity.isFinishing()) return;
@@ -421,6 +467,7 @@ public class MonetizationManager {
                 }
                 boolean approved = json.optBoolean("premium_unlocked", false)
                         && "approved".equalsIgnoreCase(json.optString("status", ""));
+                if (approved) verificarAcessoDispositivo();
                 main.post(() -> {
                     requestInProgress = false;
                     if (activity.isFinishing()) return;
