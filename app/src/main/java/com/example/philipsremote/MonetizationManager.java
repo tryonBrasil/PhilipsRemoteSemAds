@@ -14,7 +14,6 @@ import android.os.Handler;
 import android.os.Looper;
 import android.view.View;
 import android.widget.*;
-import com.google.android.gms.ads.*;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.android.gms.tasks.Tasks;
@@ -41,8 +40,7 @@ public class MonetizationManager {
     private static final String KEY_DEVICE_ID = "premium_device_id";
     private static final int FREE_SAVED_LIMIT = 1;
     private static final String SERVER = "https://ir-remote-br-premium-server.vercel.app";
-    public static final String ADMOB_APP_ID_TEST = "ca-app-pub-3940256099942544~3347511713";
-    public static final String BANNER_TEST_ID = "ca-app-pub-3940256099942544/9214589741";
+    private final StartIoAdsManager startIoAds;
 
     private final Activity activity;
     private final SharedPreferences prefs;
@@ -55,7 +53,7 @@ public class MonetizationManager {
         this.activity = activity;
         this.prefs = activity.getSharedPreferences(PREFS, Activity.MODE_PRIVATE);
         this.onPremiumChanged = onPremiumChanged;
-        MobileAds.initialize(activity, status -> {});
+        this.startIoAds = new StartIoAdsManager(activity, this::isPremium);
     }
 
     public boolean isPremium() {
@@ -83,18 +81,13 @@ public class MonetizationManager {
                 : quantidadeAtual + "/" + FREE_SAVED_LIMIT + " controles salvos";
     }
 
+    /** Compatibilidade com chamadas antigas: banners foram removidos na migração para intersticiais. */
     public void addBanner(LinearLayout root) {
-        if (root == null || isPremium()) return;
-        FrameLayout box = new FrameLayout(activity);
-        box.setPadding(0, 6, 0, 6);
-        AdView ad = new AdView(activity);
-        ad.setAdUnitId(BANNER_TEST_ID);
-        int width = Math.max(1, (int) (activity.getResources().getDisplayMetrics().widthPixels
-                / activity.getResources().getDisplayMetrics().density));
-        ad.setAdSize(AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(activity, width));
-        box.addView(ad, new FrameLayout.LayoutParams(-1, -2));
-        root.addView(box, new LinearLayout.LayoutParams(-1, -2));
-        ad.loadAd(new AdRequest.Builder().build());
+        // Sem banners; anúncios em tela cheia são chamados em pontos de navegação específicos.
+    }
+
+    public void mostrarIntersticialSePermitido() {
+        if (!isPremium()) startIoAds.showIfReady();
     }
 
     public void showPremiumDialog() {
