@@ -17,9 +17,7 @@
         android:allowBackup="false"
         android:supportsRtl="true">
 
-        <meta-data
-            android:name="com.startapp.sdk.APPLICATION_ID"
-            android:value="209418154" />
+        <!-- Start.io é inicializado exclusivamente pelo StartIoAdsManager para evitar inicialização duplicada. -->
         <meta-data
             android:name="com.startapp.sdk.RETURN_ADS_ENABLED"
             android:value="false" />
