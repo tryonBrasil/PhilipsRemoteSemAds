@@ -37,7 +37,7 @@ public class MonetizationManager {
     private static final String KEY_PREMIUM_UID = "premium_unlocked_uid";
     private static final String KEY_PREMIUM_UPDATED = "premium_unlocked_at";
     private static final String KEY_PURCHASE_ID = "mp_purchase_id";
-    private static final int FREE_SAVED_LIMIT = 3;
+    private static final int FREE_SAVED_LIMIT = 1;
     private static final String SERVER = "https://ir-remote-br-premium-server.vercel.app";
     public static final String ADMOB_APP_ID_TEST = "ca-app-pub-3940256099942544~3347511713";
     public static final String BANNER_TEST_ID = "ca-app-pub-3940256099942544/9214589741";
