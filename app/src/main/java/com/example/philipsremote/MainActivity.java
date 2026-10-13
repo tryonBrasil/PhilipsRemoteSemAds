@@ -386,6 +386,14 @@ private static final int CARD_2 = Color.rgb(31,31,36);
             v.postDelayed(()->showPremiumAccountScreen(),1200L);
         });
 
+        if(conectado){
+            Button transferir=botaoAcao("SOLICITAR TROCA DE APARELHO",Color.rgb(42,55,76),14);
+            LinearLayout.LayoutParams tp=new LinearLayout.LayoutParams(-1,dp(52));
+            tp.setMargins(0,dp(4),0,dp(8));
+            root.addView(transferir,tp);
+            transferir.setOnClickListener(v->monetizacao.solicitarTrocaDispositivo());
+        }
+
         Button premium=botaoAcao(monetizacao.isPremium()?"PREMIUM ATIVO":"CONHECER O PREMIUM",Color.rgb(70,55,20),14);
         root.addView(premium,new LinearLayout.LayoutParams(-1,dp(52)));
         premium.setOnClickListener(v->monetizacao.showPremiumDialog());
