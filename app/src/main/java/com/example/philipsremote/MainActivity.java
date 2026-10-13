@@ -365,6 +365,9 @@ private static final int CARD_2 = Color.rgb(31,31,36);
                         .setMessage("Você poderá entrar novamente para restaurar seu Premium.")
                         .setNegativeButton("Cancelar",null)
                         .setPositiveButton("Sair",(d,w)->{
+                            // O Premium é vinculado à conta; não mantenha a autorização local após sair.
+                            prefs.edit().putBoolean("premium_unlocked", false)
+                                    .remove("premium_unlocked_uid").apply();
                             firebaseAuth.signOut();
                             googleSignInClient.signOut().addOnCompleteListener(task->showPremiumAccountScreen());
                         }).show();
