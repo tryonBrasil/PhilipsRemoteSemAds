@@ -533,7 +533,7 @@ private static final int CARD_2 = Color.rgb(31,31,36);
             LinearLayout.LayoutParams ap=new LinearLayout.LayoutParams(-1,dp(70)); ap.setMargins(0,dp(18),0,dp(4)); root.addView(acesso,ap);
         }
         Button continueBtn=new Button(this); continueBtn.setText("CONTINUAR"); continueBtn.setTextColor(WHITE); continueBtn.setTextSize(17); continueBtn.setAllCaps(false);
-        GradientDrawable bg=new GradientDrawable(); bg.setColor(Color.rgb(190,24,32)); bg.setCornerRadius(dp(18)); continueBtn.setBackground(bg); continueBtn.setOnClickListener(v->{prefs.edit().putBoolean("lg_mode",lgMode).apply();showingSelector=false;build();});
+        GradientDrawable bg=new GradientDrawable(); bg.setColor(Color.rgb(190,24,32)); bg.setCornerRadius(dp(18)); continueBtn.setBackground(bg); continueBtn.setOnClickListener(v->{prefs.edit().putBoolean("lg_mode",lgMode).apply();showingSelector=false;monetizacao.mostrarIntersticialSePermitido();build();});
         root.addView(continueBtn,new LinearLayout.LayoutParams(-1,dp(58)));
         Button universal=new Button(this);
         universal.setText("🔎  CONTROLE UNIVERSAL");
@@ -548,6 +548,7 @@ private static final int CARD_2 = Color.rgb(31,31,36);
                 try{
                     Toast.makeText(this,"Abrindo Controle Universal...",Toast.LENGTH_SHORT).show();
                     showingSelector=false;
+                    monetizacao.mostrarIntersticialSePermitido();
                     // Não depende do controle ativo: o Universal deve sempre abrir seu próprio seletor.
                     showUniversalScanner("Universal","Universal",null);
                 }catch(Throwable ex){
