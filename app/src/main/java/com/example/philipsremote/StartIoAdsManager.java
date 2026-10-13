@@ -18,6 +18,7 @@ public final class StartIoAdsManager {
     private final StartAppAd interstitial;
     private boolean ready = false;
     private boolean loading = false;
+    private boolean pendingShow = false;
 
     public StartIoAdsManager(Activity activity) {
         this.activity = activity;
@@ -40,6 +41,9 @@ public final class StartIoAdsManager {
                 loading = false;
                 ready = true;
                 Log.d(TAG, "Start.io interstitial ready");
+                // If the user reached an eligible transition while the ad was loading,
+                // display it now instead of silently missing that transition.
+                if (pendingShow) showReadyAd();
             }
 
             @Override public void onFailedToReceiveAd(Ad ad) {
@@ -54,12 +58,19 @@ public final class StartIoAdsManager {
     public void showIfReady() {
         if (activity.isFinishing()) return;
         if (!ready) {
-            // Previously this path returned without requesting another load. If the first
-            // request failed, ads could remain unavailable until the app was restarted.
+            // Remember this eligible transition. If loading finishes asynchronously,
+            // show the ad then rather than requiring the user to navigate a second time.
+            pendingShow = true;
             load();
-            Log.d(TAG, "Interstitial not ready; requested load for the next navigation");
+            Log.d(TAG, "Interstitial not ready; queued display after load");
             return;
         }
+        showReadyAd();
+    }
+
+    private void showReadyAd() {
+        if (activity.isFinishing() || !ready) return;
+        pendingShow = false;
         ready = false;
         try {
             interstitial.showAd(new AdDisplayListener() {
