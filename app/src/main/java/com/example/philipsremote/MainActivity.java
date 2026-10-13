@@ -1100,7 +1100,7 @@ private static final int CARD_2 = Color.rgb(31,31,36);
             add.setOnClickListener(v->{
                 if(salvo[0]==null){
                     if(!monetizacao.podeSalvarControle(controleStorage.listar().size())){
-                        Toast.makeText(this,"Limite gratuito atingido (3 controles). Desbloqueie o Premium para salvar ilimitados.",Toast.LENGTH_LONG).show();
+                        Toast.makeText(this,"Limite gratuito de salvamento atingido. Desbloqueie o Premium para salvar ilimitados.",Toast.LENGTH_LONG).show();
                         monetizacao.showPremiumDialog();
                         return;
                     }
@@ -1513,7 +1513,7 @@ private static final int CARD_2 = Color.rgb(31,31,36);
                 String nome=nomeSelecionado[0]; String modeloSalvo=modeloSelecionado[0]; String descricao=irPerfilTeste.descricaoAtual();
                 String categoria=perfil.startsWith("AC ")?"AR-CONDICIONADO":(perfil.equals("Ventilador Universal")?"VENTILADOR":"TV");
                 if(!monetizacao.podeSalvarControle(controleStorage.listar().size())){
-                    Toast.makeText(this,"Limite gratuito atingido (3 controles). Desbloqueie o Premium para salvar ilimitados.",Toast.LENGTH_LONG).show();
+                    Toast.makeText(this,"Limite gratuito de salvamento atingido. Desbloqueie o Premium para salvar ilimitados.",Toast.LENGTH_LONG).show();
                     monetizacao.showPremiumDialog();
                     return;
                 }
