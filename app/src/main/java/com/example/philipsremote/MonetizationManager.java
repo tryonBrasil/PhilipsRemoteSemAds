@@ -34,6 +34,7 @@ public class MonetizationManager {
     public static final String PREMIUM_PRODUCT_ID = "ir_remote_premium";
     private static final String PREFS = "remote_prefs";
     private static final String KEY_PREMIUM = "premium_unlocked";
+    private static final String KEY_PREMIUM_UID = "premium_unlocked_uid";
     private static final String KEY_PREMIUM_UPDATED = "premium_unlocked_at";
     private static final String KEY_PURCHASE_ID = "mp_purchase_id";
     private static final int FREE_SAVED_LIMIT = 3;
@@ -56,7 +57,10 @@ public class MonetizationManager {
     }
 
     public boolean isPremium() {
-        return prefs.getBoolean(KEY_PREMIUM, false);
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        return user != null
+                && user.getUid().equals(prefs.getString(KEY_PREMIUM_UID, ""))
+                && prefs.getBoolean(KEY_PREMIUM, false);
     }
 
     public boolean podeSalvarControle(int quantidadeAtual) {
@@ -291,11 +295,16 @@ public class MonetizationManager {
                     if (activity.isFinishing()) return;
                     if (active) {
                         boolean changed = !isPremium();
+                        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+                        if (currentUser == null) return;
                         prefs.edit().putBoolean(KEY_PREMIUM, true)
+                                .putString(KEY_PREMIUM_UID, currentUser.getUid())
                                 .putLong(KEY_PREMIUM_UPDATED, System.currentTimeMillis()).apply();
                         toast("⭐ Premium restaurado nesta conta Google!");
                         if (changed && onPremiumChanged != null) onPremiumChanged.run();
                     } else {
+                        // O servidor é a fonte de verdade: remova o cache que não foi confirmado para esta conta.
+                        prefs.edit().putBoolean(KEY_PREMIUM, false).remove(KEY_PREMIUM_UID).apply();
                         // A conta ainda não tem entitlement; consulta a compra local autenticada, se existir.
                         if (prefs.getString(KEY_PURCHASE_ID, "").isEmpty()) {
                             new AlertDialog.Builder(activity)
@@ -413,7 +422,10 @@ public class MonetizationManager {
                     if (activity.isFinishing()) return;
                     if (approved) {
                         boolean changed = !isPremium();
+                        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+                        if (currentUser == null) return;
                         prefs.edit().putBoolean(KEY_PREMIUM, true)
+                                .putString(KEY_PREMIUM_UID, currentUser.getUid())
                                 .putLong(KEY_PREMIUM_UPDATED, System.currentTimeMillis()).apply();
                         toast("⭐ Pagamento confirmado! Premium ativado.");
                         if (changed && onPremiumChanged != null) onPremiumChanged.run();
