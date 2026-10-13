@@ -102,6 +102,36 @@ public class AdminActivity extends Activity {
         .setPositiveButton("Confirmar",(dialog,which)->managePremium(uid,"",!hasPremium)).show());
     }
 
+    addHeading("SOLICITAÇÕES DE TROCA DE APARELHO");
+    JSONArray transfers = data.optJSONArray("deviceTransferRequests");
+    boolean hasPendingTransfer = false;
+    if (transfers != null) {
+      for (int i=0;i<transfers.length();i++) {
+        JSONObject r=transfers.optJSONObject(i); if(r==null) continue;
+        String status=r.optString("status","pending");
+        if (!"pending".equals(status)) continue;
+        hasPendingTransfer = true;
+        final String requestId=r.optString("id","");
+        final String requestEmail=r.optString("email","Conta sem e-mail");
+        String reason=r.optString("reason","");
+        String details="Conta: "+requestEmail+"\nStatus: PENDENTE\nAparelho solicitado: "+r.optString("requestedDeviceId","")+
+          (reason.isEmpty()?"":"\nMotivo: "+reason)+
+          (r.optString("createdAt","").isEmpty()?"":"\nSolicitado em: "+r.optString("createdAt"));
+        LinearLayout box=new LinearLayout(this); box.setOrientation(LinearLayout.VERTICAL); box.setPadding(dp(12),dp(10),dp(12),dp(10)); box.setBackgroundColor(card);
+        LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,-2); p.setMargins(0,dp(4),0,dp(4)); content.addView(box,p);
+        box.addView(text(details,13,white));
+        Button approve=button("ACEITAR TROCA",green); box.addView(approve);
+        approve.setOnClickListener(v -> new AlertDialog.Builder(this).setTitle("Aprovar troca de aparelho")
+          .setMessage("Aprovar a troca para "+requestEmail+"? O novo aparelho será autorizado e substituirá o atual.")
+          .setNegativeButton("Cancelar",null).setPositiveButton("Aprovar",(dialog,which)->reviewDeviceTransfer(requestId,true)).show());
+        Button reject=button("RECUSAR SOLICITAÇÃO",red); box.addView(reject);
+        reject.setOnClickListener(v -> new AlertDialog.Builder(this).setTitle("Recusar solicitação")
+          .setMessage("Recusar a troca solicitada por "+requestEmail+"? O aparelho atual continuará vinculado.")
+          .setNegativeButton("Cancelar",null).setPositiveButton("Recusar",(dialog,which)->reviewDeviceTransfer(requestId,false)).show());
+      }
+    }
+    if (!hasPendingTransfer) addNote("Nenhuma solicitação de troca pendente.");
+
     addHeading("FEEDBACKS");
     JSONArray feedback = data.optJSONArray("feedback");
     if (feedback == null || feedback.length()==0) addNote("Ainda não há feedbacks recebidos.");
@@ -137,6 +167,30 @@ public class AdminActivity extends Activity {
           String error=result==null?"erro_de_rede":result.optString("error","falha");
           String message="Não foi possível alterar o Premium: "+error;
           if("user_not_found".equals(error)) message="Não existe uma conta cadastrada com esse e-mail.";
+          Toast.makeText(this,message,Toast.LENGTH_LONG).show();
+        }
+      });
+    }).start()).addOnFailureListener(e -> Toast.makeText(this,"Não foi possível validar a conta administrativa.",Toast.LENGTH_LONG).show());
+  }
+
+  private void reviewDeviceTransfer(String requestId, boolean approve) {
+    FirebaseUser user=FirebaseAuth.getInstance().getCurrentUser(); if(user==null) return;
+    user.getIdToken(true).addOnSuccessListener(token -> new Thread(() -> {
+      JSONObject body=new JSONObject();
+      try {
+        body.put("action",approve?"approve_device_transfer":"reject_device_transfer");
+        body.put("requestId",requestId);
+      } catch(Exception ignored){}
+      JSONObject result=request("POST","/api/admin",token.getToken(),body);
+      runOnUiThread(() -> {
+        if(result!=null && result.optBoolean("ok")) {
+          Toast.makeText(this,approve?"Troca aprovada e novo aparelho autorizado.":"Solicitação recusada.",Toast.LENGTH_LONG).show();
+          load();
+        } else {
+          String error=result==null?"erro_de_rede":result.optString("error","falha");
+          String message="Não foi possível analisar a solicitação: "+error;
+          if("request_already_reviewed".equals(error)) message="Esta solicitação já foi analisada. Atualize a tela.";
+          if("premium_not_active".equals(error)) message="A conta não possui Premium ativo; a troca não foi liberada.";
           Toast.makeText(this,message,Toast.LENGTH_LONG).show();
         }
       });
