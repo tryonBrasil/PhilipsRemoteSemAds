@@ -34,10 +34,10 @@ public class IrEncoderTest {
         assertEquals(68, p.length);
     }
 
-    @Test public void samsungRepeteEndereco() {   // Samsung power = 0xE0E040BF (MSB), endereço 0x07 repetido
-        int[] p = IrEncoder.samsung(0x07, 0x02);
+    @Test public void samsungRepeteEndereco() {   // Samsung TV POWER = 0xE0E040BF: endereço E0 repetido, comando 40
+        int[] p = IrEncoder.samsung(0xE0, 0x40);
         assertEquals(4500, p[0]); assertEquals(4500, p[1]);
-        assertArrayEquals(new int[]{0x07, 0x07, 0x02, 0xFD}, bytesPorEspaco(p, 2, 4, 1690, 560, false));
+        assertArrayEquals(new int[]{0xE0, 0xE0, 0x40, 0xBF}, bytesPorEspaco(p, 2, 4, 1690, 560, false));
     }
 
     @Test public void sonyBitNaMarcaE45ms() {

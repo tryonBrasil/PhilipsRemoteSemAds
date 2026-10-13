@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.0.26 (em preparação)
+### Correções e melhorias
+- Samsung TV: corrigido o endereço IR comum para E0E0 e adicionados comandos de TV para o perfil automático e a varredura.
+- Samsung/Sony: configuração automática inicial marcada como candidata, com aviso para testar cada botão no aparelho real.
+- Philips RC5: desativada a configuração automática completa até validar o mapa de funções; continua disponível na configuração guiada.
+- Ventilador: não grava mais códigos RAW genéricos como se fossem universais; reconhece somente o POWER testado para KXD194.
+- Removido o banner publicitário da tela inicial para manter o app sem anúncios.
+- Leitura do catálogo IR agora consome o fluxo completo, sem depender de `InputStream.available()`.
+- Adicionados testes de regressão para perfis automáticos e endereço Samsung E0E0.
+
+# Changelog
+
 ## 1.3.6
 ### Corrigido
 - **Sony**: o bit era codificado no espaço (o SIRC codifica na marca) e o intervalo entre quadros virava uma marca de 10 ms.

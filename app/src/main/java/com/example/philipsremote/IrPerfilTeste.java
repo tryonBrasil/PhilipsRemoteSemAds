@@ -105,7 +105,7 @@ public class IrPerfilTeste {
 
     public static int enderecoPadrao(String p) {
         if ("LG / NEC".equals(p)) return 0x04;
-        if ("Samsung TV".equals(p)) return 0x07;
+        if ("Samsung TV".equals(p)) return 0xE0;
         if ("Sony TV".equals(p)) return 0x01;
         return 0x00;
     }
@@ -123,8 +123,12 @@ public class IrPerfilTeste {
             int[] cs = {0x08, 0x09, 0x02, 0x03, 0x00, 0x01, 0x40, 0x41, 0x07, 0x06, 0x44, 0x28, 0x43, 0x7C, 0x0B, 0xAA, 0xAB, 0x72, 0x71, 0x63, 0x61, 0xB0, 0xB1, 0xBA, 0x8F, 0x8E, 0x39, 0x5B, 0xB5, 0x18};
             for (int c : cs) itens.add(new Item(String.format(Locale.US, "NEC addr 0x04 • 0x%02X", c), NEC, 0x04, c));
         } else if (p.equals("Samsung TV")) {
-            int[] cs = {0x02, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0F, 0x10, 0x11, 0x12, 0x13, 0x1A, 0x1F, 0x58, 0x60, 0x61, 0x62, 0x65, 0x68, 0x79};
-            for (int c : cs) itens.add(new Item(String.format(Locale.US, "Samsung32 addr 0x07 • 0x%02X", c), SAMSUNG, 0x07, c));
+            // Comandos comuns de TV Samsung em quadros Samsung32 E0E0xxxx.
+            int[] cs = {0x40, 0xF0, 0xE0, 0xD0, 0x48, 0x08, 0x06, 0x86, 0xA6, 0x46,
+                0x16, 0x1A, 0x58, 0x9E, 0x80, 0xF8, 0xF2, 0x36, 0x28, 0xA8, 0x68,
+                0xE2, 0x52, 0x62, 0xA2, 0x12, 0xA4, 0xB4, 0x88, 0x20, 0xA0, 0x60,
+                0x10, 0x90, 0x50, 0x30, 0xB0, 0x70};
+            for (int c : cs) itens.add(new Item(String.format(Locale.US, "Samsung32 addr 0xE0 • 0x%02X", c), SAMSUNG, 0xE0, c));
         } else if (p.equals("Sony TV")) {
             int[] cs = {0x15, 0x12, 0x13, 0x10, 0x11, 0x14, 0x19, 0x16, 0x17, 0x18, 0x1A, 0x0D, 0x2A, 0x74};
             for (int c : cs) itens.add(new Item(String.format(Locale.US, "SIRC addr 0x01 • 0x%02X", c), SONY, 0x01, c));
@@ -245,7 +249,7 @@ public class IrPerfilTeste {
         int addr = (codigo >> 8) & 0xFF, cmd = codigo & 0xFF;
         boolean comAddr = codigo > 255;
         if (p.equals("LG / NEC")) return new Sinal(38000, IrEncoder.nec(comAddr ? addr : 0x04, cmd));
-        if (p.equals("Samsung TV")) return new Sinal(38000, IrEncoder.samsung(comAddr ? addr : 0x07, cmd));
+        if (p.equals("Samsung TV")) return new Sinal(38000, IrEncoder.samsung(comAddr ? addr : 0xE0, cmd));
         if (p.equals("Sony TV")) return new Sinal(40000, IrEncoder.sony(comAddr ? addr & 0x1F : 0x01, cmd & 0x7F));
         if (p.equals("Philips / RC5")) { rc5Toggle = !rc5Toggle; return new Sinal(36000, IrEncoder.rc5(comAddr ? addr & 0x1F : 0, cmd & 0x7F, rc5Toggle)); }
         if (p.equals("Philips / RC6")) { rc6Toggle = !rc6Toggle; return new Sinal(36000, IrEncoder.rc6(comAddr ? addr : 0, cmd, rc6Toggle)); }

@@ -577,7 +577,6 @@ private static final int CARD_2 = Color.rgb(31,31,36);
         Button atualizar=new Button(this); atualizar.setText("↻  VERIFICAR ATUALIZAÇÃO"); atualizar.setTextColor(WHITE); atualizar.setTextSize(13); atualizar.setAllCaps(false);
         GradientDrawable atualizarBg=new GradientDrawable(); atualizarBg.setColor(KEY_DARK); atualizarBg.setCornerRadius(dp(16)); atualizar.setBackground(atualizarBg); actionFeedback(atualizar); atualizar.setOnClickListener(v->updateManager.verificarManualmente());
         LinearLayout.LayoutParams atualizarParams=new LinearLayout.LayoutParams(-1,dp(50)); atualizarParams.setMargins(0,dp(8),0,0); root.addView(atualizar,atualizarParams);
-        monetizacao.addBanner(root);
         sv.addView(root); mostrar(sv);
     }
     /** Banco online: consulta modelos do Flipper-IRDB sob demanda e importa somente os sinais escolhidos. */

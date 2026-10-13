@@ -8,7 +8,7 @@ Controle remoto por **infravermelho** para Android, **sem anúncios**. Usa o emi
 
 ## Recursos
 
-- Controle embutido para **Philips (RC6)** e **LG (NEC)** e perfis para Samsung, Sony, Panasonic, AOC, TCL, Philco, Semp, Toshiba/JVC, ar-condicionado (Coolix/Midea) e ventilador.
+- Configuração automática completa para **Philips (RC6)** e **LG (NEC)**; tabelas candidatas para Samsung/Sony com aviso para testar no aparelho real. Outros perfis (AOC, TCL, Philco, Semp, Toshiba/JVC, Panasonic, ar-condicionado e ventilador genérico) usam configuração guiada quando não há tabela segura.
 - **Meus controles**: salvar, buscar, renomear, duplicar e excluir.
 - **Configurar botões**: testa os códigos do perfil (varredura 0x00–0xFF) ou um código digitado em hexadecimal e grava o que funcionou para cada tecla.
 - **Teste universal** com banco de códigos de teste.
@@ -19,7 +19,7 @@ Controle remoto por **infravermelho** para Android, **sem anúncios**. Usa o emi
 | Perfil | Situação |
 |---|---|
 | Philips RC6, LG NEC | Em uso e validados em TV real |
-| Samsung, Sony, Philips RC5, NEC genérico (AOC/TCL/Philco/Semp/Toshiba) | Codificadores corrigidos na 1.3.6 e **testados em JVM** contra vetores do protocolo; falta validar em TV real |
+| Samsung | Codificador testado em JVM com endereço TV E0E0 e comandos comuns; tabela automática candidata, ainda precisa validar em TV real |\n| Sony | Codificador SIRC testado em JVM; tabela automática candidata, ainda precisa validar em TV real |\n| Philips RC5 | Codificador testado em JVM; configuração automática desativada até validar o mapeamento de funções |\n| NEC genérico (AOC/TCL/Philco/Semp/Toshiba) | Varredura guiada por endereço/comando; os códigos variam por modelo |
 | AC Coolix / "Midea" | Quadro Coolix corrigido (B2 4D 7B 84 E0 1F…); falta validar em um AR real |
 | Panasonic | **Não verificado**: a ordem de bits do ID do fabricante pode estar invertida |
 | Ventilador | Códigos brutos genéricos; compatibilidade varia por modelo |
@@ -66,7 +66,7 @@ Pull requests e outras branches usam o workflow **CI** (compila, testa e roda li
 - `TRANSMIT_IR`: enviar os sinais.
 - `INTERNET`: apenas para consultar `api.github.com` (última Release) e baixar o APK.
 - `REQUEST_INSTALL_PACKAGES`: abrir o instalador do Android na atualização.
-- Sem anúncios, sem rastreamento, sem contas. Dados em `allowBackup=false` (não vão para o backup do Google).
+- Sem anúncios ou rastreamento. A autenticação é usada somente nos recursos Premium. Dados em `allowBackup=false` (não vão para o backup do Google).
 
 ## Estrutura
 

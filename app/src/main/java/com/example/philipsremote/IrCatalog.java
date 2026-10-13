@@ -2,6 +2,7 @@ package com.example.philipsremote;
 
 import android.content.Context;
 import java.io.InputStream;
+import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
@@ -44,9 +45,12 @@ public final class IrCatalog {
 
     private void carregar(Context context) {
         try (InputStream in = context.getAssets().open("ir_catalog.json")) {
-            byte[] data = new byte[in.available()];
-            int n = in.read(data);
-            JSONObject root = new JSONObject(new String(data, 0, n, StandardCharsets.UTF_8));
+            ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+            byte[] chunk = new byte[4096];
+            int n;
+            while ((n = in.read(chunk)) != -1) buffer.write(chunk, 0, n);
+            byte[] data = buffer.toByteArray();
+            JSONObject root = new JSONObject(new String(data, StandardCharsets.UTF_8));
             JSONArray arr = root.optJSONArray("devices");
             if (arr != null) {
                 for (int i = 0; i < arr.length(); i++) {
