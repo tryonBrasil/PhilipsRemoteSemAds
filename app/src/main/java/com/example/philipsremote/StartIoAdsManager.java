@@ -19,7 +19,6 @@ public final class StartIoAdsManager {
     private boolean sdkReady = false;
     private boolean ready = false;
     private boolean loading = false;
-    private boolean pendingShow = false;
 
     public StartIoAdsManager(Activity activity) {
         this.activity = activity;
@@ -57,8 +56,7 @@ public final class StartIoAdsManager {
             @Override public void onReceiveAd(Ad ad) {
                 loading = false;
                 ready = true;
-                Log.i(TAG, "Start.io interstitial loaded successfully");
-                if (pendingShow) showReadyAd();
+                Log.i(TAG, "Start.io interstitial loaded successfully; available for the next eligible navigation");
             }
 
             @Override public void onFailedToReceiveAd(Ad ad) {
@@ -74,14 +72,12 @@ public final class StartIoAdsManager {
     public void showIfReady() {
         if (activity.isFinishing()) return;
         if (!sdkReady || interstitial == null) {
-            pendingShow = true;
-            Log.d(TAG, "SDK is still initializing; queueing one eligible interstitial display");
+            Log.d(TAG, "SDK is not ready; skipping this navigation without a delayed display");
             return;
         }
         if (!ready) {
-            pendingShow = true;
             load();
-            Log.d(TAG, "Interstitial not ready; queueing display after a successful load");
+            Log.d(TAG, "Interstitial is not ready; preparing it for a future eligible navigation");
             return;
         }
         showReadyAd();
