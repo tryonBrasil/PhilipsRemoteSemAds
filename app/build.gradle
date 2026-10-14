@@ -14,8 +14,8 @@ android {
     defaultConfig {
         minSdk 23
         targetSdk 36
-        versionCode 111
-        versionName '2.0.44'
+        versionCode 112
+        versionName '2.0.45'
         buildConfigField "String", "WEB_CLIENT_ID", '"616140212-of0jb1kmrggbinp8b47na5sbvglejvsq.apps.googleusercontent.com"'
     }
 
