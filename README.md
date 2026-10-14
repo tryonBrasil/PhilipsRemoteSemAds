@@ -1,6 +1,6 @@
 # IR Remote BR (PhilipsRemoteSemAds)
 
-Controle remoto por **infravermelho** para Android, **sem anúncios**. Usa o emissor IR do celular
+Controle remoto por **infravermelho** para Android, com anúncios intersticiais Start.io para usuários gratuitos e opção Premium sem anúncios. Usa o emissor IR do celular
 (`ConsumerIrManager`) para controlar TVs, ar-condicionado e ventilador. Controles e botões aprendidos ficam
 **só no aparelho** (SQLite local).
 
@@ -67,9 +67,10 @@ Pull requests e outras branches usam o workflow **CI** (compila, testa e roda li
 ## Privacidade e permissões
 
 - `TRANSMIT_IR`: enviar os sinais.
-- `INTERNET`: apenas para consultar `api.github.com` (última Release) e baixar o APK.
+- `INTERNET`: necessária para atualizações, anúncios Start.io e recursos online do Premium (Firebase e servidor de pagamento).
 - `REQUEST_INSTALL_PACKAGES`: abrir o instalador do Android na atualização.
-- Sem anúncios ou rastreamento. A autenticação é usada somente nos recursos Premium. Dados em `allowBackup=false` (não vão para o backup do Google).
+- O app exibe anúncios intersticiais Start.io para usuários gratuitos; usuários Premium não devem receber anúncios. Consulte a política de privacidade publicada e os termos da Start.io para detalhes sobre dados tratados pelos serviços integrados.
+- A autenticação Google/Firebase é usada nos recursos Premium. Dados locais do app usam `allowBackup=false` (não vão para o backup do Google).
 
 ## Estrutura
 
