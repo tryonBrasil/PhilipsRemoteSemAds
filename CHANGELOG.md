@@ -1,5 +1,12 @@
 # Changelog
 
+## Próxima versão — correções da auditoria
+### Anúncios e monetização
+- Anúncios intersticiais não ficam mais na fila para aparecer depois que o usuário já mudou de tela.
+- O SDK Start.io só é inicializado quando um usuário não Premium chega a um ponto de navegação elegível.
+- README atualizado para refletir os anúncios e o uso de internet pelos serviços integrados.
+
+
 ## 2.0.26 (em preparação)
 ### Correções e melhorias
 - Samsung TV: corrigido o endereço IR comum para E0E0 e adicionados comandos de TV para o perfil automático e a varredura.

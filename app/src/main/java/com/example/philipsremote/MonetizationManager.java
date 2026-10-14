@@ -40,7 +40,8 @@ public class MonetizationManager {
     private static final String KEY_DEVICE_ID = "premium_device_id";
     private static final int FREE_SAVED_LIMIT = 1;
     private static final String SERVER = "https://ir-remote-br-premium-server.vercel.app";
-    private final StartIoAdsManager startIoAds;
+    // Inicialização preguiçosa: contas Premium não inicializam nem solicitam anúncios.
+    private StartIoAdsManager startIoAds;
 
     private final Activity activity;
     private final SharedPreferences prefs;
@@ -53,7 +54,6 @@ public class MonetizationManager {
         this.activity = activity;
         this.prefs = activity.getSharedPreferences(PREFS, Activity.MODE_PRIVATE);
         this.onPremiumChanged = onPremiumChanged;
-        this.startIoAds = new StartIoAdsManager(activity);
     }
 
     public boolean isPremium() {
@@ -87,7 +87,9 @@ public class MonetizationManager {
     }
 
     public void mostrarIntersticialSePermitido() {
-        if (!isPremium()) startIoAds.showIfReady();
+        if (isPremium() || activity.isFinishing()) return;
+        if (startIoAds == null) startIoAds = new StartIoAdsManager(activity);
+        startIoAds.showIfReady();
     }
 
     public void showPremiumDialog() {
