@@ -22,35 +22,37 @@ public final class StartIoAdsManager {
 
     public StartIoAdsManager(Activity activity) {
         this.activity = activity;
+
+        // Configure test inventory before initialization, and initialize the SDK before
+        // creating StartAppAd, following Start.io's documented initialization sequence.
+        StartAppSDK.setTestAdsEnabled(BuildConfig.DEBUG);
+        Log.i(TAG, "Initializing Start.io; appId=" + APP_ID
+                + ", package=" + activity.getPackageName()
+                + ", debugBuild=" + BuildConfig.DEBUG);
+        StartAppSDK.init(activity, APP_ID);
+
         this.interstitial = new StartAppAd(activity);
-        StartAppSDK.initParams(activity, APP_ID)
-                .setReturnAdsEnabled(false)
-                .setCallback(() -> {
-                    // Use test inventory only in debug builds; production release uses real inventory.
-                    StartAppSDK.setTestAdsEnabled(BuildConfig.DEBUG);
-                    load();
-                })
-                .init();
+        load();
     }
 
     private void load() {
         if (activity.isFinishing() || loading || ready) return;
         loading = true;
+        Log.d(TAG, "Requesting Start.io interstitial");
         interstitial.loadAd(new AdEventListener() {
             @Override public void onReceiveAd(Ad ad) {
                 loading = false;
                 ready = true;
-                Log.d(TAG, "Start.io interstitial ready");
-                // If the user reached an eligible transition while the ad was loading,
-                // display it now instead of silently missing that transition.
+                Log.i(TAG, "Start.io interstitial loaded successfully");
                 if (pendingShow) showReadyAd();
             }
 
             @Override public void onFailedToReceiveAd(Ad ad) {
                 loading = false;
                 ready = false;
-                // A later navigation request will retry loading if no ad is ready.
-                Log.w(TAG, "Start.io interstitial unavailable; will retry on next eligible navigation");
+                Log.e(TAG, "Start.io interstitial failed to load. Ad result=" + String.valueOf(ad)
+                        + ". Check the Start.io SDK log immediately before this message for the failure reason.");
+                // Retry on the next eligible navigation; do not loop requests continuously.
             }
         });
     }
@@ -58,8 +60,6 @@ public final class StartIoAdsManager {
     public void showIfReady() {
         if (activity.isFinishing()) return;
         if (!ready) {
-            // Remember this eligible transition. If loading finishes asynchronously,
-            // show the ad then rather than requiring the user to navigate a second time.
             pendingShow = true;
             load();
             Log.d(TAG, "Interstitial not ready; queued display after load");
@@ -75,11 +75,11 @@ public final class StartIoAdsManager {
         try {
             interstitial.showAd(new AdDisplayListener() {
                 @Override public void adDisplayed(Ad ad) {
-                    Log.d(TAG, "Start.io interstitial displayed");
+                    Log.i(TAG, "Start.io interstitial displayed");
                 }
 
                 @Override public void adHidden(Ad ad) {
-                    Log.d(TAG, "Start.io interstitial closed");
+                    Log.d(TAG, "Start.io interstitial closed; requesting next ad");
                     load();
                 }
 
@@ -88,12 +88,12 @@ public final class StartIoAdsManager {
                 }
 
                 @Override public void adNotDisplayed(Ad ad) {
-                    Log.w(TAG, "Start.io interstitial could not be displayed");
+                    Log.e(TAG, "Start.io loaded an ad but could not display it: " + String.valueOf(ad));
                     load();
                 }
             });
         } catch (RuntimeException e) {
-            Log.w(TAG, "Could not show interstitial", e);
+            Log.e(TAG, "Exception while displaying Start.io interstitial", e);
             load();
         }
     }
