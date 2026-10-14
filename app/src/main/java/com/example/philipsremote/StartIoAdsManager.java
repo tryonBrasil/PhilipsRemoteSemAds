@@ -15,7 +15,8 @@ public final class StartIoAdsManager {
     private static final String APP_ID = "209418154";
 
     private final Activity activity;
-    private final StartAppAd interstitial;
+    private StartAppAd interstitial;
+    private boolean sdkReady = false;
     private boolean ready = false;
     private boolean loading = false;
     private boolean pendingShow = false;
@@ -23,22 +24,35 @@ public final class StartIoAdsManager {
     public StartIoAdsManager(Activity activity) {
         this.activity = activity;
 
-        // Configure test inventory before initialization, and initialize the SDK before
-        // creating StartAppAd, following Start.io's documented initialization sequence.
+        // Use the SDK initialization callback: do not request ads until Start.io has
+        // completed initialization and registered the app/product ID.
         StartAppSDK.setTestAdsEnabled(BuildConfig.DEBUG);
         Log.i(TAG, "Initializing Start.io; appId=" + APP_ID
                 + ", package=" + activity.getPackageName()
                 + ", debugBuild=" + BuildConfig.DEBUG);
-        StartAppSDK.init(activity, APP_ID);
 
-        this.interstitial = new StartAppAd(activity);
-        load();
+        StartAppSDK.initParams(activity, APP_ID)
+                .setReturnAdsEnabled(false)
+                .setCallback(new Runnable() {
+                    @Override public void run() {
+                        activity.runOnUiThread(() -> {
+                            if (activity.isFinishing()) return;
+                            if (sdkReady) return;
+                            sdkReady = true;
+                            Log.i(TAG, "Start.io SDK initialization callback completed; appId="
+                                    + APP_ID + ", package=" + activity.getPackageName());
+                            interstitial = new StartAppAd(activity);
+                            load();
+                        });
+                    }
+                })
+                .init();
     }
 
     private void load() {
-        if (activity.isFinishing() || loading || ready) return;
+        if (activity.isFinishing() || !sdkReady || interstitial == null || loading || ready) return;
         loading = true;
-        Log.d(TAG, "Requesting Start.io interstitial");
+        Log.i(TAG, "Requesting Start.io interstitial after SDK initialization");
         interstitial.loadAd(new AdEventListener() {
             @Override public void onReceiveAd(Ad ad) {
                 loading = false;
@@ -51,25 +65,30 @@ public final class StartIoAdsManager {
                 loading = false;
                 ready = false;
                 Log.e(TAG, "Start.io interstitial failed to load. Ad result=" + String.valueOf(ad)
-                        + ". Check the Start.io SDK log immediately before this message for the failure reason.");
-                // Retry on the next eligible navigation; do not loop requests continuously.
+                        + ". Check the Start.io SDK log for the actual reason (for example NO FILL, invalid app ID, or network failure).");
+                // Do not immediately loop loadAd() here; retry on the next eligible navigation.
             }
         });
     }
 
     public void showIfReady() {
         if (activity.isFinishing()) return;
+        if (!sdkReady || interstitial == null) {
+            pendingShow = true;
+            Log.d(TAG, "SDK is still initializing; queueing one eligible interstitial display");
+            return;
+        }
         if (!ready) {
             pendingShow = true;
             load();
-            Log.d(TAG, "Interstitial not ready; queued display after load");
+            Log.d(TAG, "Interstitial not ready; queueing display after a successful load");
             return;
         }
         showReadyAd();
     }
 
     private void showReadyAd() {
-        if (activity.isFinishing() || !ready) return;
+        if (activity.isFinishing() || !sdkReady || interstitial == null || !ready) return;
         pendingShow = false;
         ready = false;
         try {
