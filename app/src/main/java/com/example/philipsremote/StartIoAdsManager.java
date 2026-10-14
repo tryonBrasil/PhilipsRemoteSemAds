@@ -62,8 +62,8 @@ public final class StartIoAdsManager {
             @Override public void onFailedToReceiveAd(Ad ad) {
                 loading = false;
                 ready = false;
-                Log.e(TAG, "Start.io interstitial failed to load. Ad result=" + String.valueOf(ad)
-                        + ". Check the Start.io SDK log for the actual reason (for example NO FILL, invalid app ID, or network failure).");
+                Log.e(TAG, "Start.io interstitial failed to load: "
+                        + (ad == null ? "ad result is null" : ad.getErrorMessage()));
                 // Do not immediately loop loadAd() here; retry on the next eligible navigation.
             }
         });
@@ -102,7 +102,8 @@ public final class StartIoAdsManager {
                 }
 
                 @Override public void adNotDisplayed(Ad ad) {
-                    Log.e(TAG, "Start.io loaded an ad but could not display it: " + String.valueOf(ad));
+                    Log.e(TAG, "Start.io loaded an ad but could not display it: "
+                            + (ad == null ? "ad result is null" : ad.getErrorMessage()));
                     load();
                 }
             });
