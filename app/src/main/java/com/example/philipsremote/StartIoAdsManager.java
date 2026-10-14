@@ -85,7 +85,6 @@ public final class StartIoAdsManager {
 
     private void showReadyAd() {
         if (activity.isFinishing() || !sdkReady || interstitial == null || !ready) return;
-        pendingShow = false;
         ready = false;
         try {
             interstitial.showAd(new AdDisplayListener() {
