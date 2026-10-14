@@ -1,4 +1,5 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.TRANSMIT_IR" />
     <uses-permission android:name="android.permission.INTERNET" />
@@ -17,7 +18,13 @@
         android:allowBackup="false"
         android:supportsRtl="true">
 
-        <!-- Start.io é inicializado exclusivamente pelo StartIoAdsManager para evitar inicialização duplicada. -->
+        <!-- A inicialização é feita por código. Remova o provider automático do SDK
+             para impedir inicialização sem o App ID antes do StartIoAdsManager. -->
+        <provider
+            android:name="com.startapp.sdk.adsbase.StartAppInitProvider"
+            android:authorities="${applicationId}.startappinitprovider"
+            tools:node="remove" />
+
         <meta-data
             android:name="com.startapp.sdk.RETURN_ADS_ENABLED"
             android:value="false" />
@@ -32,12 +39,10 @@
             android:name=".MainActivity"
             android:screenOrientation="portrait"
             android:exported="true">
-
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-
         </activity>
     </application>
 </manifest>
