@@ -1167,6 +1167,7 @@ private static final int CARD_2 = Color.rgb(31,31,36);
 
     @Override protected void onDestroy(){
         if(updateManager!=null) updateManager.destroy();
+        if(monetizacao!=null) monetizacao.destroy();
         super.onDestroy();
     }
 

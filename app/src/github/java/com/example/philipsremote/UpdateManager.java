@@ -140,7 +140,9 @@ public class UpdateManager implements Updater {
                 if (manual) {
                     final String msg = e instanceof LimiteException
                         ? "Limite de consultas do GitHub atingido. Tente novamente em alguns minutos."
-                        : "Não foi possível verificar agora.";
+                        : e instanceof IntegridadeException
+                            ? "A atualização publicada não possui SHA-256 válido. Por segurança, o download foi bloqueado."
+                            : "Não foi possível verificar agora.";
                     activity.runOnUiThread(() -> { if (ativa()) Toast.makeText(activity, msg, Toast.LENGTH_SHORT).show(); });
                 }
             } finally {
@@ -151,11 +153,12 @@ public class UpdateManager implements Updater {
     }
 
     private static class LimiteException extends Exception {}
+    private static class IntegridadeException extends Exception {}
 
     /** Escolhe o APK de release (preferindo app-release.apk) e, se o GitHub informar, o SHA-256 dele. */
     private Apk encontrarApk(JSONObject release) throws Exception {
         JSONArray assets = release.optJSONArray("assets");
-        if (assets == null) return null;
+        if (assets == null) throw new IntegridadeException();
         JSONObject escolhido = null;
         for (int i = 0; i < assets.length() && escolhido == null; i++) {
             JSONObject a = assets.getJSONObject(i);
@@ -166,11 +169,11 @@ public class UpdateManager implements Updater {
             String n = a.optString("name", "").toLowerCase(Locale.ROOT);
             if (n.endsWith(".apk") && !n.contains("debug")) escolhido = a;
         }
-        if (escolhido == null) return null;
+        if (escolhido == null) throw new IntegridadeException();
         String url = escolhido.optString("browser_download_url", "");
-        if (url.isEmpty()) return null;
-        String digest = escolhido.optString("digest", "");
-        String sha = digest.toLowerCase(Locale.ROOT).startsWith("sha256:") ? digest.substring(7).trim() : "";
+        if (url.isEmpty()) throw new IntegridadeException();
+        String sha = UpdateIntegrity.extrairSha256(escolhido.optString("digest", ""));
+        if (!UpdateIntegrity.valido(sha)) throw new IntegridadeException();
         return new Apk(url, sha);
     }
 
@@ -312,9 +315,14 @@ public class UpdateManager implements Updater {
                 Toast.makeText(activity, "Download da atualização falhou.", Toast.LENGTH_SHORT).show();
                 return;
             }
-            if (esperado.isEmpty()) { continuarInstalacao(uri, versao); return; }
+            if (!UpdateIntegrity.valido(esperado)) {
+                try { manager.remove(id); } catch (Exception ignored) {}
+                limparDownload();
+                Toast.makeText(activity, "A atualização não possui SHA-256 válido. Instalação cancelada.", Toast.LENGTH_LONG).show();
+                return;
+            }
             executor.execute(() -> {
-                final boolean ok = esperado.equalsIgnoreCase(sha256(uri));
+                final boolean ok = UpdateIntegrity.corresponde(esperado, sha256(uri));
                 activity.runOnUiThread(() -> {
                     if (!ativa()) return;
                     if (ok) { continuarInstalacao(uri, versao); return; }

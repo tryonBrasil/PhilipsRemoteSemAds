@@ -56,6 +56,12 @@ public class MonetizationManager {
         this.onPremiumChanged = onPremiumChanged;
     }
 
+    /** Encerra tarefas de rede quando a Activity deixa de existir. */
+    public void destroy() {
+        executor.shutdownNow();
+        main.removeCallbacksAndMessages(null);
+    }
+
     public boolean isPremium() {
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         return user != null
