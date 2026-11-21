@@ -71,6 +71,7 @@ public class ControleStorage {
         try { if (check.moveToFirst()) count = check.getInt(0); } finally { check.close(); }
         if (count > 0) { oldPrefs.edit().putBoolean(MIGRATED, true).apply(); return; }
 
+        boolean migracaoConcluida = false;
         try {
             JSONArray a = new JSONArray(oldPrefs.getString(OLD_KEY, "[]"));
             db.beginTransaction();
@@ -104,17 +105,19 @@ public class ControleStorage {
                     cv.put("codigo", item.optInt("codigo", -1));
                     cv.put("perfil", item.optString("perfil", ""));
                     cv.put("frequencia", item.optInt("frequencia", 0));
-                if(item.has("raw_data")) cv.put("raw_data", item.optString("raw_data",""));
+                    if (item.has("raw_data")) cv.put("raw_data", item.optString("raw_data", ""));
                     db.insertWithOnConflict("commands", null, cv, SQLiteDatabase.CONFLICT_REPLACE);
                 }
             }
             db.setTransactionSuccessful();
-            oldPrefs.edit().putBoolean(MIGRATED, true).apply();
+            migracaoConcluida = true;
         } catch (Exception e) {
             Log.e(TAG, "Falha ao migrar controles antigos (será tentado de novo na próxima abertura)", e);
         } finally {
             if (db.inTransaction()) db.endTransaction();
         }
+        // Só grava o marcador depois que endTransaction confirmou o commit.
+        if (migracaoConcluida) oldPrefs.edit().putBoolean(MIGRATED, true).apply();
     }
 
     /** Salva um novo controle e devolve o id (ou -1 em caso de erro). */
@@ -219,7 +222,7 @@ public class ControleStorage {
 
     /** Salva um comando IR bruto em microssegundos. O código numérico fica -1; o sinal completo vai em raw_data. */
     public void salvarComandoRaw(Controle controle, String funcao, int frequencia, int[] pattern) {
-        if (controle == null || funcao == null || funcao.trim().isEmpty() || frequencia <= 0 || pattern == null || pattern.length == 0) return;
+        if (controle == null || funcao == null || funcao.trim().isEmpty() || !IrSanitizer.valido(frequencia, pattern)) return;
         funcao = funcao.trim();
         if (funcao.length() > 80) funcao = funcao.substring(0, 80);
         try {
@@ -250,11 +253,13 @@ public class ControleStorage {
             if (item == null) return null;
             String raw = item.optString("raw_data", "");
             if (raw.isEmpty()) return null;
-            JSONArray a = new JSONObject(raw).optJSONArray("pattern");
-            if (a == null || a.length() == 0) return null;
+            JSONObject objetoRaw = new JSONObject(raw);
+            JSONArray a = objetoRaw.optJSONArray("pattern");
+            if (a == null || a.length() == 0 || a.length() > IrSanitizer.MAX_DURACOES) return null;
+            int frequencia = objetoRaw.optInt("freq", item.optInt("frequencia", 0));
             int[] out = new int[a.length()];
-            for (int i=0;i<a.length();i++) out[i] = a.optInt(i, 0);
-            return out;
+            for (int i=0;i<a.length();i++) out[i] = a.optInt(i, -1);
+            return IrSanitizer.valido(frequencia, out) ? out : null;
         } catch (Exception e) { return null; }
     }
 
@@ -397,6 +402,20 @@ public class ControleStorage {
         } catch(Exception e){ Log.e(TAG,"Falha ao exportar backup",e); return null; }
     }
 
+    private static boolean rawDataValido(String rawData) {
+        try {
+            if (rawData == null || rawData.isEmpty() || rawData.length() > 100000) return false;
+            JSONObject raw = new JSONObject(rawData);
+            JSONArray array = raw.optJSONArray("pattern");
+            if (array == null || array.length() == 0 || array.length() > IrSanitizer.MAX_DURACOES) return false;
+            int[] pattern = new int[array.length()];
+            for (int i = 0; i < array.length(); i++) pattern[i] = array.optInt(i, -1);
+            return IrSanitizer.valido(raw.optInt("freq", 0), pattern);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     public int importarJson(String json, boolean substituir) {
         if(json==null||json.trim().isEmpty()) return -1;
         SQLiteDatabase db=null;
@@ -423,11 +442,13 @@ public class ControleStorage {
                     JSONObject cmd=comandos.optJSONObject(j); if(cmd==null) continue;
                     String funcao=s(cmd.optString("funcao","")).trim(); int codigo=cmd.optInt("codigo",-1);
                     if(funcao.isEmpty() || (codigo < 0 && !cmd.has("raw_data"))) continue;
+                    String rawData = cmd.optString("raw_data", "");
+                    if (cmd.has("raw_data") && !rawDataValido(rawData)) continue;
                     if(funcao.length()>80) funcao=funcao.substring(0,80);
                     ContentValues cv=new ContentValues(); cv.put("control_id",id); cv.put("funcao",funcao);
                     cv.put("codigo",codigo); cv.put("perfil",s(cmd.optString("perfil","")));
                     cv.put("frequencia",Math.max(0,cmd.optInt("frequencia",0)));
-                    if(cmd.has("raw_data")) cv.put("raw_data",cmd.optString("raw_data",""));
+                    if(cmd.has("raw_data")) cv.put("raw_data",rawData);
                     db.insertWithOnConflict("commands",null,cv,SQLiteDatabase.CONFLICT_REPLACE);
                 }
                 adicionados++;
