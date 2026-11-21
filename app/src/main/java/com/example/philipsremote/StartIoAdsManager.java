@@ -12,7 +12,7 @@ import com.startapp.sdk.adsbase.adlisteners.AdEventListener;
 /** Start.io interstitials; shown only at explicit navigation points, never on IR key presses. */
 public final class StartIoAdsManager {
     private static final String TAG = "StartIoAds";
-    private static final String APP_ID = "209319090";
+    private static final String APP_ID = "209418154";
 
     private final Activity activity;
     private StartAppAd interstitial;
