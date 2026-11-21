@@ -9,7 +9,7 @@ Controle remoto por **infravermelho** para Android, com anúncios intersticiais 
 ## Recursos
 
 - Configuração automática completa para **Philips (RC6)** e **LG (NEC)**; tabelas candidatas para Samsung/Sony com aviso para testar no aparelho real. Outros perfis (AOC, TCL, Philco, Semp, Toshiba/JVC, Panasonic, ar-condicionado e ventilador genérico) usam configuração guiada quando não há tabela segura.
-- **Meus controles**: salvar, buscar, renomear, duplicar e excluir.
+- **Meus controles**: salvar, buscar, renomear, duplicar, excluir e exportar/importar backups JSON.
 - **Configurar botões**: testa os códigos do perfil (varredura 0x00–0xFF) ou um código digitado em hexadecimal e grava o que funcionou para cada tecla.
 - **Teste universal** com banco de códigos de teste.
 - **Atualização pelo GitHub Releases** com conferência de SHA-256.
@@ -87,4 +87,4 @@ Pull requests e outras branches usam o workflow **CI** (compila, testa e roda li
 
 - A interface é montada em código (sem XML de layout) e em português fixo.
 - `applicationId` ainda é `com.example.philipsremote`; trocá-lo exige reinstalar o app (os controles não migram sozinhos).
-- Não há exportar/importar controles.
+- Os backups JSON podem ser exportados e importados pelo seletor de documentos do Android. A restauração de backups próprios preserva os controles do usuário; comandos RAW inválidos são ignorados durante a importação.
