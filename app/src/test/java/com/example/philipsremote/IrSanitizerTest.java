@@ -20,6 +20,17 @@ public class IrSanitizerTest {
         assertFalse(IrSanitizer.valido(500000, p));
     }
 
+    @Test public void aceitaLimitesPermitidos() {
+        assertTrue(IrSanitizer.frequenciaValida(IrSanitizer.FREQ_MIN));
+        assertTrue(IrSanitizer.frequenciaValida(IrSanitizer.FREQ_MAX));
+        assertTrue(IrSanitizer.padraoValido(new int[]{0, IrSanitizer.DURACAO_MAX_US}));
+    }
+
+    @Test public void rejeitaFrequenciasForaDosLimitesExatos() {
+        assertFalse(IrSanitizer.frequenciaValida(IrSanitizer.FREQ_MIN - 1));
+        assertFalse(IrSanitizer.frequenciaValida(IrSanitizer.FREQ_MAX + 1));
+    }
+
     @Test public void rejeitaPadraoInvalido() {
         assertFalse(IrSanitizer.padraoValido(null));
         assertFalse(IrSanitizer.padraoValido(new int[0]));
