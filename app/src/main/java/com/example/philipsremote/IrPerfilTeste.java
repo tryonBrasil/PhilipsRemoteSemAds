@@ -56,7 +56,7 @@ public class IrPerfilTeste {
 
     /** Transmite um padrão RAW já convertido para marca/espaço em microssegundos. */
     public boolean transmitirRaw(int frequencia, int[] padrao) {
-        if (!hasEmitter() || frequencia <= 0 || padrao == null || padrao.length == 0) return false;
+        if (!hasEmitter() || !IrSanitizer.valido(frequencia, padrao)) return false;
         try {
             tx(frequencia, IrEncoder.raw(padrao));
             return true;
