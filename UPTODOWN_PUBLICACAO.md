@@ -35,7 +35,7 @@ O IR Remote BR transforma celulares Android com emissor infravermelho integrado 
 Ferramentas / Utilitários
 
 ## Observações antes do envio
-1. Anexar o ícone quadrado em PNG com 512 × 512 pixels.
+1. Anexar o ícone quadrado em PNG com 512 × 512 pixels: `docs/assets/ir-remote-br-icon-512.png`.
 2. Anexar capturas reais de tela do aplicativo em funcionamento; não usar mockups que representem recursos inexistentes.
 3. Confirmar o App ID correto no painel Start.io antes de publicar.
 4. Confirmar que o ambiente de produção do backend está com PREMIUM_PRICE=19.90.
