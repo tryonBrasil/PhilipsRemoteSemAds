@@ -441,14 +441,14 @@ public class ControleStorage {
                 if(comandos!=null) for(int j=0;j<comandos.length();j++){
                     JSONObject cmd=comandos.optJSONObject(j); if(cmd==null) continue;
                     String funcao=s(cmd.optString("funcao","")).trim(); int codigo=cmd.optInt("codigo",-1);
-                    if(funcao.isEmpty() || (codigo < 0 && !cmd.has("raw_data"))) continue;
                     String rawData = cmd.optString("raw_data", "");
-                    if (cmd.has("raw_data") && !rawDataValido(rawData)) continue;
+                    boolean rawValido = cmd.has("raw_data") && rawDataValido(rawData);
+                    if(funcao.isEmpty() || (codigo < 0 && !rawValido)) continue;
                     if(funcao.length()>80) funcao=funcao.substring(0,80);
                     ContentValues cv=new ContentValues(); cv.put("control_id",id); cv.put("funcao",funcao);
                     cv.put("codigo",codigo); cv.put("perfil",s(cmd.optString("perfil","")));
                     cv.put("frequencia",Math.max(0,cmd.optInt("frequencia",0)));
-                    if(cmd.has("raw_data")) cv.put("raw_data",rawData);
+                    if(rawValido) cv.put("raw_data",rawData);
                     db.insertWithOnConflict("commands",null,cv,SQLiteDatabase.CONFLICT_REPLACE);
                 }
                 adicionados++;
